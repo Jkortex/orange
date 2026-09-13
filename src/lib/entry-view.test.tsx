@@ -1,0 +1,59 @@
+import { describe, expect, it } from 'vitest'
+import { createElement as h } from 'react'
+import { renderToReadableStream } from 'react-dom/server'
+import { EntryView } from './entry-view'
+import type { CollectionEntry } from './content'
+
+// EntryView 是服务端组件（含异步 MarkdownRenderer），用 react-dom/server 渲染成 HTML 断言
+async function renderToHtml(entry: CollectionEntry<'posts' | 'life'>) {
+  const stream = await renderToReadableStream(h(EntryView, { entry }))
+  await stream.allReady
+  return await new Response(stream).text()
+}
+
+function makeEntry(body: string): CollectionEntry<'posts' | 'life'> {
+  return {
+    collection: 'posts',
+    slug: '2026-09-01-demo',
+    data: { title: '演示文章', date: new Date('2026-09-01'), tags: [] },
+    body,
+  }
+}
+
+describe('EntryView 返回路径', () => {
+  it('正文顶部有指向父级集合的文字返回（确定路由，非浏览器历史）', async () => {
+    const html = await renderToHtml(makeEntry('正文'))
+
+    expect(html).toContain('href="/posts"')
+    expect(html).toContain('文章列表')
+  })
+})
+
+describe('EntryView 文首目录', () => {
+  it('短文无目录', async () => {
+    const html = await renderToHtml(makeEntry('## 结论\n\n正文'))
+
+    expect(html).not.toContain('文章目录')
+  })
+
+  it('长文在正文前生成目录，链接与标题锚点一致', async () => {
+    const html = await renderToHtml(makeEntry('## 一\n\n## 二\n\n## 三\n\n正文'))
+
+    expect(html).toContain('aria-label="文章目录"')
+    expect(html).toContain('href="#一"')
+    expect(html).toContain('href="#二"')
+    expect(html).toContain('href="#三"')
+    expect(html).toContain('id="一"')
+    // 目录出现在正文标题之前
+    expect(html.indexOf('文章目录')).toBeLessThan(html.indexOf('id="一"'))
+  })
+})
+
+describe('EntryView 异常渲染', () => {
+  it('空正文不抛错，无目录但仍有返回', async () => {
+    const html = await renderToHtml(makeEntry(''))
+
+    expect(html).toContain('href="/posts"')
+    expect(html).not.toContain('文章目录')
+  })
+})

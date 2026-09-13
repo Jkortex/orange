@@ -1,0 +1,99 @@
+/*
+ * 主题变量集中管理（AGENTS.md UI 主题规范）：
+ * - 每套主题一个变量块（:root[data-theme='xxx']，含对应 .dark 变体）
+ * - 组件只允许使用语义 token（经 globals.css @theme 映射为 Tailwind 工具类）
+ * - 新增主题 = 新增一对变量块，组件代码零改动
+ */
+
+/* ===== default 主题 · light ===== */
+:root,
+:root[data-theme='default'] {
+  --background: oklch(0.98 0.003 85);
+  --foreground: oklch(0.22 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0 0);
+  --muted: oklch(0.955 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --accent: oklch(0.955 0 0);
+  --accent-foreground: oklch(0.22 0 0);
+  --primary: oklch(0.56 0.17 42);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.955 0 0);
+  --secondary-foreground: oklch(0.22 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0 0);
+  --destructive: oklch(0.577 0.245 27.3);
+  --border: oklch(0.87 0 0);
+  --input: oklch(0.87 0 0);
+  --ring: oklch(0.56 0.17 42);
+  --radius: 0.5rem;
+}
+
+/* ===== default 主题 · dark ===== */
+:root.dark,
+:root[data-theme='default'].dark {
+  --background: oklch(0.17 0 0);
+  --foreground: oklch(0.93 0 0);
+  --card: oklch(0.21 0 0);
+  --card-foreground: oklch(0.93 0 0);
+  --muted: oklch(0.26 0 0);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.26 0 0);
+  --accent-foreground: oklch(0.93 0 0);
+  --primary: oklch(0.72 0.16 45);
+  --primary-foreground: oklch(0.17 0 0);
+  --secondary: oklch(0.26 0 0);
+  --secondary-foreground: oklch(0.93 0 0);
+  --popover: oklch(0.21 0 0);
+  --popover-foreground: oklch(0.93 0 0);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(0.3 0 0);
+  --input: oklch(0.3 0 0);
+  --ring: oklch(0.72 0.16 45);
+}
+
+/* ===== catppuccin 主题 · light（Latte，官方 hex，对比度经 WCAG 验算） ===== */
+:root[data-theme='catppuccin'] {
+  --background: #eff1f5;
+  --foreground: #4c4f69;
+  --card: #eff1f5;
+  --card-foreground: #4c4f69;
+  --muted: #ccd0da;
+  --muted-foreground: #5c5f77;
+  --accent: #ccd0da;
+  --accent-foreground: #4c4f69;
+  --primary: #8839ef;
+  --primary-foreground: #eff1f5;
+  --secondary: #ccd0da;
+  --secondary-foreground: #4c4f69;
+  --popover: #eff1f5;
+  --popover-foreground: #4c4f69;
+  --destructive: #d20f39;
+  --border: #bcc0cc;
+  --input: #bcc0cc;
+  --ring: #8839ef;
+  --radius: 0.5rem;
+}
+
+/* ===== catppuccin 主题 · dark（Mocha，官方 hex，对比度经 WCAG 验算） ===== */
+:root[data-theme='catppuccin'].dark {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card: #313244;
+  --card-foreground: #cdd6f4;
+  --muted: #313244;
+  --muted-foreground: #a6adc8;
+  --accent: #45475a;
+  --accent-foreground: #cdd6f4;
+  --primary: #cba6f7;
+  --primary-foreground: #11111b;
+  --secondary: #313244;
+  --secondary-foreground: #cdd6f4;
+  --popover: #313244;
+  --popover-foreground: #cdd6f4;
+  --destructive: #f38ba8;
+  --border: #45475a;
+  --input: #45475a;
+  --ring: #cba6f7;
+  --radius: 0.5rem;
+}
