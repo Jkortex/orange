@@ -151,10 +151,8 @@ src/
     layout.tsx
     page.tsx                  # 首页（聚合最新内容）
     posts/[slug]/page.tsx     # 文章页（generateStaticParams）
-    life/[slug]/page.tsx
-    photos/[slug]/page.tsx    # 相册页（自定义 React 组件渲染）
     music/[slug]/page.tsx     # 播放器页
-    archive/page.tsx          # 归档（可按类型筛选）
+    skills/[slug]/page.tsx    # 技能包详情
     tags/[tag]/page.tsx       # 标签聚合（跨类型）
     rss.xml/route.ts          # 主 feed（posts）；未来可扩展各类型 feed
 next.config.ts                # output: 'export'；图片需 images.unoptimized 或自定义 loader

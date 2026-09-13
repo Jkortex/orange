@@ -71,7 +71,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     mutedRef.current = muted
   }, [queue, index, volume, muted])
 
-  // 单例音频：挂载时创建，监听自然结束（自动下一首）、进度/时长同步与失败降级
   useEffect(() => {
     const audio = new Audio()
     audioRef.current = audio

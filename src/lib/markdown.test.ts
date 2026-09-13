@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createElement as h } from 'react'
-import { renderToReadableStream } from 'react-dom/server'
+import { renderServerComponent } from '@/components/test-utils/render-server'
 import { MarkdownRenderer } from './markdown'
 
-// MarkdownRenderer 是构建时（RSC）使用的异步渲染器，用 react-dom/server 渲染成 HTML 断言
 async function renderToHtml(markdown: string) {
-  const stream = await renderToReadableStream(h(MarkdownRenderer, { children: markdown }))
-  await stream.allReady
-  return await new Response(stream).text()
+  return renderServerComponent(h(MarkdownRenderer, { children: markdown }))
 }
 
 describe('MarkdownRenderer 正常渲染', () => {

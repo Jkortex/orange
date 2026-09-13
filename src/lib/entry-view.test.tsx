@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createElement as h } from 'react'
-import { renderToReadableStream } from 'react-dom/server'
+import { renderServerComponent } from '@/components/test-utils/render-server'
 import { EntryView } from './entry-view'
 import type { CollectionEntry } from './content'
 
-// EntryView 是服务端组件（含异步 MarkdownRenderer），用 react-dom/server 渲染成 HTML 断言
 async function renderToHtml(entry: CollectionEntry<'posts' | 'life'>) {
-  const stream = await renderToReadableStream(h(EntryView, { entry }))
-  await stream.allReady
-  return await new Response(stream).text()
+  return renderServerComponent(h(EntryView, { entry }))
 }
 
 function makeEntry(body: string): CollectionEntry<'posts' | 'life'> {

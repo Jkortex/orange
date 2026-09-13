@@ -30,21 +30,16 @@ export const photoSchema = baseSchema.extend({
   location: z.string().optional(),
   cover: z.string().optional(),
 })
-// 音乐集合：一个 md 文件 = 一张专辑，tracks 引用 public/media/music/ 下音频（AGENTS.md 界面布局规范第 5 条）
 export const musicSchema = baseSchema.extend({
   artist: z.string().min(1),
   year: z.coerce.number().int().min(1900).max(2100).optional(),
-  cover: z.string().optional(), // 封面图 → public/media/music/covers/
+  cover: z.string().optional(),
   tracks: z
     .array(z.object({ title: z.string().min(1), file: z.string().min(1) }))
     .min(1),
 })
 
-// 技能集合：一个目录 = 一个 skill 包（对齐 SKILL.md 标准布局），
-// SKILL.md 为入口（含 name/description），templates/references/scripts 为附属文件，
-// 详情页以目录形式直接展示，无需预处理拆分
 export const skillSchema = baseSchema.extend({
-  // 技能 canonical 身份（kebab-case，对应包在 agent 生态中的目录名约束）
   name: z
     .string()
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'name 须为 kebab-case（小写字母/数字/连字符），如 tdd-basics'),

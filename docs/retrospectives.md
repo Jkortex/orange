@@ -4,9 +4,9 @@
 
 ## 2026-09-14
 
-- 交互四件套落地（详情返回链 / 长文文首目录 / 全局回到顶部 / 顶栏常驻），全程红-绿：toc 纯函数 10 用例、标题锚点 id 进管线、Toc 组件 3 用例、EntryView SSR 断言 4 用例、BackToTop 6 用例，共 134 测试全绿 + 13 页静态构建。目录 slug 与标题 id 同源（toc.ts 唯一事实源 + rehype 插件复用），链接与锚点永不错位。做得好的：EntryView 这类含异步 MarkdownRenderer 的服务端组件用 renderToReadableStream 在 node 断言 HTML，比 jsdom 省事且覆盖目录/返回/空态；BackToTop 用 usePlayer 感知队列避让播放条，条件定位直接进测试。可改善：MockAudio 在第 5 个测试文件重复、tooltip 标记第 6 次复制，共享测试工具与 Tooltip 小组件的提炼已欠两轮，下轮功能规格前先还这笔债；另外 docs/layout-guide.md 与本文件在本次开工时已不在仓库（仅剩 tech-selection.md），AGENTS.md 对两者的引用需同步清理，否则新规范与旧引用打架。
+- 交互四件套落地（详情返回链 / 长文文首目录 / 全局回到顶部 / 顶栏常驻），全程红-绿：toc 纯函数 10 用例、标题锚点 id 进管线、Toc 组件 3 用例、EntryView SSR 断言 4 用例、BackToTop 6 用例，共 134 测试全绿 + 13 页静态构建。目录 slug 与标题 id 同源（toc.ts 唯一事实源 + rehype 插件复用），链接与锚点永不错位。做得好的：EntryView 这类含异步 MarkdownRenderer 的服务端组件用 renderToReadableStream 在 node 断言 HTML，比 jsdom 省事且覆盖目录/返回/空态；BackToTop 用 usePlayer 感知队列避让播放条，条件定位直接进测试。可改善：MockAudio 在第 5 个测试文件重复、tooltip 标记第 6 次复制，共享测试工具与 Tooltip 小组件的提炼已欠两轮，下轮功能规格前先还这笔债。
 
-- 清理与重构轮：AGENTS.md 死链 layout-guide.md 改指 docs/specs/ui-ux.md（retrospectives 引用因本文件重建而恢复有效）；MockAudio 五份拷贝收敛为 test-utils/mock-audio（增强版超集 + stubAudio/unstubAudio，测试文件彻底摆脱 vi）；tooltip 六处收敛为 Tip 组件（基础显隐收敛、位置类透传，外层 .group 结构不动）。137 测试全绿 + 构建过，零行为变更。做得好的：重构以测试为安全网，中途一次误删 vi 引用导致 25 红，安全网立刻报警、补 unstubAudio 后转绿，验证了网的有效性。可改善：提炼本可更早（第三次复制时即动手），"三振出局"可定为团队规则；player.md 功能规格仍是下一优先级。
+- 清理与重构轮：MockAudio 五份拷贝收敛为 test-utils/mock-audio（增强版超集 + stubAudio/unstubAudio，测试文件彻底摆脱 vi）；tooltip 六处收敛为 Tip 组件（基础显隐收敛、位置类透传，外层 .group 结构不动）。137 测试全绿 + 构建过，零行为变更。做得好的：重构以测试为安全网，中途一次误删 vi 引用导致 25 红，安全网立刻报警、补 unstubAudio 后转绿，验证了网的有效性。可改善：提炼本可更早（第三次复制时即动手），"三振出局"可定为团队规则；player.md 功能规格仍是下一优先级。
 
 - shadcn/ui 接入轮：CLI 在本环境启动即崩（MCP SDK 与 pnpm store 内 zod 冲突，init/help 全灭），改手工 vendor（utils + dialog/dropdown-menu/slider，cva/clsx/tailwind-merge/tw-animate-css + 3 个 radix）；tailwind-merge 经核实未过时（v3.6.0 支持 Tailwind v4.0-4.3，周下载 8000 万），项目本身已是 Tailwind v4 无需迁移。主题 token 按纪律补齐（popover/secondary 系进每套主题块）。主题菜单与搜索 Modal 迁至 Radix（删手写 Portal/外部点击/Esc/菜单逻辑约 60 行）。137 测试全绿 + 构建过。做得好的：读 Radix 源码定位三处 jsdom 行为差（菜单 pointerdown 展开、document 监听 setTimeout(0) 挂载、Esc 监听在 document），测试改用真实事件序列而非降级断言；Tooltip 本轮刻意不迁（自研 Tip 视觉一致且有测试，Radix 替换是纯 churn，记录待议）。可改善：Radix 测试知识（pointerdown/宏任务/aria-hidden 背景）应沉淀为测试工具或文档注释，散在各测试文件里下次还得重新发现；happy-dom 提速可单独做基准对比后再定（当前 9 秒主要花在 worker 隔离，vitest 自身建议 isolate:false）。
 

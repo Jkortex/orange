@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createElement as h } from 'react'
-import { renderToReadableStream } from 'react-dom/server'
+import { renderServerComponent } from './test-utils/render-server'
 import { SkillPackageView } from './skill-package-view'
 import type { SkillPackage } from '@/lib/content'
 
-// 服务端组件（含异步 MarkdownRenderer），用 react-dom/server 渲染成 HTML 断言
 async function renderToHtml(pkg: SkillPackage) {
-  const stream = await renderToReadableStream(h(SkillPackageView, { pkg }))
-  await stream.allReady
-  return await new Response(stream).text()
+  return renderServerComponent(h(SkillPackageView, { pkg }))
 }
 
 function makePackage(): SkillPackage {
