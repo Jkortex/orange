@@ -50,9 +50,9 @@ export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
 
   return (
     <div className="grid w-full gap-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-10">
-      <aside>
+      <aside className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-background/90 backdrop-blur border-b border-border/40 md:static md:z-auto md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-b-0 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-2">
         <nav aria-label="技能分类">
-          <ul className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:items-start md:gap-1 md:overflow-visible md:pb-0">
+          <ul className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:items-start md:gap-1 md:overflow-visible md:pb-0 scrollbar-none">
             <li>
               <button
                 type="button"

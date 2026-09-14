@@ -5,8 +5,9 @@
 
 /* 语义 token → Tailwind 工具类映射（bg-background / text-foreground / border-border ...） */
 @theme inline {
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--font-geist-sans), "HarmonyOS Sans SC", "HarmonyOS Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-serif: "LXGW WenKai", "霞鹜文楷", "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -49,7 +50,6 @@
 
   html {
     color-scheme: light;
-    scroll-behavior: smooth;
   }
 
   html.dark {
@@ -63,6 +63,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 }
 
@@ -82,6 +83,8 @@ html.dark code[data-theme] span[style*='--shiki'] {
 /* 正文排版精细化增强：呼吸感节奏、高质感行内代码与引用块 */
 .prose {
   max-width: none;
+  text-wrap: pretty;
+  word-break: break-word;
   --tw-prose-body: var(--foreground);
   --tw-prose-headings: var(--foreground);
   --tw-prose-lead: var(--muted-foreground);
@@ -101,7 +104,8 @@ html.dark code[data-theme] span[style*='--shiki'] {
 }
 
 .prose p {
-  line-height: 1.8;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
 }
 
 .prose h2 {

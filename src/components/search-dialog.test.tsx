@@ -211,3 +211,47 @@ describe('SearchDialog 异常渲染', () => {
     })
   })
 })
+
+describe('SearchDialog 命令面板增强模式 (Command / Category / Symbol)', () => {
+  it('输入 > 进入命令模式，展示系统命令列表', async () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: '> ' } })
+
+    expect(screen.getByText('命令模式')).toBeDefined()
+    expect(screen.getByText('切换深浅主题')).toBeDefined()
+    expect(screen.getByText('前往博客首页')).toBeDefined()
+  })
+
+  it('输入 # 进入大纲符号模式，扫描当前页面标题', async () => {
+    const heading = document.createElement('h2')
+    heading.id = 'sec-arch'
+    heading.textContent = '架构总览'
+    document.body.appendChild(heading)
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: '# ' } })
+
+    expect(screen.getByText('页内大纲')).toBeDefined()
+    expect(screen.getAllByText('架构总览').length).toBeGreaterThan(1)
+
+    document.body.removeChild(heading)
+  })
+
+  it('点击快捷模式切换按钮，自动填充前缀并聚焦', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const cmdBtn = screen.getByRole('button', { name: /命令/ })
+    fireEvent.click(cmdBtn)
+
+    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
+    expect(input.value).toBe('> ')
+  })
+})
+

@@ -38,11 +38,15 @@ export function BackButton({ fallbackHref, fallbackLabel, className = '' }: Back
             return
           }
           if (pathname === '/posts' || pathname.startsWith('/posts?')) {
-            setTarget({ href: '/posts', label: '文章列表', canGoBack: true })
+            if (fallbackHref.startsWith('/posts')) {
+              setTarget({ href: '/posts', label: '文章列表', canGoBack: true })
+            }
             return
           }
           if (pathname === '/skills' || pathname.startsWith('/skills?')) {
-            setTarget({ href: '/skills', label: '技能列表', canGoBack: true })
+            if (fallbackHref.startsWith('/skills')) {
+              setTarget({ href: '/skills', label: '技能列表', canGoBack: true })
+            }
             return
           }
           if (pathname.startsWith('/category/')) {

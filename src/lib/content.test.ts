@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from './content'
+import { clearContentCache, getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getRelatedEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from './content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
@@ -14,6 +14,7 @@ function writeFixture(relPath: string, raw: string) {
 }
 
 beforeEach(() => {
+  clearContentCache()
   contentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'orange-content-'))
 })
 
@@ -600,3 +601,65 @@ describe('getAdjacentEntries 相邻条目', () => {
     expect(oldestAdj.prev).toBeNull()
   })
 })
+
+describe('getRelatedEntries 相关条目推荐', () => {
+  it('基于共同标签数推荐最相关的条目，按重合度及日期倒序', () => {
+    writeFixture(
+      'posts/2026-09-01-react.md',
+      '---\ntitle: React 基础\ndate: 2026-09-01\ntags: [frontend, react]\ncategory: tech\n---\n内容1',
+    )
+    writeFixture(
+      'posts/2026-09-02-vue.md',
+      '---\ntitle: Vue 基础\ndate: 2026-09-02\ntags: [frontend, vue]\ncategory: tech\n---\n内容2',
+    )
+    writeFixture(
+      'posts/2026-09-03-nextjs.md',
+      '---\ntitle: Next.js 全栈\ndate: 2026-09-03\ntags: [frontend, react, nextjs]\ncategory: tech\n---\n内容3',
+    )
+    writeFixture(
+      'posts/2026-09-04-cooking.md',
+      '---\ntitle: 烹饪心得\ndate: 2026-09-04\ntags: [life]\ncategory: life\n---\n内容4',
+    )
+
+    // 对 React 基础 (frontend, react) 进行相关推荐
+    const related = getRelatedEntries(
+      {
+        type: 'posts',
+        slug: '2026-09-01-react',
+        tags: ['frontend', 'react'],
+        category: 'tech',
+      },
+      3,
+      { contentDir },
+    )
+
+    // Next.js 全栈有两个重合标签 (frontend, react)，得分最高排第一
+    // Vue 基础有一个重合标签 (frontend)，排第二
+    // 烹饪心得无标签且分类不同，不被推荐
+    expect(related).toHaveLength(2)
+    expect(related[0].slug).toBe('2026-09-03-nextjs')
+    expect(related[0].score).toBe(2)
+    expect(related[1].slug).toBe('2026-09-02-vue')
+    expect(related[1].score).toBe(1)
+  })
+
+  it('自身不会出现在相关文章推荐中', () => {
+    writeFixture(
+      'posts/2026-09-01-same.md',
+      '---\ntitle: 本篇\ndate: 2026-09-01\ntags: [test]\n---\n内容',
+    )
+
+    const related = getRelatedEntries(
+      {
+        type: 'posts',
+        slug: '2026-09-01-same',
+        tags: ['test'],
+      },
+      3,
+      { contentDir },
+    )
+
+    expect(related).toEqual([])
+  })
+})
+

@@ -254,6 +254,10 @@ export function usePlayer(): PlayerContextValue {
   return context
 }
 
+export function useOptionalPlayer(): PlayerContextValue | null {
+  return useContext(PlayerContext)
+}
+
 /**
  * 队列内容比较：file 序列一致即视为同一份曲目（file 为稳定 URL 标识）。
  * 不用引用比较——跨页面/跨组件实例入队后引用必不相等，会导致播放状态判断失效

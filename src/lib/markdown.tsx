@@ -9,6 +9,7 @@ import { remarkCallouts } from './remark-callouts'
 import { rehypeKeepCssVars } from './rehype-css-vars'
 import { rehypeHeadingIds } from './rehype-heading-ids'
 import { CodeBlock } from '@/components/code-block'
+import { HeadingWithAnchor } from '@/components/heading-anchor'
 
 /*
  * Markdown 渲染管线（AGENTS.md 内容与渲染纪律）：
@@ -53,6 +54,16 @@ function makeStyled<T extends 'pre' | 'code' | 'span' | 'mark'>(Tag: T) {
 
 // remark-directive 自定义块（:::note 等）→ 组件映射；`node` 是 react-markdown 注入的 hast 节点，不下传 DOM
 const components = {
+  h2: ({ node: _node, id, children, ...rest }: ComponentProps<'h2'> & { node?: unknown }) => (
+    <HeadingWithAnchor as="h2" id={id} {...rest}>
+      {children}
+    </HeadingWithAnchor>
+  ),
+  h3: ({ node: _node, id, children, ...rest }: ComponentProps<'h3'> & { node?: unknown }) => (
+    <HeadingWithAnchor as="h3" id={id} {...rest}>
+      {children}
+    </HeadingWithAnchor>
+  ),
   note: ({ node: _node, ...rest }: ComponentProps<'aside'> & { node?: unknown }) => (
     <aside data-callout="note" {...rest} />
   ),

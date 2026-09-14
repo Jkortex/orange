@@ -58,6 +58,22 @@ describe('BackButton 动态返回组件', () => {
       expect(link.getAttribute('href')).toBe('/')
     })
   })
+
+  it('当文章页（fallbackHref="/posts"）遇到来源为 /skills 时，不跨类型跳到技能，保持「文章列表」', async () => {
+    Object.defineProperty(document, 'referrer', {
+      value: 'http://localhost/skills',
+      configurable: true,
+    })
+
+    render(<BackButton fallbackHref="/posts" fallbackLabel="文章列表" />)
+
+    await waitFor(() => {
+      const link = screen.getByRole('link', { name: /文章列表/ })
+      expect(link.getAttribute('href')).toBe('/posts')
+    })
+    expect(screen.queryByRole('link', { name: /技能列表/ })).toBeNull()
+  })
 })
+
 
 

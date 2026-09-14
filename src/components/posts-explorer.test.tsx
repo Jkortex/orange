@@ -98,3 +98,50 @@ describe('PostsExplorer 异常渲染', () => {
     expect(screen.getByRole('link', { name: '无分类文章' })).toBeTruthy()
   })
 })
+
+describe('PostsExplorer 分批加载与侧栏交互', () => {
+  // 生成 25 篇文章
+  const manyPosts: PostItem[] = Array.from({ length: 25 }, (_, i) => ({
+    slug: `2026-01-${String(i + 1).padStart(2, '0')}-post-${i + 1}`,
+    title: `文章第 ${i + 1} 篇`,
+    date: `2026-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
+    category: i < 5 ? 'frontend' : 'backend',
+  }))
+
+  it('超过单批上限（15篇）时，初始仅渲染前 15 篇，并显示加载更多按钮', () => {
+    render(<PostsExplorer posts={manyPosts} />)
+
+    const links = screen.getAllByRole('link')
+    expect(links.length).toBe(15)
+    expect(screen.getByRole('button', { name: /加载更多/ })).toBeTruthy()
+  })
+
+  it('点击「加载更多」追加渲染后续文章，全部渲染后显示已到底部', () => {
+    render(<PostsExplorer posts={manyPosts} />)
+
+    const loadMoreBtn = screen.getByRole('button', { name: /加载更多/ })
+    fireEvent.click(loadMoreBtn)
+
+    const links = screen.getAllByRole('link')
+    expect(links.length).toBe(25)
+    expect(screen.queryByRole('button', { name: /加载更多/ })).toBeNull()
+    expect(screen.getByText(/已显示全部 25 篇文章/)).toBeTruthy()
+  })
+
+  it('切换分类时重置加载数量并筛选当前分类', () => {
+    render(<PostsExplorer posts={manyPosts} />)
+
+    // 切换到 backend（20 篇）
+    fireEvent.click(screen.getByRole('button', { name: 'backend 20' }))
+
+    const links = screen.getAllByRole('link')
+    expect(links.length).toBe(15)
+    expect(screen.getByRole('button', { name: /加载更多/ })).toBeTruthy()
+
+    // 切换到 frontend（5 篇，少于 15 篇）
+    fireEvent.click(screen.getByRole('button', { name: 'frontend 5' }))
+    expect(screen.getAllByRole('link').length).toBe(5)
+    expect(screen.queryByRole('button', { name: /加载更多/ })).toBeNull()
+  })
+})
+

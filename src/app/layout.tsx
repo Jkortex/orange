@@ -7,6 +7,11 @@ import { PlayerProvider } from '@/components/player-provider'
 import { PlayerBar } from '@/components/player-bar'
 import { BackToTop } from '@/components/back-to-top'
 import { SearchDialog } from '@/components/search-dialog'
+import { HotkeyHelpModal } from '@/components/hotkey-help-modal'
+import { RouteScrollReset } from '@/components/route-scroll-reset'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
+import { HeaderNav } from '@/components/header-nav'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -17,18 +22,22 @@ export const metadata: Metadata = {
 // 首帧前读取持久化的主题偏好（主题名 + 深浅色），防止闪烁；未设置时跟随系统
 const themeInitScript = `(function(){try{var t=localStorage.getItem('theme-name');if(t)document.documentElement.dataset.theme=t;var m=localStorage.getItem('theme-mode');var d=m?m==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})()`
 
-const navItems = [
-  { href: '/', label: '首页' },
-  { href: '/posts', label: '文章' },
-  { href: '/music', label: '音乐' },
-  { href: '/skills', label: '技能' },
-]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" data-theme="default" suppressHydrationWarning>
+    <html
+      lang="zh-CN"
+      data-theme="default"
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <link rel="preconnect" href="https://unpkg.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/harmonyos-sans-sc-webfont-splitted@1.1.0/dist/index.css"
+        />
       </head>
       <body className="flex min-h-dvh flex-col">
         {/* 全局播放状态 Provider：专辑卡/曲目列表经 usePlayer 入队，页面切换播放不中断（AGENTS.md 界面布局规范第 3 条）。
@@ -43,15 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Orange
               </Link>
               <div className="flex items-center justify-end gap-x-2.5 sm:gap-x-3">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="text-sm text-muted-foreground hover:text-foreground sm:text-base"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                <HeaderNav />
                 <SearchDialog />
                 <ThemeSelect className="hidden sm:inline-flex" />
                 <ThemeToggle />
@@ -62,6 +63,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="w-full flex-1 px-4 py-8 pb-16">{children}</main>
           <PlayerBar />
           <BackToTop />
+          <HotkeyHelpModal />
+          <RouteScrollReset />
         </PlayerProvider>
       </body>
     </html>

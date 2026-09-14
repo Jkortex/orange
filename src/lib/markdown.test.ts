@@ -11,7 +11,9 @@ describe('MarkdownRenderer 正常渲染', () => {
   it('渲染标题与段落（标题带与目录一致的锚点 id）', async () => {
     const html = await renderToHtml('## 二级标题\n\n段落文本')
 
-    expect(html).toContain('<h2 id="二级标题">二级标题</h2>')
+    expect(html).toContain('id="二级标题"')
+    expect(html).toContain('二级标题')
+    expect(html).toContain('aria-label="复制标题链接"')
     expect(html).toContain('<p>段落文本</p>')
   })
 

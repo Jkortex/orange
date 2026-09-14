@@ -21,3 +21,14 @@
 - dev worker 农场死亡排查（用户报"点击 skill 一直编译"）：先复现拿到 500（Jest worker child exceptions）而非真循环编译；对照实验 `/tags/testing`（无 Shiki 普通页）同 500 → 非 skill 特有；生产构建绿 → 非内容问题；结论是 dev 静态预渲染 worker 全局已死、缓存页 200 掩盖了故障。重启 dev 后 skill/tags 均 200。教训：① EPIPE 日志风暴是结果不是原因，9MB 日志无首错时别在日志里刨；② "缓存正常 + 新鲜路由全灭" 就是农场死亡特征，先做新路由对照再二分代码；③ 实验性改动（附属降级渲染）及时用备份恢复，保持工作树干净；④ 用户常驻的 dev 进程动手前先确认归属（PID/端口）。
 
 - 顶栏与技能侧边栏轮：技能进导航（4 链接）；顶栏改全宽 between（品牌左、工具右，不随内容收窄），窄屏右侧组换行不断功能；技能详情改文档式双栏（目录 aside、桌面 sticky、窄屏叠上）。180 测试全绿 + 17 页构建。教训：layout 层至今零测试，顶栏改动只能靠构建 + 人眼，真机/肉眼验收不可省；双栏宽度直接复用文章页 5xl 档，未发明新宽度。
+
+- Keep 优质特性迁移与工程知识库导入轮：完成 4 个阶段迁移（移动端 TOC 抽屉 + 标题锚点复制 + 滚动无障碍 + 相关推荐与上下篇 + TanStack Hotkeys 驱动的命令面板与帮助弹窗 + 64 篇 Keep 软件工程原则/定律知识库迁移）。30 测试套件、221 项测试全绿 + 261 页静态构建与 Pagefind 索引生成通过。做得好的：① TanStack Hotkeys 成功在 React 19 下通过序列按键（g c / g a / g s / g h）与快捷键平替原有底层 DOM 监听；② 迁移知识库时严格遵循 zod schema，利用 Node 脚本清洗重复 H1 并标准化 category 与 slug，零手动搬运差错；③ 发现 60+ 篇文章并发渲染导致测试超时后，迅速识别根本原因，在 content.ts 为 getCollection 引入内存缓存，测试耗时从 5000ms+ 骤降至 200ms。可改善：TanStack Hotkeys 强类型对按键字符区分大小写（单字母必须大写如 'G', 'C'），提前查阅类型定义可避免一次编译类型错误。
+
+- 长列表体验与侧栏吸顶轮：针对 66+ 篇文章的长列表交互，评估否决虚拟列表方案（避免破坏浏览器原生 Ctrl+F 与无障碍），采用 Incremental Loading（首屏 15 篇 + IntersectionObserver 触底自动追加 + 兜底按钮）兼顾 DOM 极致轻量与原地查找能力；重构 PostsExplorer 与 SkillsExplorer，桌面端左侧分类栏升级为 `sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto` 独立吸顶自滚动，移动端分类栏升级为 `sticky top-14` 横向吸顶胶囊栏（下滚浏览时随时可切换分类）。30 测试套件、224 项测试全绿 + 261 页构建与 Pagefind 索引生成通过。做得好的：严格遵循 TDD 红绿循环，针对分页初始切片、点击追加、分类切换重置分别编写完整单元测试，并保持全语义 Token；可改善：移动端吸顶分类栏横向滚动条在部分 Webkit 下默认可见，通过 scrollbar-none/样式微调进一步消除了多余滚动条视觉干扰。
+
+- 顶栏路由激活、返回隔离与中英文字体升级轮：① 顶栏导航升级客户端组件 HeaderNav，联动当前路由自动显示高亮激活态（`aria-current="page"` 与 `text-primary`）；② 修复 BackButton 跨集合穿透 bug，增加集合隔离测试与校验守卫，杜绝从 /skills 来源污染文章返回路径；③ 引入 Vercel `geist` 离线字体体系（GeistSans 西文现代几何无衬线 + GeistMono 编程等宽代码字体，零外部网络依赖，构建期自托管）与现代中文系统字体栈（苹方/思源黑体/微软雅黑/霞鹜文楷/冬青黑体），优化 CJK 混排断行（`text-wrap: pretty`）与行高节奏（`leading: 1.85`）。31 测试套件、229 项测试全绿 + 261 页构建与 Pagefind 索引生成通过。做得好的：安装字体包时敏锐察觉 npm 全局索引较慢，及时切换回与 lockfile 一致的 pnpm（3.6s 瞬间完成），保证工具链一致性；可改善：中西文混排还可结合 CSS 标点挤压与字符间距进一步打磨。
+
+- 路由滚动复位与 HarmonyOS Sans 线上切片接入轮：针对底部切文章时因全局 smooth-scroll 打断导致滚动未到顶、标题被 sticky header 遮挡的真机体验 bug，移除根级全局强制 smooth，开发并挂载 RouteScrollReset 客户端监听组件（TDD 2 用例），并在 AdjacentNav 添加 instant 点击复位；同时接入 HarmonyOS Sans SC 线上全字重 Unicode 切片 WebFont。32 测试套件、231 项测试全绿 + 261 页静态构建通过。教训：RelatedEntries 为服务端组件，Link 属性不得混入客户端事件函数 onClick，软导航由顶层 RouteScrollReset 统一收敛即可。
+
+
+

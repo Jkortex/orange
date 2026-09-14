@@ -1,0 +1,91 @@
+'use client'
+
+import { useRef } from 'react'
+import Link from 'next/link'
+import { useHotkey } from '@tanstack/react-hotkeys'
+import type { CollectionType } from '@/lib/content'
+
+export interface AdjacentNavProps {
+  collection: CollectionType
+  prev: { title: string; slug: string } | null
+  next: { title: string; slug: string } | null
+  className?: string
+}
+
+export function AdjacentNav({ collection, prev, next, className = '' }: AdjacentNavProps) {
+  const prevRef = useRef<HTMLAnchorElement>(null)
+  const nextRef = useRef<HTMLAnchorElement>(null)
+
+  useHotkey('[', () => {
+    if (prevRef.current) {
+      prevRef.current.click()
+    }
+  })
+
+  useHotkey(']', () => {
+    if (nextRef.current) {
+      nextRef.current.click()
+    }
+  })
+
+  if (!prev && !next) return null
+
+  const handleNav = () => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
+  }
+
+  return (
+    <nav
+      aria-label="相邻文章"
+      className={`mt-12 grid grid-cols-1 gap-4 border-t border-border/80 pt-8 sm:grid-cols-2 not-prose ${className}`}
+    >
+      {prev ? (
+        <Link
+          ref={prevRef}
+          href={`/${collection}/${prev.slug}`}
+          onClick={handleNav}
+          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-md"
+        >
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+              <span>上一篇</span>
+            </span>
+            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/80">
+              [
+            </kbd>
+          </div>
+          <span className="mt-2 block font-medium text-foreground transition-colors group-hover:text-primary truncate">
+            {prev.title}
+          </span>
+        </Link>
+      ) : (
+        <div />
+      )}
+
+      {next ? (
+        <Link
+          ref={nextRef}
+          href={`/${collection}/${next.slug}`}
+          onClick={handleNav}
+          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 text-right shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-md sm:col-start-2"
+        >
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/80">
+              ]
+            </kbd>
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>下一篇</span>
+              <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+            </span>
+          </div>
+          <span className="mt-2 block font-medium text-foreground transition-colors group-hover:text-primary truncate">
+            {next.title}
+          </span>
+        </Link>
+      ) : null}
+    </nav>
+  )
+}

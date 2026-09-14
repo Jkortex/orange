@@ -105,21 +105,34 @@ function parseEntry<T extends CollectionType>(
   } as CollectionEntry<T>
 }
 
+const collectionCache = new Map<string, CollectionEntry<any>[]>()
+
+/** 清除内容缓存（用于测试动态重载） */
+export function clearContentCache(): void {
+  collectionCache.clear()
+}
+
 /** 读取一个内容集合，按日期倒序（新在前） */
 export function getCollection<T extends CollectionType>(
   type: T,
   options?: GetOptions,
 ): CollectionEntry<T>[] {
   const dir = resolveContentDir(type, options)
+  const cacheKey = `${type}:${dir}`
+  if (collectionCache.has(cacheKey)) {
+    return collectionCache.get(cacheKey) as CollectionEntry<T>[]
+  }
   if (!fs.existsSync(dir)) {
     throw new Error(`内容集合目录不存在：${dir}`)
   }
   const files = fs.readdirSync(dir).filter((file) => file.endsWith('.md'))
-  return files
+  const entries = files
     .map((file) =>
       parseEntry<T>(type, path.join(dir, file), fs.readFileSync(path.join(dir, file), 'utf8')),
     )
     .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  collectionCache.set(cacheKey, entries)
+  return entries
 }
 
 /** 读取单条内容；文件不存在或 slug 非法时抛错（页面层转 404） */
@@ -317,4 +330,52 @@ export function getSkillEntries(options?: GetOptions): CollectionEntry<'skills'>
       } as CollectionEntry<'skills'>
     })
     .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+}
+
+export type RelatedEntry = {
+  collection: CollectionType
+  slug: string
+  title: string
+  category?: string
+  date: Date
+  tags: string[]
+  score: number
+}
+
+/** 相关条目推荐：根据共同标签数计算相关分值，并支持同分类补充 */
+export function getRelatedEntries(
+  current: { type: CollectionType; slug: string; tags?: string[]; category?: string },
+  limit = 3,
+  options?: GetOptions,
+): RelatedEntry[] {
+  const currentTags = new Set(current.tags ?? [])
+  const candidates = getAllEntries(options).filter(
+    (e) => !(e.collection === current.type && e.slug === current.slug),
+  )
+
+  const scored: RelatedEntry[] = candidates
+    .map((e) => {
+      const eTags = e.data.tags ?? []
+      const sharedCount = eTags.filter((t) => currentTags.has(t)).length
+      let score = sharedCount
+      if (score === 0 && current.category && e.data.category === current.category) {
+        score = 0.5
+      }
+      return {
+        collection: e.collection,
+        slug: e.slug,
+        title: e.data.title,
+        category: e.data.category,
+        date: e.data.date,
+        tags: eTags,
+        score,
+      }
+    })
+    .filter((e) => e.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      return b.date.getTime() - a.date.getTime()
+    })
+
+  return scored.slice(0, limit)
 }

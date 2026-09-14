@@ -1,13 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getAdjacentEntries, getEntry, type CollectionEntry, type CollectionType } from '@/lib/content'
+import { getAdjacentEntries, getEntry, getRelatedEntries, type CollectionEntry, type CollectionType } from '@/lib/content'
 import { estimateReadingTime, formatDate } from '@/lib/format'
 import { MarkdownRenderer } from '@/lib/markdown'
 import { extractToc, shouldShowToc } from '@/lib/toc'
 import { Toc } from '@/components/toc'
+import { MobileTocDrawer } from '@/components/mobile-toc-drawer'
+import { A11yScrollable } from '@/components/a11y-scrollable'
 import { BackButton } from '@/components/back-button'
 import { ReadingProgress } from '@/components/reading-progress'
+import { AdjacentNav } from '@/components/adjacent-nav'
+import { RelatedEntries } from '@/components/related-entries'
+import { RecentTracker } from '@/components/recent-tracker'
 
 /*
  * 集合详情页共用视图（posts/life 结构一致，提炼复用）：
@@ -48,11 +53,24 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
       : { prev: null, next: null }
 
   const hasToc = headings.length > 0
+  // 相关文章推荐
+  const related = getRelatedEntries(
+    {
+      type: entry.collection,
+      slug: entry.slug,
+      tags: entry.data.tags,
+      category: entry.data.category,
+    },
+    3,
+  )
 
   return (
     <div className="w-full animate-in fade-in-50 duration-300">
       {/* 顶部滚动进度指示条 */}
       <ReadingProgress />
+
+      {/* 记录当前页面到最近访问列表 */}
+      <RecentTracker url={`/${entry.collection}/${entry.slug}`} title={entry.data.title} />
 
       {/* 顶部元信息：动态返回链接 + 标题与元数据，始终在 max-w-3xl mx-auto 中居中舒适对齐 */}
       <div className="mx-auto w-full max-w-3xl mb-8">
@@ -105,41 +123,10 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
             {/* 中间正文列：48rem (max-w-3xl)，阅读空间舒展，与上方的 Header 严丝合缝对齐 */}
             <article className="min-w-0 w-full max-w-3xl">
               <MarkdownRenderer>{entry.body}</MarkdownRenderer>
+              <A11yScrollable />
 
-              {(adjacent.prev || adjacent.next) && (
-                <nav aria-label="相邻文章" className="mt-14 grid grid-cols-1 gap-4 border-t border-border/80 pt-8 sm:grid-cols-2">
-                  {adjacent.prev ? (
-                    <Link
-                      href={`/posts/${adjacent.prev.slug}`}
-                      className="group rounded-xl border border-border/80 bg-card/60 p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
-                    >
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
-                        <span>上一篇</span>
-                      </span>
-                      <span className="mt-1.5 block font-medium group-hover:text-primary transition-colors truncate">
-                        {adjacent.prev.title}
-                      </span>
-                    </Link>
-                  ) : (
-                    <div />
-                  )}
-                  {adjacent.next ? (
-                    <Link
-                      href={`/posts/${adjacent.next.slug}`}
-                      className="group rounded-xl border border-border/80 bg-card/60 p-4 text-right shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md sm:col-start-2"
-                    >
-                      <span className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-                        <span>下一篇</span>
-                        <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-                      </span>
-                      <span className="mt-1.5 block font-medium group-hover:text-primary transition-colors truncate">
-                        {adjacent.next.title}
-                      </span>
-                    </Link>
-                  ) : null}
-                </nav>
-              )}
+              <RelatedEntries entries={related} />
+              <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
             </article>
 
             {/* 右侧 TOC 列：顶端与正文第一行完美平齐！高度被 grid stretch 自动拉伸，sticky 滚动常驻 */}
@@ -148,46 +135,18 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
                 <Toc headings={headings} />
               </div>
             </aside>
+
+            {/* 移动端目录抽屉 */}
+            <MobileTocDrawer headings={headings} />
           </div>
         </div>
       ) : (
         <article className="mx-auto w-full max-w-3xl">
           <MarkdownRenderer>{entry.body}</MarkdownRenderer>
+          <A11yScrollable />
 
-          {(adjacent.prev || adjacent.next) && (
-            <nav aria-label="相邻文章" className="mt-14 grid grid-cols-1 gap-4 border-t border-border/80 pt-8 sm:grid-cols-2">
-              {adjacent.prev ? (
-                <Link
-                  href={`/posts/${adjacent.prev.slug}`}
-                  className="group rounded-xl border border-border/80 bg-card/60 p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
-                >
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
-                    <span>上一篇</span>
-                  </span>
-                  <span className="mt-1.5 block font-medium group-hover:text-primary transition-colors truncate">
-                    {adjacent.prev.title}
-                  </span>
-                </Link>
-              ) : (
-                <div />
-              )}
-              {adjacent.next ? (
-                <Link
-                  href={`/posts/${adjacent.next.slug}`}
-                  className="group rounded-xl border border-border/80 bg-card/60 p-4 text-right shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md sm:col-start-2"
-                >
-                  <span className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-                    <span>下一篇</span>
-                    <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-                  </span>
-                  <span className="mt-1.5 block font-medium group-hover:text-primary transition-colors truncate">
-                    {adjacent.next.title}
-                  </span>
-                </Link>
-              ) : null}
-            </nav>
-          )}
+          <RelatedEntries entries={related} />
+          <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
         </article>
       )}
     </div>

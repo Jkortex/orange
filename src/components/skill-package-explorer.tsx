@@ -8,8 +8,10 @@ import type { SkillPackage } from '@/lib/content'
 import type { TocHeading } from '@/lib/toc'
 import { formatDate } from '@/lib/format'
 import { Toc } from './toc'
+import { MobileTocDrawer } from './mobile-toc-drawer'
 import { BackButton } from './back-button'
 import { ReadingProgress } from './reading-progress'
+import { RecentTracker } from './recent-tracker'
 
 export type RenderedSkillFile = {
   path: string
@@ -83,6 +85,9 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
   return (
     <article id="skill-top" className="w-full animate-in fade-in-50 duration-300">
       <ReadingProgress />
+
+      {/* 记录当前技能包到最近访问 */}
+      <RecentTracker url={`/skills/${pkg.slug}`} title={pkg.data.title} />
 
       {/* 顶部 Header 区块：动态返回链接与技能信息、下载按钮 */}
       <div className="mb-8">
@@ -286,6 +291,9 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             )}
           </div>
         </aside>
+
+        {/* 移动端目录抽屉 */}
+        <MobileTocDrawer headings={headings} />
       </div>
     </article>
   )
