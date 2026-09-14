@@ -38,15 +38,14 @@ describe('SkillPackageView 目录展示', () => {
     expect(html).toContain('1.0.0')
   })
 
-  it('头部显示文件 pills + 侧边栏列出全部文件并链到对应锚点', async () => {
+  it('侧边栏列出全部文件并包含技能导航与下载按钮', async () => {
     const html = await renderToHtml(makePackage())
 
-    // header 文件 pills
     expect(html).toContain('references/pitfalls.md')
     expect(html).toContain('templates/checklist.md')
-    // sidebar 文件列表
     expect(html).toContain('aria-label="技能导航"')
     expect(html).toContain('SKILL.md')
+    expect(html).toContain('下载技能包')
   })
 
   it('侧边栏含 heading TOC（目录）+ 文件列表两个分区', async () => {

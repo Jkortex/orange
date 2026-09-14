@@ -17,12 +17,19 @@ function makeEntry(body: string): CollectionEntry<'posts' | 'life'> {
   }
 }
 
-describe('EntryView 返回路径', () => {
+describe('EntryView 返回路径与元信息', () => {
   it('正文顶部有指向父级集合的文字返回（确定路由，非浏览器历史）', async () => {
     const html = await renderToHtml(makeEntry('正文'))
 
     expect(html).toContain('href="/posts"')
     expect(html).toContain('文章列表')
+  })
+
+  it('展示预估阅读时长与字数', async () => {
+    const html = await renderToHtml(makeEntry('这是包含若干汉字的文章内容。'))
+
+    expect(html).toContain('分钟阅读')
+    expect(html).toContain('字')
   })
 })
 

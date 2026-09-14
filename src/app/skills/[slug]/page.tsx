@@ -30,7 +30,7 @@ export default async function SkillPage({ params }: Params) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="mx-auto w-full max-w-7xl">
       <SkillPackageView pkg={pkg} />
     </div>
   )

@@ -5,6 +5,8 @@
 
 /* 语义 token → Tailwind 工具类映射（bg-background / text-foreground / border-border ...） */
 @theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -47,6 +49,7 @@
 
   html {
     color-scheme: light;
+    scroll-behavior: smooth;
   }
 
   html.dark {
@@ -56,32 +59,139 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 
-/* Shiki dual theme：代码高亮经 CSS 变量随主题切换，不做运行时重渲染 */
-html.dark .shiki,
-html.dark .shiki span {
-  color: var(--shiki-dark);
+/* Shiki dual theme 代码高亮：经 CSS 变量随主题无缝切换，零客户端 JS 运行时 */
+[data-rehype-pretty-code-figure] code span[style*='--shiki'],
+pre[data-theme] code span[style*='--shiki'],
+code[data-theme] span[style*='--shiki'] {
+  color: var(--shiki-light) !important;
 }
 
-/* 正文排版颜色对齐语义 token */
+html.dark [data-rehype-pretty-code-figure] code span[style*='--shiki'],
+html.dark pre[data-theme] code span[style*='--shiki'],
+html.dark code[data-theme] span[style*='--shiki'] {
+  color: var(--shiki-dark) !important;
+}
+
+/* 正文排版精细化增强：呼吸感节奏、高质感行内代码与引用块 */
 .prose {
+  max-width: none;
   --tw-prose-body: var(--foreground);
   --tw-prose-headings: var(--foreground);
   --tw-prose-lead: var(--muted-foreground);
   --tw-prose-links: var(--primary);
   --tw-prose-bold: var(--foreground);
   --tw-prose-counters: var(--muted-foreground);
-  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-bullets: var(--primary);
   --tw-prose-hr: var(--border);
   --tw-prose-quotes: var(--foreground);
   --tw-prose-quote-borders: var(--primary);
   --tw-prose-captions: var(--muted-foreground);
-  --tw-prose-code: var(--foreground);
+  --tw-prose-code: var(--primary);
   --tw-prose-pre-code: var(--foreground);
   --tw-prose-pre-bg: var(--muted);
   --tw-prose-th-borders: var(--border);
   --tw-prose-td-borders: var(--border);
 }
+
+.prose p {
+  line-height: 1.8;
+}
+
+.prose h2 {
+  letter-spacing: -0.015em;
+  margin-top: 2.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
+}
+
+.prose h3 {
+  letter-spacing: -0.01em;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+/* 移除 Tailwind 对 inline code 默认添加的反引号包裹，赋予精致胶囊底色 */
+.prose :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  font-weight: 500;
+  color: var(--primary);
+  background-color: color-mix(in oklab, var(--primary) 9%, var(--muted));
+  padding: 0.15em 0.42em;
+  border-radius: 0.375rem;
+  border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+  word-break: break-word;
+}
+.prose :not(pre) > code::before,
+.prose :not(pre) > code::after {
+  content: none !important;
+}
+
+/* 引用块卡片化与现代圆角微底色 */
+.prose blockquote {
+  font-style: normal;
+  font-weight: 400;
+  border-left: 3px solid var(--primary);
+  background-color: color-mix(in oklab, var(--primary) 4%, var(--muted));
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.85rem 1.25rem;
+  margin: 1.75rem 0;
+  color: var(--foreground);
+}
+.prose blockquote p:first-of-type::before,
+.prose blockquote p:last-of-type::after {
+  content: none !important;
+}
+
+/* 链接精致下划线与悬浮微过渡 */
+.prose a:not([class*='group']) {
+  color: var(--primary);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+  transition: all 0.15s ease-in-out;
+}
+.prose a:not([class*='group']):hover {
+  text-decoration-thickness: 2.25px;
+  opacity: 0.88;
+}
+
+/* 表格优雅圆角与隔行微条纹斑马线 */
+.prose table {
+  width: 100%;
+  margin: 2rem 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.prose thead {
+  background-color: var(--muted);
+}
+.prose thead th {
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.prose tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
+}
+.prose tbody tr:last-child td {
+  border-bottom: none;
+}
+.prose tbody tr:nth-child(even) {
+  background-color: color-mix(in oklab, var(--muted) 35%, transparent);
+}
+.prose tbody tr:hover {
+  background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+

@@ -8,6 +8,7 @@ import type { Components } from 'react-markdown'
 import { remarkCallouts } from './remark-callouts'
 import { rehypeKeepCssVars } from './rehype-css-vars'
 import { rehypeHeadingIds } from './rehype-heading-ids'
+import { CodeBlock } from '@/components/code-block'
 
 /*
  * Markdown 渲染管线（AGENTS.md 内容与渲染纪律）：
@@ -55,7 +56,9 @@ const components = {
   note: ({ node: _node, ...rest }: ComponentProps<'aside'> & { node?: unknown }) => (
     <aside data-callout="note" {...rest} />
   ),
-  pre: makeStyled('pre'),
+  pre: ({ node: _node, 'data-hast-style': style, ...rest }: StyledProps<'pre'>) => (
+    <CodeBlock {...rest} style={parseStyle(style)} />
+  ),
   code: makeStyled('code'),
   span: makeStyled('span'),
   mark: makeStyled('mark'),
@@ -64,7 +67,7 @@ const components = {
 /** 内容渲染入口：输入 markdown 原文，输出带语义 token 样式的 React 树 */
 export async function MarkdownRenderer({ children }: { children: string }) {
   return (
-    <div className="prose">
+    <div className="prose max-w-none w-full">
       <MarkdownAsync
         remarkPlugins={[remarkGfm, remarkDirective, remarkCallouts]}
         rehypePlugins={[

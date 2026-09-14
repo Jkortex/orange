@@ -17,7 +17,7 @@ const THEMES = [
   { id: 'catppuccin', label: 'Catppuccin' },
 ]
 
-export function ThemeSelect() {
+export function ThemeSelect({ className = '' }: { className?: string } = {}) {
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState('default')
 
@@ -44,7 +44,7 @@ export function ThemeSelect() {
         <button
           type="button"
           aria-label="选择主题"
-          className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
+          className={`flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-sm text-muted-foreground hover:text-foreground ${className}`}
         >
           {current.label}
           <ChevronDown className="size-3.5" aria-hidden />

@@ -17,9 +17,5 @@ export default async function PostPage({ params }: Params) {
   const { slug } = await params
   const entry = readEntry('posts', slug)
 
-  return (
-    <div className="mx-auto w-full max-w-2xl">
-      <EntryView entry={entry} />
-    </div>
-  )
+  return <EntryView entry={entry} />
 }

@@ -26,6 +26,7 @@ export function SearchDialog() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Result[] | null>(null) // null = 未搜索
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   // 竞态守卫：连按键盘时仅保留最后一次请求的结果
@@ -45,11 +46,15 @@ export function SearchDialog() {
 
   // 打开时聚焦输入框（Radix 默认聚焦首个可聚焦元素即输入框，此为双保险）
   useEffect(() => {
-    if (open) inputRef.current?.focus()
+    if (open) {
+      inputRef.current?.focus()
+      setSelectedIndex(-1)
+    }
   }, [open])
 
   async function handleInput(value: string) {
     setQuery(value)
+    setSelectedIndex(-1)
     const seq = ++seqRef.current
     if (!value.trim()) {
       setResults(null)
@@ -80,6 +85,22 @@ export function SearchDialog() {
       if (seq !== seqRef.current) return
       setResults(null)
       setError('搜索出错，请稍后再试。')
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!results || results.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
+    } else if (e.key === 'Enter' && selectedIndex >= 0 && results[selectedIndex]) {
+      e.preventDefault()
+      setOpen(false)
+      window.location.href = results[selectedIndex].url
     }
   }
 
@@ -114,6 +135,7 @@ export function SearchDialog() {
             type="search"
             value={query}
             onChange={(e) => handleInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="搜索文章、专辑…"
             aria-label="搜索关键词"
             className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -137,10 +159,15 @@ export function SearchDialog() {
             <p className="p-4 text-sm text-muted-foreground">没有找到相关内容。</p>
           ) : (
             <ul>
-              {results.map((r) => (
+              {results.map((r, i) => (
                 <li key={r.url}>
                   {/* 摘要为构建期本地索引生成的富文本（<mark> 高亮），内容源为自有文章，无第三方注入 */}
-                  <a href={r.url} className="block rounded-md p-3 transition-colors hover:bg-primary/10">
+                  <a
+                    href={r.url}
+                    className={`block rounded-md p-3 transition-colors ${
+                      selectedIndex === i ? 'bg-primary/15 ring-1 ring-primary/30' : 'hover:bg-primary/10'
+                    }`}
+                  >
                     <span className="block font-medium">{r.title}</span>
                     <span
                       className="mt-1 block text-sm text-muted-foreground [&>mark]:bg-primary/20 [&>mark]:text-foreground"
@@ -151,6 +178,10 @@ export function SearchDialog() {
               ))}
             </ul>
           )}
+        </div>
+        <div className="flex items-center justify-between border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+          <span>↑↓ 选择 · Enter 打开</span>
+          <span>ESC 关闭</span>
         </div>
       </DialogContent>
     </Dialog>

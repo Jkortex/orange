@@ -1,24 +1,84 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import type { TocHeading } from '@/lib/toc'
 
 /*
- * 文首锚点目录（docs/specs/ui-ux.md §2.6）：
- * - 纯服务端渲染的锚点导航，无客户端 JS；点击即浏览器原生锚点跳转
- * - 是否显示由调用方按 shouldShowToc 判定，本组件只负责呈现
+ * 文内目录：
+ * - 纯客户端响应式高亮当前阅读位置（IntersectionObserver）
+ * - 桌面端可在右侧 sticky 悬浮，移动端可嵌入在正文前
+ * - 激活项胶囊微底色 + 悬浮位移微动效，提升长文导航沉浸感
  */
 
-export function Toc({ headings }: { headings: TocHeading[] }) {
+export function Toc({ headings, className = '' }: { headings: TocHeading[]; className?: string }) {
+  const [activeId, setActiveId] = useState<string>('')
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined' || headings.length === 0) return
+
+    // 监听标题可见性，动态高亮当前小节
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id)
+            break
+          }
+        }
+      },
+      { rootMargin: '0px 0px -70% 0px' },
+    )
+
+    for (const heading of headings) {
+      const el = document.getElementById(heading.id)
+      if (el) observer.observe(el)
+    }
+
+    return () => observer.disconnect()
+  }, [headings])
+
   if (headings.length === 0) return null
 
+  function handleHeadingClick(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
+    e.preventDefault()
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' })
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        window.history.replaceState(null, '', `#${encodeURIComponent(id)}`)
+      }
+      setActiveId(id)
+    }
+  }
+
   return (
-    <nav aria-label="文章目录" className="mb-8 rounded-md border border-border bg-muted px-4 py-3">
-      <ol className="space-y-1.5 text-sm">
-        {headings.map((heading) => (
-          <li key={heading.id} className={heading.depth === 3 ? 'ml-4' : undefined}>
-            <a href={`#${heading.id}`} className="text-muted-foreground hover:text-foreground">
-              {heading.text}
-            </a>
-          </li>
-        ))}
+    <nav
+      aria-label="文章目录"
+      className={`rounded-xl border border-border/70 bg-card/60 p-3.5 shadow-xs backdrop-blur-sm ${className}`}
+    >
+      <div className="mb-2.5 flex items-center justify-between px-1">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">目录</p>
+        <span className="font-mono text-[10px] text-muted-foreground/70">{headings.length} 节</span>
+      </div>
+      <ol className="relative space-y-1 border-l border-border/50 pl-2.5 text-sm">
+        {headings.map((heading) => {
+          const isActive = activeId === heading.id
+          return (
+            <li key={heading.id} className={heading.depth === 3 ? 'ml-4' : undefined}>
+              <a
+                href={`#${heading.id}`}
+                onClick={(e) => handleHeadingClick(e, heading.id)}
+                className={`group flex items-center rounded-md px-2 py-1 text-xs transition-all duration-200 ${
+                  isActive
+                    ? 'bg-primary/12 font-medium text-primary shadow-2xs'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:translate-x-0.5'
+                }`}
+              >
+                <span className="truncate">{heading.text}</span>
+              </a>
+            </li>
+          )
+        })}
       </ol>
     </nav>
   )

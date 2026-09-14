@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from './content'
+import { getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from './content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
@@ -577,5 +577,26 @@ description: 红绿重构循环，测试先行。
   it('skills 未启用（无目录）时聚合为空，不报错', () => {
     expect(getSkillEntries({ contentDir })).toEqual([])
     expect(listSkillSlugs({ contentDir })).toEqual([])
+  })
+})
+
+describe('getAdjacentEntries 相邻条目', () => {
+  it('正确获取按日期排序的上一篇与下一篇', () => {
+    writeFixture('posts/2026-09-01-first.md', '---\ntitle: 第一篇\ndate: 2026-09-01\n---\n正文1')
+    writeFixture('posts/2026-09-02-second.md', '---\ntitle: 第二篇\ndate: 2026-09-02\n---\n正文2')
+    writeFixture('posts/2026-09-03-third.md', '---\ntitle: 第三篇\ndate: 2026-09-03\n---\n正文3')
+
+    // 集合倒序：third (09-03), second (09-02), first (09-01)
+    const secondAdj = getAdjacentEntries('posts', '2026-09-02-second', { contentDir })
+    expect(secondAdj.next?.slug).toBe('2026-09-03-third')
+    expect(secondAdj.prev?.slug).toBe('2026-09-01-first')
+
+    const newestAdj = getAdjacentEntries('posts', '2026-09-03-third', { contentDir })
+    expect(newestAdj.next).toBeNull()
+    expect(newestAdj.prev?.slug).toBe('2026-09-02-second')
+
+    const oldestAdj = getAdjacentEntries('posts', '2026-09-01-first', { contentDir })
+    expect(oldestAdj.next?.slug).toBe('2026-09-02-second')
+    expect(oldestAdj.prev).toBeNull()
   })
 })

@@ -136,6 +136,33 @@ export function getEntry<T extends CollectionType>(
   return parseEntry<T>(type, filePath, fs.readFileSync(filePath, 'utf8'))
 }
 
+export type AdjacentEntry = {
+  slug: string
+  title: string
+}
+
+export type AdjacentResult = {
+  prev: AdjacentEntry | null
+  next: AdjacentEntry | null
+}
+
+/** 获取指定条目在集合中的上一篇（更早）与下一篇（更新），集合按日期倒序 */
+export function getAdjacentEntries<T extends CollectionType>(
+  type: T,
+  slug: string,
+  options?: GetOptions,
+): AdjacentResult {
+  const entries = getCollection(type, options)
+  const index = entries.findIndex((e) => e.slug === slug)
+  if (index === -1) return { prev: null, next: null }
+  const newer = index > 0 ? entries[index - 1] : null
+  const older = index < entries.length - 1 ? entries[index + 1] : null
+  return {
+    next: newer ? { slug: newer.slug, title: newer.data.title } : null,
+    prev: older ? { slug: older.slug, title: older.data.title } : null,
+  }
+}
+
 /** 全类型聚合，按日期倒序（首页混合时间线 / 归档共用，AGENTS.md 界面布局规范第 6 条） */
 export function getAllEntries(options?: GetOptions): CollectionEntry<CollectionType>[] {
   const fileEntries = (Object.keys(collectionSchemas) as CollectionType[])

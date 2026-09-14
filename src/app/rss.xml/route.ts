@@ -1,4 +1,4 @@
-import { getCollection } from '@/lib/content'
+import { getAllEntries } from '@/lib/content'
 
 // RSS 全文输出：静态 Route Handler，构建时预渲染为 rss.xml（output: 'export' 兼容）
 export const dynamic = 'force-static'
@@ -16,15 +16,21 @@ function escapeXml(value: string) {
 }
 
 export function GET() {
-  const items = getCollection('posts')
-    .map((post) => {
-      const url = `${SITE_URL}/posts/${post.slug}`
+  // 聚合文章与技能包
+  const entries = getAllEntries().filter(
+    (e) => e.collection === 'posts' || e.collection === 'skills',
+  )
+
+  const items = entries
+    .map((entry) => {
+      const url = `${SITE_URL}/${entry.collection}/${entry.slug}`
+      const desc = entry.data.description ?? entry.body.slice(0, 300)
       return `    <item>
-      <title>${escapeXml(post.data.title)}</title>
+      <title>${escapeXml(entry.data.title)}</title>
       <link>${url}</link>
       <guid>${url}</guid>
-      <pubDate>${post.data.date.toUTCString()}</pubDate>
-      <description>${escapeXml(post.data.description ?? post.body)}</description>
+      <pubDate>${entry.data.date.toUTCString()}</pubDate>
+      <description><![CDATA[${desc}]]></description>
     </item>`
     })
     .join('\n')

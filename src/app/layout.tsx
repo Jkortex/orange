@@ -37,34 +37,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* 顶栏全宽两端对齐（docs/specs/ui-ux.md §1.2）：品牌居左、导航与工具居右，不随内容区收窄；
               窄屏右侧组换行、各项仍可达 */}
           <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-            <nav className="flex w-full items-center justify-between gap-2 px-4 py-4">
+            <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:py-4">
               <Link href="/" className="flex shrink-0 items-center gap-1.5 text-lg font-semibold hover:text-primary">
                 <Citrus className="size-5 text-primary" aria-hidden />
                 Orange
               </Link>
-              <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+              <div className="flex items-center justify-end gap-x-2.5 sm:gap-x-3">
                 {navItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-sm text-muted-foreground hover:text-foreground sm:text-base"
                   >
                     {item.label}
                   </Link>
                 ))}
                 <SearchDialog />
-                <ThemeSelect />
+                <ThemeSelect className="hidden sm:inline-flex" />
                 <ThemeToggle />
               </div>
             </nav>
           </header>
           {/* 宽度由各页面自持（文章页双栏 max-w-5xl，其余 max-w-2xl 居中），main 只管弹性与留白 */}
-          <main className="w-full flex-1 px-4 py-8">{children}</main>
-          <footer className="border-t border-border">
-            <div className="mx-auto w-full max-w-2xl px-4 py-6 text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Orange · 由 Next.js 与静态导出构建
-            </div>
-          </footer>
+          <main className="w-full flex-1 px-4 py-8 pb-16">{children}</main>
           <PlayerBar />
           <BackToTop />
         </PlayerProvider>

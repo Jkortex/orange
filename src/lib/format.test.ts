@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatTime } from './format'
+import { estimateReadingTime, formatDate, formatTime } from './format'
 
 describe('formatDate', () => {
   it('统一输出 YYYY-MM-DD', () => {
@@ -22,5 +22,20 @@ describe('formatTime 异常边界', () => {
     expect(formatTime(NaN)).toBe('--:--')
     expect(formatTime(Infinity)).toBe('--:--')
     expect(formatTime(-5)).toBe('--:--')
+  })
+})
+
+describe('estimateReadingTime', () => {
+  it('正确估算中文与英文混合文本的字数与用时', () => {
+    const text = '这是测试内容，包含若干中文汉字。'
+    const res = estimateReadingTime(text)
+    expect(res.words).toBeGreaterThan(10)
+    expect(res.minutes).toBe(1)
+  })
+
+  it('长文本正确递增分钟数', () => {
+    const longText = '汉字 '.repeat(400)
+    const res = estimateReadingTime(longText)
+    expect(res.minutes).toBeGreaterThanOrEqual(2)
   })
 })

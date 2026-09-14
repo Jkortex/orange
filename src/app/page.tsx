@@ -15,10 +15,17 @@ export default function HomePage() {
 
   return (
     <section className="mx-auto w-full max-w-2xl">
-      <h1 className="mb-6 flex items-center gap-2 text-2xl font-semibold">
-        <Newspaper className="size-6 text-primary" aria-hidden />
+      <div className="mb-10 space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">你好，这里是 Orange 🍊</h1>
+        <p className="text-muted-foreground">
+          记录编程技术、生活随想与音乐专辑的个人数字空间。
+        </p>
+      </div>
+
+      <h2 className="mb-6 flex items-center gap-2 text-xl font-semibold">
+        <Newspaper className="size-5 text-primary" aria-hidden />
         最近更新
-      </h1>
+      </h2>
       {entries.length === 0 ? (
         <p className="text-muted-foreground">还没有内容。</p>
       ) : (
@@ -33,6 +40,8 @@ export default function HomePage() {
                       <img
                         src={entry.data.cover}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="size-12 shrink-0 rounded-md border border-border object-cover"
                       />
                     )}
