@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractToc, shouldShowToc, slugifyHeading, TOC_MIN_HEADINGS } from './toc'
+import { extractToc, shouldShowToc, slugifyHeading, TOC_MIN_HEADINGS } from '@/lib/toc'
 
 // 目录提取：纯函数，输入 markdown 原文，输出与渲染管线一致的锚点 id
 //（slug 规则与 rehype 标题 id 插件同源，见 toc.ts）

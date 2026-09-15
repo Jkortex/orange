@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getCollection } from '@/lib/content'
-import { entryMetadata, readEntry, EntryView } from '@/lib/entry-view'
+import { entryMetadata, readEntry, EntryView } from '@/components/listing/entry-view'
 
 type Params = { params: Promise<{ slug: string }> }
 

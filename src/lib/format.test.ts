@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateReadingTime, formatDate, formatTime } from './format'
+import { estimateReadingTime, formatDate, formatTime } from '@/lib/format'
 
 describe('formatDate', () => {
   it('统一输出 YYYY-MM-DD', () => {

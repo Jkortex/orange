@@ -5,11 +5,11 @@ import remarkGfm from 'remark-gfm'
 import remarkDirective from 'remark-directive'
 import rehypePrettyCode from 'rehype-pretty-code'
 import type { Components } from 'react-markdown'
-import { remarkCallouts } from './remark-callouts'
-import { rehypeKeepCssVars } from './rehype-css-vars'
-import { rehypeHeadingIds } from './rehype-heading-ids'
-import { CodeBlock } from '@/components/code-block'
-import { HeadingWithAnchor } from '@/components/heading-anchor'
+import { remarkCallouts } from '@/lib/remark-callouts'
+import { rehypeKeepCssVars } from '@/lib/rehype-css-vars'
+import { rehypeHeadingIds } from '@/lib/rehype-heading-ids'
+import { CodeBlock } from '@/components/reading/code-block'
+import { HeadingWithAnchor } from '@/components/reading/heading-anchor'
 
 /*
  * Markdown 渲染管线（AGENTS.md 内容与渲染纪律）：

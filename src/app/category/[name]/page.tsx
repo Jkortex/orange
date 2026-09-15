@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getCategories, getEntriesByCategory } from '@/lib/content'
-import { TypeBadge } from '@/components/type-badge'
+import { TypeBadge } from '@/components/primitives/type-badge'
 import { formatDate } from '@/lib/format'
 
 type Params = { params: Promise<{ name: string }> }

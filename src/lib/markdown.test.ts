@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createElement as h } from 'react'
 import { renderServerComponent } from '@/components/test-utils/render-server'
-import { MarkdownRenderer } from './markdown'
+import { MarkdownRenderer } from '@/lib/markdown'
 
 async function renderToHtml(markdown: string) {
   return renderServerComponent(h(MarkdownRenderer, { children: markdown }))

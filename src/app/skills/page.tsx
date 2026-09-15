@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getSkillEntries } from '@/lib/content'
-import { SkillsExplorer, type SkillItem } from '@/components/skills-explorer'
+import { SkillsExplorer, type SkillItem } from '@/components/listing/skills-explorer'
 
 export const metadata: Metadata = { title: '技能' }
 
@@ -19,8 +19,13 @@ export default function SkillsPage() {
   }))
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <h1 className="mb-6 text-2xl font-semibold">技能</h1>
+    <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
+      <div className="mb-8 space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">技能</h1>
+        <p className="text-[15px] leading-relaxed text-muted-foreground">
+          可交互的开发技能包与工作流 · 按分类过滤，即时切换。
+        </p>
+      </div>
       <SkillsExplorer skills={skills} />
     </div>
   )

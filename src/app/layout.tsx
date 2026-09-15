@@ -1,17 +1,17 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Citrus } from 'lucide-react'
-import { ThemeSelect } from '@/components/theme-select'
-import { ThemeToggle } from '@/components/theme-toggle'
-import { PlayerProvider } from '@/components/player-provider'
-import { PlayerBar } from '@/components/player-bar'
-import { BackToTop } from '@/components/back-to-top'
-import { SearchDialog } from '@/components/search-dialog'
-import { HotkeyHelpModal } from '@/components/hotkey-help-modal'
-import { RouteScrollReset } from '@/components/route-scroll-reset'
+import { ThemeSelect } from '@/components/chrome/theme-select'
+import { ThemeToggle } from '@/components/chrome/theme-toggle'
+import { PlayerProvider } from '@/components/player/player-provider'
+import { PlayerBar } from '@/components/chrome/player-bar'
+import { BackToTop } from '@/components/chrome/back-to-top'
+import { SearchDialog } from '@/components/chrome/search-dialog'
+import { HotkeyHelpModal } from '@/components/chrome/hotkey-help-modal'
+import { RouteScrollReset } from '@/components/chrome/route-scroll-reset'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import { HeaderNav } from '@/components/header-nav'
+import { HeaderNav } from '@/components/chrome/header-nav'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -45,14 +45,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PlayerProvider>
           {/* 顶栏全宽两端对齐（docs/specs/ui-ux.md §1.2）：品牌居左、导航与工具居右，不随内容区收窄；
               窄屏右侧组换行、各项仍可达 */}
-          <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-            <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:py-4">
-              <Link href="/" className="flex shrink-0 items-center gap-1.5 text-lg font-semibold hover:text-primary">
-                <Citrus className="size-5 text-primary" aria-hidden />
+          <header className="sticky top-0 z-40 border-b border-border/60 bg-background/75 shadow-[0_1px_0_rgb(0_0_0/0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+            <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
+              <Link href="/" className="group flex shrink-0 items-center gap-2 text-[17px] font-semibold tracking-tight transition-colors hover:text-primary">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20 transition-transform duration-200 group-hover:scale-105">
+                  <Citrus className="size-4 text-primary" aria-hidden />
+                </span>
                 Orange
               </Link>
-              <div className="flex items-center justify-end gap-x-2.5 sm:gap-x-3">
+              <div className="flex items-center justify-end gap-x-1 sm:gap-x-2">
                 <HeaderNav />
+                <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/70 sm:inline-block" />
                 <SearchDialog />
                 <ThemeSelect className="hidden sm:inline-flex" />
                 <ThemeToggle />
@@ -60,7 +63,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </header>
           {/* 宽度由各页面自持（文章页双栏 max-w-5xl，其余 max-w-2xl 居中），main 只管弹性与留白 */}
-          <main className="w-full flex-1 px-4 py-8 pb-16">{children}</main>
+          <main className="w-full flex-1 px-4 py-10 sm:px-6 sm:py-12 pb-20">{children}</main>
+          <footer className="border-t border-border/60">
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <p className="flex items-center gap-1.5">
+                <Citrus className="size-4 text-primary/70" aria-hidden />
+                <span>
+                  Orange · 记录编程技术、生活随想与音乐
+                </span>
+              </p>
+              <nav aria-label="页脚" className="flex items-center gap-4 text-[13px]">
+                <Link href="/posts" className="transition-colors hover:text-foreground">文章</Link>
+                <Link href="/music" className="transition-colors hover:text-foreground">音乐</Link>
+                <Link href="/skills" className="transition-colors hover:text-foreground">技能</Link>
+                <span aria-hidden="true" className="h-3 w-px bg-border" />
+                <span className="tabular-nums">© {new Date().getFullYear()}</span>
+              </nav>
+            </div>
+            {/* 播放条悬浮覆盖页脚下缘时，此处留白保证 footer 内容始终可读（ui-ux.md §1.7） */}
+            <div className="h-[env(safe-area-inset-bottom)]" aria-hidden="true" />
+          </footer>
           <PlayerBar />
           <BackToTop />
           <HotkeyHelpModal />

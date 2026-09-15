@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getSkillPackage, listSkillSlugs } from '@/lib/content'
-import { SkillPackageView } from '@/components/skill-package-view'
+import { SkillPackageView } from '@/components/listing/skill-package-view'
 
 type Params = { params: Promise<{ slug: string }> }
 

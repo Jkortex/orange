@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getCollection } from '@/lib/content'
-import { PostsExplorer, type PostItem } from '@/components/posts-explorer'
+import { PostsExplorer, type PostItem } from '@/components/listing/posts-explorer'
 
 export const metadata: Metadata = { title: '文章' }
 
@@ -15,8 +15,13 @@ export default function PostsPage() {
   }))
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <h1 className="mb-6 text-2xl font-semibold">文章</h1>
+    <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
+      <div className="mb-8 space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">文章</h1>
+        <p className="text-[15px] leading-relaxed text-muted-foreground">
+          分类即过滤器 · 切换即时、无跳转，默认「最近」为全部倒序。
+        </p>
+      </div>
       <PostsExplorer posts={posts} />
     </div>
   )

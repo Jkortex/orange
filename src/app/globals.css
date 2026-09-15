@@ -38,6 +38,38 @@
     border-color: var(--border);
   }
 
+  /* 文本选中：品牌微底色，保持深浅主题可读 */
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+    color: var(--foreground);
+  }
+
+  /* 键盘焦点：统一可见焦点环（鼠标点击不受影响，:focus-visible 限定键盘） */
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--ring) 80%, transparent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* 细滚动条：页面级纵向 + 横向 chips 均收敛为低存在感样式 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--border) 90%, transparent) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--border) 90%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   /* 触摸设备（any-pointer: coarse，含 iPadOS 伪装桌面、匹配 hover:hover 的 Safari）禁用 hover 文字提示：
      iOS/iPadOS 对「:hover 改变内容可见性」的元素采用两段式 tap——首次 tap 只进 hover 态，
      第二次 tap 才派发 click，导致图标按钮「点了只显示提示、功能不执行」。
@@ -56,6 +88,13 @@
     color-scheme: dark;
   }
 
+  /* Tailwind v4 起 button 默认 cursor 为 default，全站交互元素统一指回 pointer；
+     禁用态保持默认箭头，避免暗示可点 */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
@@ -64,6 +103,29 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* 标题自动平衡换行，避免孤字与锯齿断行 */
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  /* 锚点跳转避让 sticky 顶栏 */
+  [id] {
+    scroll-margin-top: 5rem;
+  }
+
+  /* 图片默认质感：圆角 + 边框 + 懒载淡入由各组件控制，此处只定基调 */
+  article img {
+    border-radius: 0.75rem;
+  }
+}
+
+/* 横向分类栏隐藏滚动条（保留滚动能力，仅去视觉干扰） */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -106,6 +168,30 @@ html.dark code[data-theme] span[style*='--shiki'] {
 .prose p {
   line-height: 1.85;
   letter-spacing: 0.01em;
+}
+
+/* 正文图片：圆角边框微阴影，caption 居中弱化 */
+.prose img {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+.prose figure {
+  margin: 2rem 0;
+}
+.prose figcaption {
+  margin-top: 0.6rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+/* 分隔线：短居中细线，不再全宽生硬切割 */
+.prose hr {
+  margin: 2.5rem auto;
+  width: 6rem;
+  border-top-width: 2px;
+  border-color: color-mix(in oklab, var(--border) 80%, transparent);
 }
 
 .prose h2 {
@@ -197,5 +283,55 @@ html.dark code[data-theme] span[style*='--shiki'] {
 }
 .prose tbody tr:hover {
   background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+
+/* 明暗/主题切换过渡：
+ * 路径一（现代浏览器）：View Transitions 圆形扩散——旧页快照原位保留，
+ * 新页以右上（--theme-tx/--theme-ty，顶栏按钮处）为圆心展开，字全程可见；
+ * 路径二（退化）：.theme-transition 波形渐变，各元素按 --theme-delay 错开起步；
+ * 减少动态偏好由文件末尾全局兜底压为瞬时（helper 内亦直接同步切换） */
+::view-transition-old(root) {
+  animation: none;
+}
+
+::view-transition-new(root) {
+  /* both：终态保持到快照卸载，避免收尾弹回 circle(0) 闪一下 */
+  animation: theme-wipe 0.4s ease-out both;
+}
+
+@keyframes theme-wipe {
+  from {
+    clip-path: circle(0px at var(--theme-tx, 100vw) var(--theme-ty, 0px));
+  }
+  to {
+    /* --theme-r 由 helper 按圆心到最远角精确计算（+8px 冗余），比 150vmax 省光栅 */
+    clip-path: circle(var(--theme-r, 150vmax) at var(--theme-tx, 100vw) var(--theme-ty, 0px));
+  }
+}
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition:
+    background-color 0.38s ease,
+    color 0.38s ease,
+    border-color 0.38s ease,
+    fill 0.38s ease,
+    stroke 0.38s ease !important;
+  transition-delay: var(--theme-delay, 0ms) !important;
+}
+
+/* 减少动态偏好全局兜底（docs/specs/ui-ux.md §3.5/§4.7）：
+   入场动画与过渡降为瞬时，信息不依赖动效故零损失；
+   单个组件不再各自判断媒体查询，统一在此收敛 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 

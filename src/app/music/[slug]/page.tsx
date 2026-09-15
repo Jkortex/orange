@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Music } from 'lucide-react'
 import { getCollection } from '@/lib/content'
-import { entryMetadata, readEntry } from '@/lib/entry-view'
-import { AlbumTrackList } from '@/components/album-track-list'
+import { entryMetadata, readEntry } from '@/components/listing/entry-view'
+import { AlbumTrackList } from '@/components/player/album-track-list'
 
 type Params = { params: Promise<{ slug: string }> }
 

@@ -1,5 +1,5 @@
 import type { Element, Root, Text } from 'hast'
-import { slugifyHeading } from './toc'
+import { slugifyHeading } from '@/lib/toc'
 
 /*
  * 标题锚点 id（docs/specs/ui-ux.md §2.6 文首目录的跳转目标）：

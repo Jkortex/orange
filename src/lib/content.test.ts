@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { clearContentCache, getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getRelatedEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from './content'
+import { clearContentCache, getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getRelatedEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from '@/lib/content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
