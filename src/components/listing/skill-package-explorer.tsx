@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import JSZip from 'jszip'
 import { FileCode, FileText, File, Copy, Check, Download, Loader2 } from 'lucide-react'
 import type { SkillPackage } from '@/lib/content'
@@ -9,9 +8,11 @@ import type { TocHeading } from '@/lib/toc'
 import { formatDate } from '@/lib/format'
 import { Toc } from '@/components/reading/toc'
 import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
-import { BackButton } from '@/components/reading/back-button'
 import { ReadingProgress } from '@/components/reading/reading-progress'
 import { RecentTracker } from '@/components/chrome/recent-tracker'
+import { DetailHeader } from '@/components/listing/detail-header'
+import { useCopyText } from '@/components/primitives/use-copy-text'
+import { scrollToHeading } from '@/lib/scroll'
 
 export type RenderedSkillFile = {
   path: string
@@ -35,7 +36,7 @@ function getFileIcon(path: string) {
 
 export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplorerProps) {
   const [activePath, setActivePath] = useState<string>('SKILL.md')
-  const [copied, setCopied] = useState(false)
+  const { copied, copyText } = useCopyText(2000)
   const [downloading, setDownloading] = useState(false)
 
   const currentFile = renderedFiles.find((f) => f.path === activePath) ?? renderedFiles[0]
@@ -46,13 +47,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
   async function copyCurrentContent() {
     const text = currentFile?.path === 'SKILL.md' ? pkg.body : currentFile?.content
     if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // 剪贴板异常降级
-    }
+    await copyText(text)
   }
 
   async function handleDownloadZip() {
@@ -90,41 +85,27 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
       <RecentTracker url={`/skills/${pkg.slug}`} title={pkg.data.title} />
 
       {/* 顶部 Header 区块：动态返回链接与技能信息、下载按钮 */}
-      <div className="mb-8">
-        <BackButton fallbackHref="/" fallbackLabel="首页" className="mb-6" />
-
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-border/70 pb-6">
-          <div className="space-y-2.5">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{pkg.data.title}</h1>
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-muted-foreground">
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground font-medium">
-                {pkg.data.name}
-              </code>
-              {pkg.data.version !== undefined && <span className="font-mono text-xs">v{pkg.data.version}</span>}
+      <DetailHeader
+        backHref="/"
+        backLabel="首页"
+        title={pkg.data.title}
+        meta={
+          <>
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[13px] text-foreground font-medium">
+              {pkg.data.name}
+            </code>
+              {pkg.data.version !== undefined && <span className="font-mono text-[13px]">v{pkg.data.version}</span>}
               {pkg.data.author !== undefined && <span>· {pkg.data.author}</span>}
               <span>·</span>
-              <time dateTime={pkg.data.date.toISOString()} className="font-mono text-xs">
-                {formatDate(pkg.data.date)}
-              </time>
-              {pkg.data.tags.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 ml-1">
-                  {pkg.data.tags.map((tag) => (
-                    <Link
-                      key={tag}
-                      href={`/tags/${tag}`}
-                      className="inline-flex items-center rounded-md border border-border/60 bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                    >
-                      #{tag}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-            {pkg.data.description && (
-              <p className="text-sm text-muted-foreground/90 max-w-3xl leading-relaxed">{pkg.data.description}</p>
-            )}
-          </div>
-
+              <time dateTime={pkg.data.date.toISOString()} className="font-mono text-[13px]">
+              {formatDate(pkg.data.date)}
+            </time>
+          </>
+        }
+        tags={pkg.data.tags}
+        description={pkg.data.description}
+        divided
+        actions={
           <button
             type="button"
             onClick={handleDownloadZip}
@@ -139,8 +120,8 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             )}
             <span>{downloading ? '正在打包…' : '下载技能包 (.zip)'}</span>
           </button>
-        </header>
-      </div>
+        }
+      />
 
       {/* 核心工作区：三栏栅格从正文首行平齐起跑，左侧文件树 + 中间正文 + 右侧 TOC */}
       <div className="grid w-full gap-6 md:grid-cols-[13rem_minmax(0,1fr)] lg:grid-cols-[13rem_minmax(0,1fr)_13rem] md:gap-8">
@@ -153,16 +134,16 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             >
               {hasFiles && (
                 <div>
-                  <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    文件
-                  </p>
+                    <p className="mb-2 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      文件
+                    </p>
                   <ol className="space-y-1 text-sm">
                     {renderedFiles.map((file) => (
                       <li key={file.path}>
                         <button
                           type="button"
                           onClick={() => setActivePath(file.path)}
-                          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left font-mono text-xs transition-colors ${
+                          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left font-mono text-[13px] transition-colors ${
                             activePath === file.path
                               ? 'bg-primary/15 font-medium text-primary'
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -179,9 +160,9 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
               {/* 中等屏 (< lg) 下将当前目录也收在左侧导航内 */}
               {headings.length > 0 && (
                 <div className="lg:hidden border-t border-border pt-3">
-                  <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    目录
-                  </p>
+                    <p className="mb-2 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      目录
+                    </p>
                   <ol className="space-y-1.5 text-sm">
                     {headings.map((heading) => (
                       <li key={heading.id} className={heading.depth === 3 ? 'ml-3' : undefined}>
@@ -189,15 +170,9 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                           href={`#${heading.id}`}
                           onClick={(e) => {
                             e.preventDefault()
-                            const el = document.getElementById(heading.id)
-                            if (el) {
-                              el.scrollIntoView({ behavior: 'smooth' })
-                              if (typeof window !== 'undefined' && window.history?.replaceState) {
-                                window.history.replaceState(null, '', `#${encodeURIComponent(heading.id)}`)
-                              }
-                            }
+                            scrollToHeading(heading.id)
                           }}
-                          className="block truncate text-xs text-muted-foreground hover:text-foreground"
+                          className="block truncate text-[13px] text-muted-foreground hover:text-foreground"
                         >
                           {heading.text}
                         </a>
@@ -219,7 +194,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                 key={file.path}
                 type="button"
                 onClick={() => setActivePath(file.path)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-mono transition-colors ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-[13px] font-mono transition-colors ${
                   activePath === file.path
                     ? 'border-primary/50 bg-primary/10 text-primary font-medium'
                     : 'border-border bg-card text-muted-foreground hover:text-foreground'
@@ -232,7 +207,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
           </div>
 
           <div className="mb-5 flex items-center justify-between rounded-xl border border-border/70 bg-card/60 px-3.5 py-2.5 shadow-2xs backdrop-blur-sm">
-            <span className="flex items-center gap-2 font-mono text-xs font-medium text-foreground/80">
+            <span className="flex items-center gap-2 font-mono text-[13px] font-medium text-foreground/80">
               {getFileIcon(currentFile.path)}
               {currentFile.path}
             </span>
@@ -240,7 +215,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
               <button
                 type="button"
                 onClick={copyCurrentContent}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
               >
                 {copied ? (
                   <>
@@ -285,7 +260,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             {headings.length > 0 ? (
               <Toc headings={headings} />
             ) : (
-              <div className="rounded-md border border-border/50 bg-muted/20 p-4 text-center text-xs text-muted-foreground">
+              <div className="rounded-md border border-border/50 bg-muted/20 p-4 text-center text-[13px] text-muted-foreground">
                 本文档无子章节
               </div>
             )}

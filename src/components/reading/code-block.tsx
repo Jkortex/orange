@@ -1,23 +1,18 @@
 'use client'
 
-import { useRef, useState, type ComponentProps } from 'react'
+import { useRef, type ComponentProps } from 'react'
 import { Check, Copy } from 'lucide-react'
+import { useCopyText } from '@/components/primitives/use-copy-text'
 
 export function CodeBlock({ children, className = '', ...props }: ComponentProps<'pre'>) {
   const preRef = useRef<HTMLPreElement>(null)
-  const [copied, setCopied] = useState(false)
+  const { copied, copyText } = useCopyText(2000)
   const lang = (props as Record<string, unknown>)['data-language'] as string | undefined
 
   async function onCopy() {
     if (!preRef.current) return
     const text = preRef.current.innerText ?? preRef.current.textContent ?? ''
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // 剪贴板不可用时静默降级
-    }
+    await copyText(text)
   }
 
   return (
@@ -30,7 +25,7 @@ export function CodeBlock({ children, className = '', ...props }: ComponentProps
           <span className="size-2.5 rounded-full bg-emerald-400/80 dark:bg-emerald-500/60" />
         </div>
         {lang && (
-          <span className="font-mono text-[10px] font-medium tracking-wider text-muted-foreground/80 uppercase">
+          <span className="font-mono text-xs font-medium tracking-wider text-muted-foreground/80 uppercase">
             {lang}
           </span>
         )}

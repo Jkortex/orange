@@ -48,12 +48,12 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
           onClick={handleNav}
           className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-md"
         >
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-[13px] text-muted-foreground">
             <span className="flex items-center gap-1.5 font-medium">
               <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
               <span>上一篇</span>
             </span>
-            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/80">
+            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/80">
               [
             </kbd>
           </div>
@@ -72,8 +72,8 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
           onClick={handleNav}
           className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 text-right shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-md sm:col-start-2"
         >
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/80">
+          <div className="flex items-center justify-between text-[13px] text-muted-foreground">
+            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/80">
               ]
             </kbd>
             <span className="flex items-center gap-1.5 font-medium">

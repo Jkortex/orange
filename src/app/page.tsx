@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Newspaper } from 'lucide-react'
 import { getRecentEntries, type CollectionEntry, type CollectionType } from '@/lib/content'
 import { TypeBadge } from '@/components/primitives/type-badge'
+import { EmptyState } from '@/components/primitives/empty-state'
 import { formatDate } from '@/lib/format'
 
 // 类型守卫：泛型 union 无法按 collection 字面量自动窄化，显式收窄到音乐条目
@@ -16,7 +17,7 @@ export default function HomePage() {
   return (
     <section className="mx-auto w-full max-w-2xl animate-in fade-in-50 duration-300">
       <div className="mb-10 space-y-3">
-        <p className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-xs">
+        <p className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[13px] font-medium text-muted-foreground shadow-xs">
           <span className="relative flex size-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
             <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
@@ -36,10 +37,10 @@ export default function HomePage() {
           </span>
           最近更新
         </h2>
-        <span className="font-mono text-xs tabular-nums text-muted-foreground/70">{entries.length} 篇</span>
+        <span className="font-mono text-[13px] tabular-nums text-muted-foreground/70">{entries.length} 篇</span>
       </div>
       {entries.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-10 text-center text-sm text-muted-foreground">还没有内容。</p>
+        <EmptyState message="还没有内容。" />
       ) : (
         <ol className="divide-y divide-border/60 border-y border-border/60">
           {entries.map((entry) => (
@@ -77,7 +78,7 @@ export default function HomePage() {
                     >
                       {entry.data.title}
                     </Link>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                    <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                       <time dateTime={entry.data.date.toISOString()} className="tabular-nums">
                         {formatDate(entry.data.date)}
                       </time>

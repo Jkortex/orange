@@ -15,7 +15,7 @@ export function RelatedEntries({
 
   return (
     <section aria-label="相关推荐" className={`mt-12 not-prose ${className}`}>
-      <div className="mb-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="mb-4 flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
         <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         <span>相关推荐</span>
       </div>
@@ -33,7 +33,7 @@ export function RelatedEntries({
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <TypeBadge type={entry.collection} />
                   {entry.category && (
-                    <span className="font-mono text-[11px] text-muted-foreground/80 truncate">
+                    <span className="font-mono text-xs text-muted-foreground/80 truncate">
                       {entry.category}
                     </span>
                   )}
@@ -42,7 +42,7 @@ export function RelatedEntries({
                   {entry.title}
                 </h3>
               </div>
-              <div className="mt-3 text-[11px] text-muted-foreground/70">
+              <div className="mt-3 text-xs text-muted-foreground/70">
                 {formatDate(entry.date)}
               </div>
             </Link>

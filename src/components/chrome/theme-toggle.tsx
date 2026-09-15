@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Moon, Sun } from 'lucide-react'
-import { Tip } from '@/components/primitives/tip'
+import { IconButton } from '@/components/primitives/icon-button'
 import { animateThemeChange } from '@/lib/theme-transition'
 
 // 深浅色切换：html.dark 类 + localStorage 持久化，纯客户端实现（AGENTS.md UI 主题规范）
@@ -38,19 +38,16 @@ export function ThemeToggle() {
   const label = dark ? '切换到浅色' : '切换到深色'
 
   return (
-    <span className="group relative inline-flex">
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label={label}
-        className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95"
-      >
-        {/* key 随状态重挂图标，播放一次淡入缩放，表达明暗切换的即时反馈 */}
-        <span key={dark ? 'sun' : 'moon'} className="block animate-in fade-in-0 zoom-in-50 duration-200">
-          {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
-        </span>
-      </button>
-      <Tip className="right-0 top-full mt-1.5">{label}</Tip>
-    </span>
+    <IconButton
+      label={label}
+      onClick={toggle}
+      buttonClassName="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95"
+      tipClassName="right-0 top-full mt-1.5"
+    >
+      {/* key 随状态重挂图标，播放一次淡入缩放，表达明暗切换的即时反馈 */}
+      <span key={dark ? 'sun' : 'moon'} className="block animate-in fade-in-0 zoom-in-50 duration-200">
+        {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
+      </span>
+    </IconButton>
   )
 }

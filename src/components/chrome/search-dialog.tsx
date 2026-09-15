@@ -5,6 +5,8 @@ import { Search, X, Terminal, Tag, Hash, History, Sparkles } from 'lucide-react'
 import { useHotkey, useHotkeySequence } from '@tanstack/react-hotkeys'
 import { loadPagefind, type PagefindResultItem } from '@/lib/pagefind'
 import { animateThemeChange } from '@/lib/theme-transition'
+import { scrollToHeading } from '@/lib/scroll'
+import { IconButton } from '@/components/primitives/icon-button'
 import {
   Dialog,
   DialogContent,
@@ -82,6 +84,18 @@ export function SearchDialog() {
       inputRef.current?.focus()
       inputRef.current?.setSelectionRange(prefix.length, prefix.length)
     }, 0)
+  }
+
+  // 大纲跳转：居中滚动 + 目标 ring 高亮 2s（两处符号跳转共用）
+  function jumpToSymbol(id: string) {
+    if (!scrollToHeading(id, { block: 'center' })) return
+    const target = document.getElementById(id)
+    if (target) {
+      target.classList.add('ring-2', 'ring-primary/60', 'rounded', 'transition-all', 'duration-300')
+      setTimeout(() => {
+        target.classList.remove('ring-2', 'ring-primary/60', 'rounded', 'transition-all', 'duration-300')
+      }, 2000)
+    }
   }
 
   // Ctrl/Cmd+K 原生监听（双重保险保持已有测试 100% 兼容）
@@ -309,14 +323,7 @@ export function SearchDialog() {
       } else if (e.key === 'Enter' && selectedIndex >= 0 && filteredSymbols[selectedIndex]) {
         e.preventDefault()
         setOpen(false)
-        const target = document.getElementById(filteredSymbols[selectedIndex].id)
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          target.classList.add('ring-2', 'ring-primary/60', 'rounded', 'transition-all', 'duration-300')
-          setTimeout(() => {
-            target.classList.remove('ring-2', 'ring-primary/60', 'rounded', 'transition-all', 'duration-300')
-          }, 2000)
-        }
+        jumpToSymbol(filteredSymbols[selectedIndex].id)
       }
       return
     }
@@ -385,31 +392,30 @@ export function SearchDialog() {
           />
 
           {mode !== 'search' && (
-            <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[13px] font-medium text-primary">
               {mode === 'command' ? '命令模式' : mode === 'category' ? '分类模式' : '页内大纲'}
             </span>
           )}
 
-          <button
-            type="button"
-            aria-label="关闭搜索"
+          <IconButton
+            label="关闭搜索"
             onClick={() => setOpen(false)}
-            className={iconBtnClass}
+            buttonClassName="relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95"
+            tipClassName={tooltipPosition}
           >
             <X className="size-4" aria-hidden />
-            <Tip className={tooltipPosition}>关闭</Tip>
-          </button>
+          </IconButton>
         </div>
 
         {/* 模式切换快捷标签条 */}
-        <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-1.5 text-xs">
+        <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-1.5 text-[13px]">
           <button
             type="button"
             onClick={() => openWithPrefix('> ')}
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <span>&gt; 命令</span>
-            <kbd className="font-mono text-[10px] text-muted-foreground/70">g c</kbd>
+            <kbd className="font-mono text-xs text-muted-foreground/70">g c</kbd>
           </button>
           <button
             type="button"
@@ -417,7 +423,7 @@ export function SearchDialog() {
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <span>@ 分类</span>
-            <kbd className="font-mono text-[10px] text-muted-foreground/70">g a</kbd>
+            <kbd className="font-mono text-xs text-muted-foreground/70">g a</kbd>
           </button>
           <button
             type="button"
@@ -425,7 +431,7 @@ export function SearchDialog() {
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <span># 大纲</span>
-            <kbd className="font-mono text-[10px] text-muted-foreground/70">g s</kbd>
+            <kbd className="font-mono text-xs text-muted-foreground/70">g s</kbd>
           </button>
         </div>
 
@@ -451,10 +457,10 @@ export function SearchDialog() {
                     >
                       <div>
                         <span className="font-medium text-foreground">{c.title}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">{c.desc}</span>
+                        <span className="mt-0.5 block text-[13px] text-muted-foreground">{c.desc}</span>
                       </div>
                       {c.keys && (
-                        <kbd className="rounded border border-border bg-muted/70 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        <kbd className="rounded border border-border bg-muted/70 px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
                           {c.keys}
                         </kbd>
                       )}
@@ -499,14 +505,7 @@ export function SearchDialog() {
                       type="button"
                       onClick={() => {
                         setOpen(false)
-                        const target = document.getElementById(s.id)
-                        if (target) {
-                          target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                          target.classList.add('ring-2', 'ring-primary/60', 'rounded', 'transition-all', 'duration-300')
-                          setTimeout(() => {
-                            target.classList.remove('ring-2', 'ring-primary/60', 'rounded', 'transition-all', 'duration-300')
-                          }, 2000)
-                        }
+                        jumpToSymbol(s.id)
                       }}
                       className={`flex w-full items-center justify-between rounded-md p-2.5 text-left text-sm transition-colors ${
                         selectedIndex === i ? 'bg-primary/15 ring-1 ring-primary/30' : 'hover:bg-muted'
@@ -529,7 +528,7 @@ export function SearchDialog() {
             <div>
               {recentVisits.length > 0 && (
                 <div className="mb-3">
-                  <div className="mb-1.5 flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="mb-1.5 flex items-center gap-1.5 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <History className="size-3.5" aria-hidden />
                     <span>最近访问</span>
                   </div>
@@ -541,7 +540,7 @@ export function SearchDialog() {
                           className="flex items-center justify-between rounded-md p-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                           <span className="truncate">{r.title}</span>
-                          <span className="font-mono text-[11px] text-muted-foreground/60 truncate max-w-[120px]">
+                          <span className="font-mono text-xs text-muted-foreground/60 truncate max-w-[120px]">
                             {r.url}
                           </span>
                         </a>
@@ -577,7 +576,7 @@ export function SearchDialog() {
         </div>
 
         {/* 底栏快捷操作说明 */}
-        <div className="flex items-center justify-between border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-border px-3 py-1.5 text-[13px] text-muted-foreground">
           <span>↑↓ 选择 · Enter 打开</span>
           <span>ESC 关闭</span>
         </div>

@@ -82,6 +82,15 @@
 
   html {
     color-scheme: light;
+    /* 预留纵向滚动条槽位：内容长短页切换时居中容器不再左右横跳（文章 ↔ 技能） */
+    scrollbar-gutter: stable;
+  }
+
+  /* 不支持 scrollbar-gutter 的旧浏览器：常驻滚动条兜底，同样消除横跳 */
+  @supports not (scrollbar-gutter: stable) {
+    html {
+      overflow-y: scroll;
+    }
   }
 
   html.dark {

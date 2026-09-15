@@ -95,6 +95,12 @@ src/
 4. **`app/*.tsx` 预算 50 行**：超限即抽到 `components/`；`page.tsx` 出现 `useState` 即违规。
 5. **测试就近存放**：`foo.tsx` + `foo.test.tsx` 同目录，至少覆盖正常渲染 + 空/坏输入各一例。
 
+## 5.5 动效纪律（ui-ux.md §3.5/§4.7 的落点）
+
+1. 只做状态过渡类微动效（挂载入场、过滤切换、图标 swapped 反馈、悬浮/按压态），不做装饰性动画；时长三档：`150`（hover/按压）、`200`（图标/列表切换）、`300`（播放条/抽屉/页面入场）。
+2. 一律用 `tw-animate-css` 的 `animate-in …` 工具类，不手写 `@keyframes`（确需关键帧时先修订本文）。
+3. `prefers-reduced-motion` 由 `globals.css` 全局兜底，单个组件不再各自判断（平滑滚动这类 JS 行为仍在调用处判断，如 BackToTop）。
+
 ## 6. Server / Client 边界
 
 1. 默认 Server Component；仅确有交互（播放、过滤、对话框、快捷键、滚动监听）才加 `'use client'`。

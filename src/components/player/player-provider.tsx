@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 /*
  * 全局播放状态（AGENTS.md 界面布局规范第 3 条）：
@@ -264,4 +264,18 @@ export function useOptionalPlayer(): PlayerContextValue | null {
  */
 export function isQueueMatch(queue: PlayerTrack[], tracks: PlayerTrack[]): boolean {
   return queue.length === tracks.length && queue.every((track, i) => track.file === tracks[i].file)
+}
+
+/*
+ * 专辑队列装配（album-card / album-track-list 共用）：
+ * - 队列携带封面与艺术家，供全局播放条展示；引用稳定以支持「当前专辑」判断
+ * - 必须在条件返回之前调用（Hooks 顺序不得依赖 props）
+ */
+export function useAlbumQueue(tracks: PlayerTrack[], cover?: string, artist?: string) {
+  const { queue } = usePlayer()
+  const queueTracks = useMemo(
+    () => tracks.map((track) => ({ ...track, cover, artist })),
+    [tracks, cover, artist],
+  )
+  return { queueTracks, isAlbumMatch: isQueueMatch(queue, queueTracks) }
 }

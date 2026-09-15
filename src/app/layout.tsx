@@ -72,10 +72,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Orange · 记录编程技术、生活随想与音乐
                 </span>
               </p>
-              <nav aria-label="页脚" className="flex items-center gap-4 text-[13px]">
-                <Link href="/posts" className="transition-colors hover:text-foreground">文章</Link>
-                <Link href="/music" className="transition-colors hover:text-foreground">音乐</Link>
-                <Link href="/skills" className="transition-colors hover:text-foreground">技能</Link>
+              <nav aria-label="页脚" className="flex items-center gap-4 text-sm">
+                <Link href="/rss.xml" className="transition-colors hover:text-foreground">RSS</Link>
                 <span aria-hidden="true" className="h-3 w-px bg-border" />
                 <span className="tabular-nums">© {new Date().getFullYear()}</span>
               </nav>

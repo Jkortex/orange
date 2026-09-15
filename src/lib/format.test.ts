@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { estimateReadingTime, formatDate, formatTime } from '@/lib/format'
+import { estimateReadingTime, formatDate, formatDateISO, formatTime } from '@/lib/format'
 
 describe('formatDate', () => {
   it('统一输出 YYYY-MM-DD', () => {
     expect(formatDate(new Date('2026-09-05'))).toBe('2026-09-05')
     expect(formatDate(new Date('2026-01-02'))).toBe('2026-01-02')
+  })
+
+  it('formatDateISO 直接消费服务端内嵌的 ISO 字符串', () => {
+    expect(formatDateISO('2026-09-01T00:00:00.000Z')).toBe('2026-09-01')
   })
 })
 

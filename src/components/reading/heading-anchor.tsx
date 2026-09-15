@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { Link as LinkIcon, Check } from 'lucide-react'
+import { useCopyText } from '@/components/primitives/use-copy-text'
 
 export interface HeadingWithAnchorProps extends React.HTMLAttributes<HTMLHeadingElement> {
   as: 'h2' | 'h3'
@@ -16,7 +16,7 @@ export function HeadingWithAnchor({
   className = '',
   ...props
 }: HeadingWithAnchorProps) {
-  const [copied, setCopied] = useState(false)
+  const { copied, copyText } = useCopyText(1500)
 
   if (!id) {
     return (
@@ -33,15 +33,10 @@ export function HeadingWithAnchor({
     if (!id) return
     const url = `${window.location.origin}${window.location.pathname}#${encodeURIComponent(id)}`
 
-    try {
-      await navigator.clipboard.writeText(url)
+    if (await copyText(url)) {
       if (window.history?.replaceState) {
         window.history.replaceState(null, '', `#${encodeURIComponent(id)}`)
       }
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // 降级静默忽略
     }
   }
 

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { List, X } from 'lucide-react'
 import type { TocHeading } from '@/lib/toc'
+import { scrollToHeading } from '@/lib/scroll'
 
 export function MobileTocDrawer({
   headings,
@@ -17,13 +18,7 @@ export function MobileTocDrawer({
 
   function handleHeadingClick(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
     e.preventDefault()
-    const el = document.getElementById(id)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' })
-      if (typeof window !== 'undefined' && window.history?.replaceState) {
-        window.history.replaceState(null, '', `#${encodeURIComponent(id)}`)
-      }
-    }
+    scrollToHeading(id)
     setIsOpen(false)
   }
 
@@ -57,7 +52,7 @@ export function MobileTocDrawer({
               <div className="flex items-center gap-2">
                 <List className="h-4 w-4 text-primary" aria-hidden="true" />
                 <h2 className="text-base font-semibold text-foreground">文章目录</h2>
-                <span className="font-mono text-xs text-muted-foreground">({headings.length} 节)</span>
+                <span className="font-mono text-[13px] text-muted-foreground">({headings.length} 节)</span>
               </div>
               <button
                 type="button"
@@ -77,7 +72,7 @@ export function MobileTocDrawer({
                   href={`#${heading.id}`}
                   onClick={(e) => handleHeadingClick(e, heading.id)}
                   className={`block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:bg-primary/10 ${
-                    heading.depth === 3 ? 'pl-7 text-xs' : 'font-medium'
+                    heading.depth === 3 ? 'pl-7 text-[13px]' : 'font-medium'
                   }`}
                 >
                   {heading.text}

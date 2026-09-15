@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { usePlayer } from '@/components/player/player-provider'
 import { Slider } from '@/components/ui/slider'
+import { IconButton } from '@/components/primitives/icon-button'
 import { Tip } from '@/components/primitives/tip'
 import { formatTime } from '@/lib/format'
 
@@ -61,10 +62,10 @@ export function PlayerBar() {
         )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium tracking-tight">{track.title}</p>
-          {track.artist && <p className="truncate text-xs text-muted-foreground">{track.artist}</p>}
+          {track.artist && <p className="truncate text-[13px] text-muted-foreground">{track.artist}</p>}
         </div>
         <div role="group" aria-label="播放进度" className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="hidden font-mono text-[11px] tabular-nums text-muted-foreground/80 sm:inline">
+          <span className="hidden font-mono text-xs tabular-nums text-muted-foreground/80 sm:inline">
             {formatTime(currentTime)}
           </span>
           <Slider
@@ -74,22 +75,18 @@ export function PlayerBar() {
             value={[finite ? Math.min(currentTime, duration) : 0]}
             onValueChange={([v]) => seekTo(v ?? 0)}
           />
-          <span className="hidden font-mono text-[11px] tabular-nums text-muted-foreground/80 sm:inline">
+          <span className="hidden font-mono text-xs tabular-nums text-muted-foreground/80 sm:inline">
             {formatTime(duration)}
           </span>
         </div>
         <div data-volume role="group" aria-label="音量" className="hidden shrink-0 items-center gap-1 md:flex">
-          <span className="group relative inline-flex">
-            <button
-              type="button"
-              aria-label={muteLabel}
-              onClick={toggleMute}
-              className="rounded-md p-2 text-muted-foreground hover:text-foreground"
-            >
-              <VolumeIcon className="size-5" aria-hidden />
-            </button>
-            <Tip className="bottom-full right-0 mb-1.5">{muteLabel}</Tip>
-          </span>
+          <IconButton
+            label={muteLabel}
+            onClick={toggleMute}
+            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
+          >
+            <VolumeIcon className="size-5" aria-hidden />
+          </IconButton>
           <Slider
             min={0}
             max={1}
@@ -100,17 +97,13 @@ export function PlayerBar() {
           />
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <span className="group relative inline-flex">
-            <button
-              type="button"
-              aria-label="上一首"
-              onClick={prev}
-              className="rounded-md p-2 text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="size-5" aria-hidden />
-            </button>
-            <Tip className="bottom-full right-0 mb-1.5">上一首</Tip>
-          </span>
+          <IconButton
+            label="上一首"
+            onClick={prev}
+            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="size-5" aria-hidden />
+          </IconButton>
           <span className="group relative inline-flex">
             <button
               type="button"
@@ -122,28 +115,20 @@ export function PlayerBar() {
             </button>
             <Tip className="bottom-full right-0 mb-1.5">{playLabel}</Tip>
           </span>
-          <span className="group relative inline-flex">
-            <button
-              type="button"
-              aria-label="下一首"
-              onClick={next}
-              className="rounded-md p-2 text-muted-foreground hover:text-foreground"
-            >
-              <ChevronRight className="size-5" aria-hidden />
-            </button>
-            <Tip className="bottom-full right-0 mb-1.5">下一首</Tip>
-          </span>
-          <span className="group relative inline-flex">
-            <button
-              type="button"
-              aria-label="关闭播放条"
-              onClick={clear}
-              className="rounded-md p-2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-5" aria-hidden />
-            </button>
-            <Tip className="bottom-full right-0 mb-1.5">关闭播放条</Tip>
-          </span>
+          <IconButton
+            label="下一首"
+            onClick={next}
+            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRight className="size-5" aria-hidden />
+          </IconButton>
+          <IconButton
+            label="关闭播放条"
+            onClick={clear}
+            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-5" aria-hidden />
+          </IconButton>
         </div>
       </div>
     </div>

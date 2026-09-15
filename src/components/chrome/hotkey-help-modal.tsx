@@ -88,8 +88,8 @@ export function HotkeyHelpModal() {
           ))}
         </div>
 
-        <div className="mt-5 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground/70">
-          按 <kbd className="rounded border border-border px-1 font-mono text-[10px]">Esc</kbd> 或点击外部关闭
+        <div className="mt-5 border-t border-border/60 pt-3 text-center text-[13px] text-muted-foreground/70">
+          按 <kbd className="rounded border border-border px-1 font-mono text-xs">Esc</kbd> 或点击外部关闭
         </div>
       </div>
     </div>

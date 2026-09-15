@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { TocHeading } from '@/lib/toc'
+import { scrollToHeading } from '@/lib/scroll'
 
 /*
  * 文内目录：
@@ -41,14 +42,8 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
 
   function handleHeadingClick(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
     e.preventDefault()
-    const el = document.getElementById(id)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' })
-      if (typeof window !== 'undefined' && window.history?.replaceState) {
-        window.history.replaceState(null, '', `#${encodeURIComponent(id)}`)
-      }
-      setActiveId(id)
-    }
+    // 滚动 + hash 同步收敛到 scrollToHeading；高亮态本地维护
+    if (scrollToHeading(id)) setActiveId(id)
   }
 
   return (
@@ -57,8 +52,8 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
       className={`rounded-xl border border-border/70 bg-card/60 p-3.5 shadow-xs backdrop-blur-sm ${className}`}
     >
       <div className="mb-2.5 flex items-center justify-between px-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">目录</p>
-        <span className="font-mono text-[10px] text-muted-foreground/70">{headings.length} 节</span>
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">目录</p>
+        <span className="font-mono text-xs text-muted-foreground/70">{headings.length} 节</span>
       </div>
       <ol className="relative space-y-1 border-l border-border/50 pl-2.5 text-sm">
         {headings.map((heading) => {
@@ -68,7 +63,7 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
               <a
                 href={`#${heading.id}`}
                 onClick={(e) => handleHeadingClick(e, heading.id)}
-                className={`group flex items-center rounded-md px-2 py-1 text-xs transition-all duration-200 ${
+                className={`group flex items-center rounded-md px-2 py-1.5 text-[13px] transition-all duration-200 ${
                   isActive
                     ? 'bg-primary/12 font-medium text-primary shadow-2xs'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:translate-x-0.5'

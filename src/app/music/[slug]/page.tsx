@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { Music } from 'lucide-react'
 import { getCollection } from '@/lib/content'
 import { entryMetadata, readEntry } from '@/components/listing/entry-view'
+import { BackButton } from '@/components/reading/back-button'
 import { AlbumTrackList } from '@/components/player/album-track-list'
 
 type Params = { params: Promise<{ slug: string }> }
@@ -24,9 +24,7 @@ export default async function MusicDetailPage({ params }: Params) {
 
   return (
     <article className="mx-auto w-full max-w-2xl">
-      <Link href="/music" className="mb-6 inline-block text-sm text-muted-foreground hover:text-primary">
-        ← 音乐
-      </Link>
+      <BackButton fallbackHref="/music" fallbackLabel="音乐" className="mb-6" />
       <header className="flex flex-col gap-6 sm:flex-row sm:items-end">
         <div className="w-40 sm:w-48">
           {cover ? (

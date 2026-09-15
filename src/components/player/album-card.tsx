@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
 import Link from 'next/link'
 import { Music, Pause, Play } from 'lucide-react'
-import { isQueueMatch, usePlayer, type PlayerTrack } from '@/components/player/player-provider'
+import { useAlbumQueue, usePlayer, type PlayerTrack } from '@/components/player/player-provider'
 import { Tip } from '@/components/primitives/tip'
 
 /*
@@ -24,14 +23,9 @@ export type AlbumCardProps = {
 }
 
 export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCardProps) {
-  const { queue, playing, playAlbum, toggle } = usePlayer()
-  // 队列携带封面与艺术家，供全局播放条展示
-  const queueTracks = useMemo(
-    () => tracks.map((track) => ({ ...track, cover, artist })),
-    [tracks, cover, artist],
-  )
-  // 内容比较（file 序列）而非引用比较：跨页面入队后仍能识别本专辑
-  const current = isQueueMatch(queue, queueTracks)
+  const { playing, playAlbum, toggle } = usePlayer()
+  // 队列装配与「当前专辑」判断收敛到 useAlbumQueue（内容比较，跨页面可比）
+  const { queueTracks, isAlbumMatch: current } = useAlbumQueue(tracks, cover, artist)
   const playingThis = current && playing
   const playLabel = playingThis ? `暂停专辑《${title}》` : `播放专辑《${title}》`
 
@@ -70,7 +64,7 @@ export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCar
           {title}
         </Link>
       </h2>
-      <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+      <p className="mt-0.5 truncate text-sm text-muted-foreground">
         {artist}
         {year !== undefined && <span className="tabular-nums"> · {year}</span>}
       </p>

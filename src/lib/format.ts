@@ -6,6 +6,11 @@ export function formatDate(date: Date) {
   return `${y}-${m}-${d}`
 }
 
+// 客户端条目惯例：服务端以 ISO 字符串内嵌日期，展示前转 Date（posts/skills-explorer 共用）
+export function formatDateISO(iso: string) {
+  return formatDate(new Date(iso))
+}
+
 // 播放时长格式：秒 → m:ss；时长未知（NaN/无限/负数）显示 --:--（规格 §5.3，不编造数字）
 export function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return '--:--'

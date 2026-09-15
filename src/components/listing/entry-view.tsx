@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getAdjacentEntries, getEntry, getRelatedEntries, type CollectionEntry, type CollectionType } from '@/lib/content'
 import { estimateReadingTime, formatDate } from '@/lib/format'
@@ -8,11 +7,11 @@ import { extractToc, shouldShowToc } from '@/lib/toc'
 import { Toc } from '@/components/reading/toc'
 import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
 import { A11yScrollable } from '@/components/primitives/a11y-scrollable'
-import { BackButton } from '@/components/reading/back-button'
 import { ReadingProgress } from '@/components/reading/reading-progress'
 import { AdjacentNav } from '@/components/reading/adjacent-nav'
 import { RelatedEntries } from '@/components/reading/related-entries'
 import { RecentTracker } from '@/components/chrome/recent-tracker'
+import { DetailHeader } from '@/components/listing/detail-header'
 
 /*
  * 集合详情页共用视图（posts/life 结构一致，提炼复用）：
@@ -74,32 +73,23 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
 
       {/* 顶部元信息：动态返回链接 + 标题与元数据，始终在 max-w-3xl mx-auto 中居中舒适对齐 */}
       <div className="mx-auto w-full max-w-3xl mb-8">
-        <BackButton fallbackHref={fallback.href} fallbackLabel={fallback.label} className="mb-6" />
-        <header className="mb-8">
-          <h1 className="text-balance text-3xl font-bold leading-[1.2] tracking-tight sm:text-4xl sm:leading-[1.15]">{entry.data.title}</h1>
-          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-            <time dateTime={entry.data.date.toISOString()} className="font-mono text-xs tabular-nums">
-              {formatDate(entry.data.date)}
-            </time>
-            {words > 0 && (
-              <span className="text-[13px]">· 约 {minutes} 分钟阅读 · {words} 字</span>
-            )}
-            {entry.data.tags.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {entry.data.tags.map((tag) => (
-                  <Link
-                    key={tag}
-                    href={`/tags/${tag}`}
-                    className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-xs text-muted-foreground transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:text-primary"
-                  >
-                    #{tag}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-          <div aria-hidden="true" className="mt-6 h-px bg-gradient-to-r from-border via-border/40 to-transparent" />
-        </header>
+        <DetailHeader
+          backHref={fallback.href}
+          backLabel={fallback.label}
+          title={entry.data.title}
+          meta={
+            <>
+              <time dateTime={entry.data.date.toISOString()} className="font-mono text-[13px] tabular-nums">
+                {formatDate(entry.data.date)}
+              </time>
+              {words > 0 && (
+                <span className="text-sm">· 约 {minutes} 分钟阅读 · {words} 字</span>
+              )}
+            </>
+          }
+          tags={entry.data.tags}
+        />
+        <div aria-hidden="true" className="mt-6 h-px bg-gradient-to-r from-border via-border/40 to-transparent" />
 
         {/* 窄屏/笔记本下正文前轻量折叠式目录 (< xl) */}
         {hasToc && (
