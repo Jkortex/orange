@@ -10,8 +10,6 @@ tags:
 category: css
 description: ':has() 是 CSS 的关系型伪类选择器，可基于子元素选择父元素、基于后续兄弟选择前序兄弟，打破 CSS 单向选择限制。'
 ---
-import CodeDemo from '../../../components/CodeDemo.astro';
-import './has-selector.css';
 
 ## 概述
 
@@ -44,7 +42,10 @@ import './has-selector.css';
 
 最常见的场景：根据子元素的有无来设置父元素样式。以下卡片有的带标题（`figcaption`），有的不带，`:has()` 自动区分。
 
+:::demo[案例一：父选择器（基础）]
 
+```html
+<div class="card-container">
   <figure class="cd-card">
     <img src="https://picsum.photos/300/180?random=1" alt="thumbnail" />
   </figure>
@@ -56,23 +57,37 @@ import './has-selector.css';
     <img src="https://picsum.photos/300/180?random=3" alt="thumbnail" />
     <figcaption>CSS Parent Selector</figcaption>
   </figure>
-</div>`,
-    },
-    {
-      name: 'style.css',
-      code: `.cd-card {
+</div>
+```
+
+```css
+.card-container {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cd-card {
   display: flex;
   flex-direction: row;
   border-radius: 10px;
   max-width: 280px;
   background: #f5f5f5;
   overflow: hidden;
+  margin: 0;
 }
 
 .cd-card img {
   width: 120px;
   aspect-ratio: 1;
   object-fit: cover;
+}
+
+.cd-card figcaption {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
 }
 
 .cd-card:has(figcaption) {
@@ -84,24 +99,10 @@ import './has-selector.css';
 .cd-card:has(figcaption) img {
   width: 100%;
   aspect-ratio: 16 / 9;
-}`,
-    },
-  ]}
->
-  <div class="card-container">
-    <figure class="cd-card">
-      <img src="https://picsum.photos/300/180?random=1" alt="thumbnail" />
-    </figure>
-    <figure class="cd-card">
-      <img src="https://picsum.photos/300/180?random=2" alt="thumbnail" />
-      <figcaption>Modern CSS: :has()</figcaption>
-    </figure>
-    <figure class="cd-card">
-      <img src="https://picsum.photos/300/180?random=3" alt="thumbnail" />
-      <figcaption>CSS Parent Selector</figcaption>
-    </figure>
-  </div>
+}
+```
 
+:::
 
 没有 `:has()` 时，需要给带标题的卡片额外添加一个类名（如 `.card--has-title`），通过 JS 或后端控制。`:has()` 让 CSS 自己检测内容结构，自动应用样式——像 `if` 条件一样智能。
 
@@ -111,22 +112,37 @@ import './has-selector.css';
 
 这是 `:has()` 最革命性的能力——**选择前面的兄弟元素**。在过去，纯 CSS 无法做到。
 
+:::demo[案例二：前序兄弟选择器]
 
+```html
+<ul class="sibling-list">
   <li>HTML</li>
   <li>CSS</li>
   <li>JavaScript</li>
   <li>React</li>
   <li>Vue</li>
-</ul>`,
-    },
-    {
-      name: 'style.css',
-      code: `.sibling-list li {
+</ul>
+```
+
+```css
+.sibling-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 240px;
+}
+
+.sibling-list li {
   padding: 10px 16px;
   border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   transition: all 0.25s ease;
+  cursor: pointer;
+  color: #334155;
 }
 
 .sibling-list li:has(~ li:hover) {
@@ -139,18 +155,10 @@ import './has-selector.css';
   border-color: #3b82f6;
   color: #1e40af;
   transform: translateX(4px);
-}`,
-    },
-  ]}
->
-  <ul class="sibling-list">
-    <li>HTML</li>
-    <li>CSS</li>
-    <li>JavaScript</li>
-    <li>React</li>
-    <li>Vue</li>
-  </ul>
+}
+```
 
+:::
 
 **原理**：`li:has(~ li:hover)` 检查当前 `li` 的后面是否有 hover 状态的兄弟。如果有，说明当前 `li` 是"前面的项"，于是变淡。
 
@@ -162,7 +170,10 @@ import './has-selector.css';
 
 `:has()` 可与表单伪类（`:focus`、`:valid`、`:invalid`、`:checked`）结合，实现纯 CSS 的表单交互——聚焦高亮、验证反馈、复选框联动按钮。
 
+:::demo[案例三：表单状态联动]
 
+```html
+<form class="demo-form" onsubmit="return false">
   <div class="form-field">
     <label>邮箱</label>
     <input type="email" placeholder="输入邮箱" required />
@@ -170,19 +181,54 @@ import './has-selector.css';
   </div>
   <div class="form-field">
     <label>密码（至少 6 位）</label>
-    <input type="text" pattern=".{6,}" placeholder="输入密码" required />
+    <input type="password" pattern=".{6,}" placeholder="输入密码" required />
     <span class="field-error">密码不能少于 6 位</span>
   </div>
   <label class="agree-field">
     <input type="checkbox" />
     <span>我已阅读并同意用户协议</span>
   </label>
-  <button class="demo-submit" type="submit" disabled>创建账号</button>
-</form>`,
-    },
-    {
-      name: 'style.css',
-      code: `.form-field:has(input:focus) {
+  <button class="demo-submit" type="submit">创建账号</button>
+</form>
+```
+
+```css
+.demo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 320px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.form-field label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.form-field input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+}
+
+.field-error {
+  display: none;
+  font-size: 11px;
+  color: #ef4444;
+}
+
+.form-field:has(input:focus) {
   border-color: #3b82f6;
   background: #f8faff;
 }
@@ -192,41 +238,44 @@ import './has-selector.css';
   background: #fef2f2;
 }
 
-.form-field:has(input:invalid:not(:placeholder-shown))
-  .field-error { display: block; }
+.form-field:has(input:invalid:not(:placeholder-shown)) .field-error {
+  display: block;
+}
 
 .form-field:has(input:valid:not(:placeholder-shown)) {
   border-color: #22c55e;
   background: #f0fdf4;
 }
 
-.demo-form:has(input[type="checkbox"]:checked)
-  .demo-submit {
+.agree-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+
+.demo-submit {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #cbd5e1;
+  color: #fff;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.demo-form:has(input[type="checkbox"]:checked) .demo-submit {
   background: #3b82f6;
   opacity: 1;
   cursor: pointer;
-}`,
-    },
-  ]}
->
-  <form class="demo-form" onsubmit="return false">
-    <div class="form-field">
-      <label>邮箱</label>
-      <input type="email" placeholder="输入邮箱" required />
-      <span class="field-error">请输入有效的邮箱地址</span>
-    </div>
-    <div class="form-field">
-      <label>密码（至少 6 位）</label>
-      <input type="text" pattern=".{6,}" placeholder="输入密码" required />
-      <span class="field-error">密码不能少于 6 位</span>
-    </div>
-    <label class="agree-field">
-      <input type="checkbox" />
-      <span>我已阅读并同意用户协议</span>
-    </label>
-    <button class="demo-submit" type="submit" disabled>创建账号</button>
-  </form>
+}
+```
 
+:::
 
 **试试**：在预览中点击输入框聚焦 → 输入无效值 → 勾选协议，观察 UI 的自动响应。整个交互逻辑完全由 CSS 驱动。
 
@@ -238,18 +287,53 @@ import './has-selector.css';
 
 与相邻兄弟组合器 `+` 结合，可以选中指定位置的前序兄弟元素。hover 蓝色圆圈试试：
 
+:::demo[选择前第 n 个兄弟]
 
+```html
+<div class="sibling-demo">
   <div class="sq-box">1</div>
   <div class="sq-box">2</div>
   <div class="sq-box">3</div>
   <div class="sq-circle">•</div>
   <div class="sq-box">5</div>
   <div class="sq-box">6</div>
-</div>`,
-    },
-    {
-      name: 'style.css',
-      code: `/* hover 圆圈时，它前面的方块变蓝色 */
+</div>
+```
+
+```css
+.sibling-demo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.sq-box, .sq-circle {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.sq-box {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.sq-circle {
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+/* hover 圆圈时，它前面的方块变蓝色 */
 .sq-box:has(+ .sq-circle:hover) {
   background: #2563eb;
   color: #fff;
@@ -261,19 +345,10 @@ import './has-selector.css';
   background: #7c3aed;
   color: #fff;
   transform: scale(1.1);
-}`,
-    },
-  ]}
->
-  <div class="sibling-demo">
-    <div class="sq-box">1</div>
-    <div class="sq-box">2</div>
-    <div class="sq-box">3</div>
-    <div class="sq-circle">•</div>
-    <div class="sq-box">5</div>
-    <div class="sq-box">6</div>
-  </div>
+}
+```
 
+:::
 
 ` .box:has(+ .circle) {} ` — 选择 `.circle` **前一个**兄弟（蓝色高亮）
 
@@ -287,7 +362,10 @@ import './has-selector.css';
 
 根据子元素数量动态设置父元素样式——纯 CSS 的响应式内容感知：
 
+:::demo[数量查询]
 
+```html
+<div class="qty-demo">
   <ul class="qty-list">
     <span class="qty-label">2 项</span>
     <li>Alpha</li>
@@ -312,14 +390,40 @@ import './has-selector.css';
     <li>Eta</li>
     <li>Theta</li>
   </ul>
-</div>`,
-    },
-    {
-      name: 'style.css',
-      code: `/* 默认样式 */
+</div>
+```
+
+```css
+.qty-demo {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .qty-list {
+  list-style: none;
+  padding: 12px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 110px;
   border: 3px solid #e2e8f0;
   border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.qty-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.qty-list li {
+  font-size: 13px;
+  color: #334155;
 }
 
 /* 至少 5 项 → 蓝色边框 */
@@ -332,37 +436,10 @@ import './has-selector.css';
 .qty-list:has(> :nth-child(8)) {
   border-color: #8b5cf6;
   background: #f5f3ff;
-}`,
-    },
-  ]}
->
-  <div class="qty-demo">
-    <ul class="qty-list">
-      <span class="qty-label">2 项</span>
-      <li>Alpha</li>
-      <li>Beta</li>
-    </ul>
-    <ul class="qty-list">
-      <span class="qty-label">5 项</span>
-      <li>Alpha</li>
-      <li>Beta</li>
-      <li>Gamma</li>
-      <li>Delta</li>
-      <li>Epsilon</li>
-    </ul>
-    <ul class="qty-list">
-      <span class="qty-label">8 项</span>
-      <li>Alpha</li>
-      <li>Beta</li>
-      <li>Gamma</li>
-      <li>Delta</li>
-      <li>Epsilon</li>
-      <li>Zeta</li>
-      <li>Eta</li>
-      <li>Theta</li>
-    </ul>
-  </div>
+}
+```
 
+:::
 
 关键选择器解析：
 
@@ -376,7 +453,10 @@ import './has-selector.css';
 
 与 `:not()` 组合，可以模拟 `:only-of-selector` 效果——仅当某选择器在兄弟中**唯一匹配**时才生效：
 
+:::demo[模拟 :only-of-selector]
 
+```html
+<div class="only-demo">
   <div class="only-group">
     <div class="only-item">A</div>
     <div class="only-item special">B</div>
@@ -391,37 +471,55 @@ import './has-selector.css';
     <div class="only-item">H</div>
     <span class="only-label">两个 .special → 都不高亮</span>
   </div>
-</div>`,
-    },
-    {
-      name: 'style.css',
-      code: `/* 仅当 .special 是兄弟中唯一匹配时生效 */
-.special:not(:has(~ .special))
-  :not(.special ~ *) {
+</div>
+```
+
+```css
+.only-demo {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.only-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.only-item {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #475569;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.only-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-left: 8px;
+}
+
+/* 仅当 .special 是兄弟中唯一匹配时生效 */
+.special:not(:has(~ .special)):not(.special ~ *) {
   background: #3b82f6;
   color: #fff;
   transform: scale(1.1);
-}`,
-    },
-  ]}
->
-  <div class="only-demo">
-    <div class="only-group">
-      <div class="only-item">A</div>
-      <div class="only-item special">B</div>
-      <div class="only-item">C</div>
-      <div class="only-item">D</div>
-      <span class="only-label">唯一 .special → 高亮</span>
-    </div>
-    <div class="only-group">
-      <div class="only-item special">E</div>
-      <div class="only-item">F</div>
-      <div class="only-item special">G</div>
-      <div class="only-item">H</div>
-      <span class="only-label">两个 .special → 都不高亮</span>
-    </div>
-  </div>
+}
+```
 
+:::
 
 选择器解析：
 
@@ -435,7 +533,10 @@ import './has-selector.css';
 
 `:has()` 是**严格选择器**——参数中的无效选择器会使整条规则失效。` :is() ` 和 ` :where() ` 是宽松的，包裹后可让无效选择器被忽略。此外，`:is()` **继承参数中最高权重**，而 `:where()` **权重始终为 0**：
 
+:::demo[与 :is() / :where() 结合]
 
+```html
+<div class="spec-demo">
   <div class="spec-card">
     <span class="spec-label">:is()</span>
     <p class="spec-text" id="spec-is">使用 :is(.any-class, #spec-is)<br/>继承 ID 权重 → 蓝色</p>
@@ -444,16 +545,41 @@ import './has-selector.css';
     <span class="spec-label">:where()</span>
     <p class="spec-text" id="spec-where">使用 :where(.any-class, #spec-where)<br/>权重降为 0 → 紫色</p>
   </div>
-</div>`,
-    },
-    {
-      name: 'style.css',
-      code: `/* :is() 继承参数中最高权重（#spec-is 的 ID 权重） */
+</div>
+```
+
+```css
+.spec-demo {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.spec-card {
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.spec-label {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.spec-text {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+}
+
+/* :is() 继承参数中最高权重（#spec-is 的 ID 权重） */
 .spec-card:has(:is(.any-class, #spec-is)) {
   border-color: #3b82f6;
 }
-.spec-card:has(:is(.any-class, #spec-is))
-  .spec-text {
+.spec-card:has(:is(.any-class, #spec-is)) .spec-text {
   color: #3b82f6;
   font-weight: 700;
 }
@@ -462,25 +588,13 @@ import './has-selector.css';
 .spec-card:has(:where(.any-class, #spec-where)) {
   border-color: #8b5cf6;
 }
-.spec-card:has(:where(.any-class, #spec-where))
-  .spec-text {
+.spec-card:has(:where(.any-class, #spec-where)) .spec-text {
   color: #8b5cf6;
   font-weight: 700;
-}`,
-    },
-  ]}
->
-  <div class="spec-demo">
-    <div class="spec-card">
-      <span class="spec-label">:is()</span>
-      <p class="spec-text" id="spec-is">使用 :is(.any-class, #spec-is)<br/>继承 ID 权重 → 蓝色</p>
-    </div>
-    <div class="spec-card">
-      <span class="spec-label">:where()</span>
-      <p class="spec-text" id="spec-where">使用 :where(.any-class, #spec-where)<br/>权重降为 0 → 紫色</p>
-    </div>
-  </div>
+}
+```
 
+:::
 
 关键区别：
 

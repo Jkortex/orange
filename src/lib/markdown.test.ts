@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createElement as h } from 'react'
 import { renderServerComponent } from '@/components/test-utils/render-server'
 import { MarkdownRenderer } from '@/lib/markdown'
+import { extractToc } from '@/lib/toc'
 
 async function renderToHtml(markdown: string) {
   return renderServerComponent(h(MarkdownRenderer, { children: markdown }))
@@ -31,6 +32,28 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('提示内容')
   })
 
+  it(':::demo 指令转换为 CodeDemo 组件与 iframe 沙箱', async () => {
+    const md = [
+      ':::demo[卡片测试]',
+      '',
+      '```html',
+      '<div class="card">Hello</div>',
+      '```',
+      '',
+      '```css',
+      '.card { color: red; }',
+      '```',
+      '',
+      ':::',
+    ].join('\n')
+
+    const html = await renderToHtml(md)
+
+    expect(html).toContain('卡片测试')
+    expect(html).toContain('<iframe')
+    expect(html).toContain('.card { color: red; }')
+  })
+
   it('代码块构建时高亮（Shiki dual theme）', async () => {
     const html = await renderToHtml('```ts\nconst a = 1\n```')
 
@@ -58,6 +81,36 @@ describe('MarkdownRenderer 正常渲染', () => {
     const html = await renderToHtml('# 一级\n\n#### 四级\n')
 
     expect(html).not.toContain('id=')
+  })
+
+  it('含有类似 :is() 或 :where() 的标题正常渲染且锚点与 toc 一致', async () => {
+    const md = '## 案例一：:is() 简化\n\n## 案例二：组件用 :where() 覆盖\n\n正文使用 ::before 伪元素'
+    const html = await renderToHtml(md)
+
+    expect(html).toContain('案例一：:is() 简化')
+    expect(html).toContain('id="案例一is-简化"')
+    expect(html).toContain('案例二：组件用 :where() 覆盖')
+    expect(html).toContain('id="案例二组件用-where-覆盖"')
+    expect(html).toContain('::before')
+  })
+
+  it('文章包含 :is() 和 :where() 时，渲染产物的所有标题 id 与 extractToc 100% 一致', async () => {
+    const md = [
+      '## 概述',
+      '## 案例一：:is() 简化多选择器',
+      '## 案例二：组件用 :where()，外部轻松覆盖',
+      '## 案例三：外部用 :is() 批量覆盖组件',
+      '## 总结',
+    ].join('\n\n')
+
+    const toc = extractToc(md)
+    const html = await renderToHtml(md)
+
+    expect(toc).toHaveLength(5)
+    for (const item of toc) {
+      expect(html).toContain(`id="${item.id}"`)
+      expect(html).toContain(`<span>${item.text}</span>`)
+    }
   })
 })
 

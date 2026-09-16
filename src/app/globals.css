@@ -114,6 +114,12 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
+  /* 覆写 Radix / react-remove-scroll 的暴力挤压，配合 scrollbar-gutter: stable 彻底消除弹窗打开时的页面横跳与布局偏移 */
+  body[data-scroll-locked] {
+    margin-right: 0px !important;
+    padding-right: 0px !important;
+  }
+
   /* 标题自动平衡换行，避免孤字与锯齿断行 */
   h1, h2, h3 {
     text-wrap: balance;
@@ -295,39 +301,20 @@ html.dark code[data-theme] span[style*='--shiki'] {
 }
 
 /* 明暗/主题切换过渡：
- * 路径一（现代浏览器）：View Transitions 圆形扩散——旧页快照原位保留，
- * 新页以右上（--theme-tx/--theme-ty，顶栏按钮处）为圆心展开，字全程可见；
- * 路径二（退化）：.theme-transition 波形渐变，各元素按 --theme-delay 错开起步；
- * 减少动态偏好由文件末尾全局兜底压为瞬时（helper 内亦直接同步切换） */
-::view-transition-old(root) {
+ * 现代浏览器：View Transitions + WAAPI 圆形扩散，隔离混合模式消除重影泛白与白边；
+ * 不支持 View Transitions 的环境瞬时同步切换，零主线程重排开销 */
+::view-transition-old(root),
+::view-transition-new(root) {
   animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
 }
 
 ::view-transition-new(root) {
-  /* both：终态保持到快照卸载，避免收尾弹回 circle(0) 闪一下 */
-  animation: theme-wipe 0.4s ease-out both;
-}
-
-@keyframes theme-wipe {
-  from {
-    clip-path: circle(0px at var(--theme-tx, 100vw) var(--theme-ty, 0px));
-  }
-  to {
-    /* --theme-r 由 helper 按圆心到最远角精确计算（+8px 冗余），比 150vmax 省光栅 */
-    clip-path: circle(var(--theme-r, 150vmax) at var(--theme-tx, 100vw) var(--theme-ty, 0px));
-  }
-}
-html.theme-transition,
-html.theme-transition *,
-html.theme-transition *::before,
-html.theme-transition *::after {
-  transition:
-    background-color 0.38s ease,
-    color 0.38s ease,
-    border-color 0.38s ease,
-    fill 0.38s ease,
-    stroke 0.38s ease !important;
-  transition-delay: var(--theme-delay, 0ms) !important;
+  z-index: 9999;
 }
 
 /* 减少动态偏好全局兜底（docs/specs/ui-ux.md §3.5/§4.7）：

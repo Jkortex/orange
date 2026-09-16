@@ -34,7 +34,7 @@ describe('Tip 正常渲染', () => {
     expect(tip?.className).toContain('-translate-x-1/2')
     expect(tip?.className).toContain('opacity-0')
     expect(tip?.className).toContain('group-hover:opacity-100')
-    expect(tip?.className).toContain('group-focus-within:opacity-100')
+    expect(tip?.className).toContain('group-has-[:focus-visible]:opacity-100')
   })
 })
 

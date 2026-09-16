@@ -11,6 +11,7 @@ export type NavItem = {
 export const defaultNavItems: NavItem[] = [
   { href: '/', label: '首页' },
   { href: '/posts', label: '文章' },
+  { href: '/life', label: '生活' },
   { href: '/music', label: '音乐' },
   { href: '/skills', label: '技能' },
 ]

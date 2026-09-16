@@ -6,9 +6,12 @@ import remarkDirective from 'remark-directive'
 import rehypePrettyCode from 'rehype-pretty-code'
 import type { Components } from 'react-markdown'
 import { remarkCallouts } from '@/lib/remark-callouts'
+import { remarkCodeDemo } from '@/lib/remark-code-demo'
+import { remarkDirectiveFallback } from '@/lib/remark-directive-fallback'
 import { rehypeKeepCssVars } from '@/lib/rehype-css-vars'
 import { rehypeHeadingIds } from '@/lib/rehype-heading-ids'
 import { CodeBlock } from '@/components/reading/code-block'
+import { CodeDemo, type CodeDemoProps } from '@/components/reading/code-demo'
 import { HeadingWithAnchor } from '@/components/reading/heading-anchor'
 
 /*
@@ -67,6 +70,9 @@ const components = {
   note: ({ node: _node, ...rest }: ComponentProps<'aside'> & { node?: unknown }) => (
     <aside data-callout="note" {...rest} />
   ),
+  'code-demo': ({ node: _node, ...rest }: CodeDemoProps & { node?: unknown }) => (
+    <CodeDemo {...rest} />
+  ),
   pre: ({ node: _node, 'data-hast-style': style, ...rest }: StyledProps<'pre'>) => (
     <CodeBlock {...rest} style={parseStyle(style)} />
   ),
@@ -80,7 +86,13 @@ export async function MarkdownRenderer({ children }: { children: string }) {
   return (
     <div className="prose max-w-none w-full">
       <MarkdownAsync
-        remarkPlugins={[remarkGfm, remarkDirective, remarkCallouts]}
+        remarkPlugins={[
+          remarkGfm,
+          remarkDirective,
+          remarkCallouts,
+          remarkCodeDemo,
+          remarkDirectiveFallback,
+        ]}
         rehypePlugins={[
           [rehypePrettyCode, rehypePrettyCodeOptions],
           rehypeKeepCssVars,

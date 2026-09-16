@@ -30,7 +30,7 @@ describe('ThemeToggle 正常渲染', () => {
     // 默认隐藏，hover 或 focus 时显示（视觉提示，语义已由 aria-label 兜底）
     expect(tip?.className).toContain('opacity-0')
     expect(tip?.className).toContain('group-hover:opacity-100')
-    expect(tip?.className).toContain('group-focus-within:opacity-100')
+    expect(tip?.className).toContain('group-has-[:focus-visible]:opacity-100')
   })
 
   it('图标按钮具备足够触摸目标（36px，移动端可点中）', () => {

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="warm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#744210" />
+      <stop offset="100%" stop-color="#2d1d0f" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#warm)" />
+  <rect x="300" y="220" width="200" height="220" rx="16" fill="#f7fafc" opacity="0.9" />
+  <rect x="470" y="270" width="50" height="100" rx="20" fill="none" stroke="#f7fafc" stroke-width="16" opacity="0.9" />
+  <text x="400" y="520" text-anchor="middle" fill="#edf2f7" font-family="system-ui, sans-serif" font-size="22" letter-spacing="2">手冲咖啡</text>
+</svg>

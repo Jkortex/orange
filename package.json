@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node --experimental-strip-types scripts/build-content.ts",
     "dev": "next dev -H 0.0.0.0",
+    "prebuild": "node --experimental-strip-types scripts/build-content.ts",
     "build": "next build",
     "postbuild": "pagefind --site out",
     "test": "vitest run",

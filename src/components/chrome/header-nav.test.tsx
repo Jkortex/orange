@@ -20,6 +20,7 @@ describe('HeaderNav 顶部导航组件', () => {
 
     expect(screen.getByRole('link', { name: '首页' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '文章' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '生活' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '音乐' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '技能' })).toBeTruthy()
   })
@@ -59,5 +60,14 @@ describe('HeaderNav 顶部导航组件', () => {
     const skills = screen.getByRole('link', { name: '技能' })
     expect(skills.getAttribute('aria-current')).toBe('page')
     expect(skills.className).toContain('text-primary')
+  })
+
+  it('访问 /life 或 /life/[slug] 时，「生活」高亮并带有 aria-current="page"', () => {
+    currentPath = '/life'
+    render(<HeaderNav />)
+
+    const life = screen.getByRole('link', { name: '生活' })
+    expect(life.getAttribute('aria-current')).toBe('page')
+    expect(life.className).toContain('text-primary')
   })
 })

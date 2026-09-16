@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a5568" />
+      <stop offset="50%" stop-color="#2d3748" />
+      <stop offset="100%" stop-color="#1a202c" />
+    </linearGradient>
+    <linearGradient id="tea" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d69e2e" />
+      <stop offset="100%" stop-color="#b7791f" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#g1)" />
+  <circle cx="400" cy="300" r="140" fill="#2d3748" stroke="#4a5568" stroke-width="8" />
+  <circle cx="400" cy="300" r="110" fill="url(#tea)" />
+  <text x="400" y="520" text-anchor="middle" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="24" letter-spacing="2">雨后桂花乌龙</text>
+</svg>

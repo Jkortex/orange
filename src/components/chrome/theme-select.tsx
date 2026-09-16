@@ -45,7 +45,7 @@ export function ThemeSelect({ className = '' }: { className?: string } = {}) {
   const current = THEMES.find(({ id }) => id === theme) ?? THEMES[0]
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"

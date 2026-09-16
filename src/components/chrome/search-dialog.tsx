@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Search, X, Terminal, Tag, Hash, History, Sparkles } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Search, X, Terminal, Tag, Hash, History, Sparkles, BookOpen, Coffee, Music, Wrench, ListTree } from 'lucide-react'
 import { useHotkey, useHotkeySequence } from '@tanstack/react-hotkeys'
 import { loadPagefind, type PagefindResultItem } from '@/lib/pagefind'
 import { animateThemeChange } from '@/lib/theme-transition'
@@ -20,9 +21,12 @@ import { useOptionalPlayer } from '@/components/player/player-provider'
 /*
  * 全局命令面板 & 站内搜索（AGENTS.md 界面布局规范）：
  * - 顶栏图标按钮（满足图标化三判据，aria-label + hover/focus 提示）
- * - 支持综合搜索、> 命令模式、@ 分类模式、# 页内大纲模式
+ * - 支持综合搜索、> 命令模式、@ 分类/大类模式（含 @toc 虚拟子命令）、# 页内大纲模式
+ * - 支持上下文感知作用域与快捷退出（Backspace / 胶囊点击）
  * - 快捷键支持：Mod+K / Mod+P 开关，g c / g a / g s 快速前缀，g h 首页
  */
+
+export type SearchScope = 'all' | 'life' | 'posts' | 'music' | 'skills' | 'toc'
 
 type Result = { url: string; title: string; excerpt: string }
 
@@ -40,18 +44,39 @@ type SymbolItem = {
   depth: number
 }
 
-const KNOWN_CATEGORIES = [
-  { name: 'tech', label: '技术文章', slug: 'tech' },
-  { name: 'life', label: '生活随笔', slug: 'life' },
-  { name: 'engineering', label: '软件工程', slug: 'engineering' },
-  { name: 'principles', label: '工程原则', slug: 'principles' },
-  { name: 'laws', label: '经典定律', slug: 'laws' },
-  { name: 'css', label: '样式探索', slug: 'css' },
+type CategoryItem = {
+  name: string
+  label: string
+  slug: string
+  desc?: string
+  href?: string
+  isToc?: boolean
+}
+
+const BASE_CATEGORIES: CategoryItem[] = [
+  { name: 'life', label: '@生活 随笔', slug: 'life', desc: '日常碎片、即兴随笔与随手拍', href: '/life' },
+  { name: 'posts', label: '@文章 全部', slug: 'posts', desc: '所有深度技术文章', href: '/posts' },
+  { name: 'music', label: '@音乐 合辑', slug: 'music', desc: '精选音乐专辑与曲目', href: '/music' },
+  { name: 'skills', label: '@技能 目录', slug: 'skills', desc: '可交互的 Agent 技能包', href: '/skills' },
+  { name: 'tech', label: '技术文章', slug: 'tech', desc: '通用软件与开发技术' },
+  { name: 'engineering', label: '软件工程', slug: 'engineering', desc: '架构演进与工程实践' },
+  { name: 'principles', label: '工程原则', slug: 'principles', desc: '极简与清晰的设计准则' },
+  { name: 'laws', label: '经典定律', slug: 'laws', desc: '计算机经典定律与经验' },
+  { name: 'css', label: '样式探索', slug: 'css', desc: '现代 CSS 与动画体系' },
 ]
+
+const TOC_CATEGORY_ITEM: CategoryItem = {
+  name: 'toc',
+  label: '@toc 页面大纲',
+  slug: 'toc',
+  desc: '跳转当前正文的章节目录',
+  isToc: true,
+}
 
 const tooltipPosition = 'left-1/2 top-full mt-1.5 -translate-x-1/2'
 
 export function SearchDialog() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Result[] | null>(null) // null = 未搜索
@@ -59,9 +84,27 @@ export function SearchDialog() {
   const [error, setError] = useState<string | null>(null)
   const [symbols, setSymbols] = useState<SymbolItem[]>([])
   const [recentVisits, setRecentVisits] = useState<{ url: string; title: string }[]>([])
+  const [activeScope, setActiveScope] = useState<SearchScope>('all')
   const inputRef = useRef<HTMLInputElement>(null)
   const seqRef = useRef(0)
   const player = useOptionalPlayer()
+
+  // 监听自定义事件 orange:open-search，支持页面内按钮以指定 scope 打开
+  useEffect(() => {
+    function handleCustomOpen(e: Event) {
+      const customEvent = e as CustomEvent<{ scope?: SearchScope; query?: string }>
+      setOpen(true)
+      if (customEvent.detail?.scope) {
+        setActiveScope(customEvent.detail.scope)
+      }
+      if (customEvent.detail?.query !== undefined) {
+        setQuery(customEvent.detail.query)
+      }
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+    window.addEventListener('orange:open-search', handleCustomOpen)
+    return () => window.removeEventListener('orange:open-search', handleCustomOpen)
+  }, [])
 
   // 读取 localStorage 最近访问记录
   useEffect(() => {
@@ -110,25 +153,52 @@ export function SearchDialog() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // 检测当前页面是否有长文正文大纲（文章详情页等）
+  const [hasOutline, setHasOutline] = useState(false)
+
   // TanStack Hotkeys 监听快捷序列
   useHotkeySequence(['G', 'C'], () => openWithPrefix('> '))
   useHotkeySequence(['G', 'A'], () => openWithPrefix('@ '))
-  useHotkeySequence(['G', 'S'], () => openWithPrefix('# '))
+  useHotkeySequence(['G', 'S'], () => {
+    const headings = document.querySelectorAll<HTMLElement>('article h2[id], article h3[id], h2[id], h3[id]')
+    if (headings.length > 0) {
+      openWithPrefix('@toc')
+    } else {
+      openWithPrefix('# ')
+    }
+  })
   useHotkeySequence(['G', 'H'], () => {
     window.location.href = '/'
   })
 
-  // 打开时聚焦输入框
+  // 打开时聚焦输入框并智能推导默认作用域及大纲能力
   useEffect(() => {
     if (open) {
       inputRef.current?.focus()
       setSelectedIndex(-1)
-    }
-  }, [open])
 
-  // 扫描当前页大纲
+      const headings = document.querySelectorAll<HTMLElement>(
+        'article h2[id], article h3[id], h2[id], h3[id]',
+      )
+      setHasOutline(headings.length > 0)
+
+      if (pathname && activeScope === 'all') {
+        if (pathname.startsWith('/life')) {
+          setActiveScope('life')
+        } else if (pathname === '/posts') {
+          setActiveScope('posts')
+        } else if (pathname === '/music') {
+          setActiveScope('music')
+        } else if (pathname === '/skills') {
+          setActiveScope('skills')
+        }
+      }
+    }
+  }, [open, pathname])
+
+  // 扫描当前页大纲（支持 # 或 @toc）
   useEffect(() => {
-    if (open && query.trim().startsWith('#')) {
+    if (open && (query.trim().startsWith('#') || query.trim() === '@toc' || query.trim().startsWith('@toc '))) {
       const headings = Array.from(document.querySelectorAll<HTMLElement>('article h2[id], article h3[id], h2[id], h3[id]'))
       setSymbols(
         headings.map((h) => ({
@@ -149,7 +219,6 @@ export function SearchDialog() {
       keys: 't',
       run: () => {
         animateThemeChange(() => {
-          // 双参数 toggle 保证可重放（过渡 helper 会预应用一次、盖住后重放一次）
           const isDark = !document.documentElement.classList.contains('dark')
           document.documentElement.classList.toggle('dark', isDark)
           localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
@@ -171,6 +240,14 @@ export function SearchDialog() {
       desc: '浏览博客全部分类与深度技术文章',
       run: () => {
         window.location.href = '/posts'
+      },
+    },
+    {
+      id: 'nav-life',
+      title: '查看生活随笔',
+      desc: '浏览日常碎片、随笔与随手拍',
+      run: () => {
+        window.location.href = '/life'
       },
     },
     {
@@ -211,10 +288,10 @@ export function SearchDialog() {
   const trimmed = query.trim()
   const mode: 'command' | 'category' | 'symbol' | 'search' = trimmed.startsWith('>')
     ? 'command'
-    : trimmed.startsWith('@')
-      ? 'category'
-      : trimmed.startsWith('#')
-        ? 'symbol'
+    : trimmed === '@toc' || trimmed.startsWith('@toc ') || trimmed.startsWith('#')
+      ? 'symbol'
+      : trimmed.startsWith('@')
+        ? 'category'
         : 'search'
 
   // 命令模式过滤
@@ -223,14 +300,23 @@ export function SearchDialog() {
     (c) => !commandKeyword || c.title.toLowerCase().includes(commandKeyword) || c.desc.toLowerCase().includes(commandKeyword),
   )
 
-  // 分类模式过滤
+  // 分类/大类模式过滤：仅在有正文大纲时允许展示 @toc
+  const availableCategories = hasOutline
+    ? [TOC_CATEGORY_ITEM, ...BASE_CATEGORIES]
+    : BASE_CATEGORIES
+
   const categoryKeyword = mode === 'category' ? trimmed.slice(1).trim().toLowerCase() : ''
-  const filteredCategories = KNOWN_CATEGORIES.filter(
+  const filteredCategories = availableCategories.filter(
     (c) => !categoryKeyword || c.name.toLowerCase().includes(categoryKeyword) || c.label.toLowerCase().includes(categoryKeyword),
   )
 
-  // 页面大纲过滤
-  const symbolKeyword = mode === 'symbol' ? trimmed.slice(1).trim().toLowerCase() : ''
+  // 页面大纲过滤（支持 @toc 和 #）
+  const symbolKeyword =
+    mode === 'symbol'
+      ? trimmed.startsWith('@toc')
+        ? trimmed.replace(/^@toc\s*/, '').toLowerCase()
+        : trimmed.slice(1).trim().toLowerCase()
+      : ''
   const filteredSymbols = symbols.filter(
     (s) => !symbolKeyword || s.title.toLowerCase().includes(symbolKeyword),
   )
@@ -265,13 +351,25 @@ export function SearchDialog() {
       const items: PagefindResultItem[] = await Promise.all(res.results.map((r) => r.data()))
       if (seq !== seqRef.current) return
       setError(null)
-      setResults(
-        items.map((it) => ({
-          url: it.url,
-          title: it.meta?.title ?? it.url,
-          excerpt: it.excerpt ?? '',
-        })),
-      )
+
+      let mappedResults = items.map((it) => ({
+        url: it.url,
+        title: it.meta?.title ?? it.url,
+        excerpt: it.excerpt ?? '',
+      }))
+
+      // 按作用域过滤结果
+      if (activeScope === 'life') {
+        mappedResults = mappedResults.filter((it) => it.url.startsWith('/life/'))
+      } else if (activeScope === 'posts') {
+        mappedResults = mappedResults.filter((it) => it.url.startsWith('/posts/'))
+      } else if (activeScope === 'music') {
+        mappedResults = mappedResults.filter((it) => it.url.startsWith('/music/'))
+      } else if (activeScope === 'skills') {
+        mappedResults = mappedResults.filter((it) => it.url.startsWith('/skills/'))
+      }
+
+      setResults(mappedResults)
     } catch {
       if (seq !== seqRef.current) return
       setResults(null)
@@ -280,6 +378,13 @@ export function SearchDialog() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    // 退格键：如果输入为空且在特定作用域下，退出该作用域切回全站
+    if (e.key === 'Backspace' && query === '' && activeScope !== 'all') {
+      e.preventDefault()
+      setActiveScope('all')
+      return
+    }
+
     // 命令模式回车执行
     if (mode === 'command') {
       if (e.key === 'ArrowDown') {
@@ -296,7 +401,7 @@ export function SearchDialog() {
       return
     }
 
-    // 分类模式回车跳转
+    // 分类/大类模式回车跳转或执行
     if (mode === 'category') {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
@@ -306,8 +411,17 @@ export function SearchDialog() {
         setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredCategories.length - 1))
       } else if (e.key === 'Enter' && selectedIndex >= 0 && filteredCategories[selectedIndex]) {
         e.preventDefault()
+        const selected = filteredCategories[selectedIndex]
+        if (selected.isToc) {
+          setQuery('@toc')
+          return
+        }
         setOpen(false)
-        window.location.href = `/category/${filteredCategories[selectedIndex].slug}`
+        if (selected.href) {
+          window.location.href = selected.href
+        } else {
+          window.location.href = `/category/${selected.slug}`
+        }
       }
       return
     }
@@ -364,6 +478,10 @@ export function SearchDialog() {
       <DialogContent
         aria-label="站内搜索"
         showCloseButton={false}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          inputRef.current?.focus()
+        }}
         className="top-24 max-w-lg translate-y-0 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl"
       >
         <DialogTitle className="sr-only">站内搜索</DialogTitle>
@@ -380,20 +498,59 @@ export function SearchDialog() {
             <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           )}
 
+          {activeScope !== 'all' && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {activeScope === 'life'
+                ? '生活'
+                : activeScope === 'posts'
+                ? '文章'
+                : activeScope === 'music'
+                ? '音乐'
+                : activeScope === 'skills'
+                ? '技能'
+                : '大纲'}
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setActiveScope('all')}
+                className="text-primary/60 hover:text-primary transition-colors ml-0.5"
+                aria-label="清除作用域"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+
           <input
             ref={inputRef}
             type="search"
             value={query}
             onChange={(e) => handleInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="搜索文章，> 命令，@ 分类，# 大纲…"
+            placeholder={
+              activeScope === 'life'
+                ? '搜索生活记录、地点与随笔…'
+                : activeScope === 'posts'
+                ? '搜索技术文章与分类…'
+                : activeScope === 'music'
+                ? '搜索音乐专辑与曲目…'
+                : activeScope === 'skills'
+                ? '搜索技能包与命令…'
+                : hasOutline
+                ? '搜索本文，@toc 章节大纲，> 命令…'
+                : '搜索全站内容，> 命令，@ 分类…'
+            }
             aria-label="搜索关键词"
             className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
 
           {mode !== 'search' && (
             <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[13px] font-medium text-primary">
-              {mode === 'command' ? '命令模式' : mode === 'category' ? '分类模式' : '页内大纲'}
+              {mode === 'command'
+                ? '命令模式'
+                : mode === 'category'
+                ? '分类模式'
+                : '页内大纲'}
             </span>
           )}
 
@@ -422,17 +579,28 @@ export function SearchDialog() {
             onClick={() => openWithPrefix('@ ')}
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <span>@ 分类</span>
+            <span>@ 分类/大类</span>
             <kbd className="font-mono text-xs text-muted-foreground/70">g a</kbd>
           </button>
-          <button
-            type="button"
-            onClick={() => openWithPrefix('# ')}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <span># 大纲</span>
-            <kbd className="font-mono text-xs text-muted-foreground/70">g s</kbd>
-          </button>
+          {hasOutline ? (
+            <button
+              type="button"
+              onClick={() => openWithPrefix('@toc')}
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <span>@toc 大纲</span>
+              <kbd className="font-mono text-xs text-muted-foreground/70">g s</kbd>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => openWithPrefix('# ')}
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <span># 标签</span>
+              <kbd className="font-mono text-xs text-muted-foreground/70">g s</kbd>
+            </button>
+          )}
         </div>
 
         {/* 结果呈现区域 */}
@@ -478,16 +646,33 @@ export function SearchDialog() {
                 filteredCategories.map((c, i) => (
                   <li key={c.slug}>
                     <a
-                      href={`/category/${c.slug}`}
+                      href={c.isToc ? '#' : c.href || `/category/${c.slug}`}
+                      onClick={(e) => {
+                        if (c.isToc) {
+                          e.preventDefault()
+                          setQuery('@toc')
+                        }
+                      }}
                       className={`flex w-full items-center justify-between rounded-md p-2.5 text-left text-sm transition-colors ${
                         selectedIndex === i ? 'bg-primary/15 ring-1 ring-primary/30' : 'hover:bg-muted'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-primary" aria-hidden />
-                        <span className="font-medium text-foreground">{c.label}</span>
+                        {c.isToc ? (
+                          <ListTree className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                        ) : c.href ? (
+                          <Sparkles className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                        ) : (
+                          <Tag className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                        )}
+                        <div>
+                          <span className="font-medium text-foreground">{c.label}</span>
+                          {c.desc && (
+                            <span className="block text-xs text-muted-foreground">{c.desc}</span>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-mono text-xs text-muted-foreground">@{c.slug}</span>
+                      <span className="font-mono text-xs text-muted-foreground shrink-0">@{c.slug}</span>
                     </a>
                   </li>
                 ))
@@ -555,22 +740,41 @@ export function SearchDialog() {
             <p className="p-4 text-sm text-muted-foreground">没有找到相关内容。</p>
           ) : (
             <ul>
-              {results.map((r, i) => (
-                <li key={r.url}>
-                  <a
-                    href={r.url}
-                    className={`block rounded-md p-3 transition-colors ${
-                      selectedIndex === i ? 'bg-primary/15 ring-1 ring-primary/30' : 'hover:bg-primary/10'
-                    }`}
-                  >
-                    <span className="block font-medium">{r.title}</span>
-                    <span
-                      className="mt-1 block text-sm text-muted-foreground [&>mark]:bg-primary/20 [&>mark]:text-foreground"
-                      dangerouslySetInnerHTML={{ __html: r.excerpt }}
-                    />
-                  </a>
-                </li>
-              ))}
+              {results.map((r, i) => {
+                const typeLabel = r.url.startsWith('/life/')
+                  ? '生活'
+                  : r.url.startsWith('/posts/')
+                  ? '文章'
+                  : r.url.startsWith('/music/')
+                  ? '音乐'
+                  : r.url.startsWith('/skills/')
+                  ? '技能'
+                  : null
+
+                return (
+                  <li key={r.url}>
+                    <a
+                      href={r.url}
+                      className={`block rounded-md p-3 transition-colors ${
+                        selectedIndex === i ? 'bg-primary/15 ring-1 ring-primary/30' : 'hover:bg-primary/10'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="block font-medium truncate">{r.title}</span>
+                        {typeLabel && (
+                          <span className="shrink-0 rounded-full border border-border/60 bg-muted/60 px-2 py-px text-[11px] font-medium text-muted-foreground">
+                            {typeLabel}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className="mt-1 block text-sm text-muted-foreground [&>mark]:bg-primary/20 [&>mark]:text-foreground"
+                        dangerouslySetInnerHTML={{ __html: r.excerpt }}
+                      />
+                    </a>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>

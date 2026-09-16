@@ -253,5 +253,70 @@ describe('SearchDialog 命令面板增强模式 (Command / Category / Symbol)', 
     const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
     expect(input.value).toBe('> ')
   })
+
+  it('输入 @toc 虚拟子命令进入大纲模式', async () => {
+    const heading = document.createElement('h2')
+    heading.id = 'sec-conclusion'
+    heading.textContent = '结论与反思'
+    document.body.appendChild(heading)
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: '@toc' } })
+
+    expect(screen.getByText('页内大纲')).toBeDefined()
+    expect(screen.getAllByText('结论与反思').length).toBeGreaterThan(0)
+
+    document.body.removeChild(heading)
+  })
+
+  it('通过 orange:open-search 自定义事件携带 scope: life 唤起并支持 Backspace 退出', async () => {
+    render(<SearchDialog />)
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('orange:open-search', { detail: { scope: 'life' } }),
+      )
+    })
+
+    const dialog = screen.getByRole('dialog', { name: '站内搜索' })
+    expect(dialog).toBeTruthy()
+    expect(screen.getByText('生活')).toBeTruthy()
+
+    // 按退格键退出生活作用域
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.keyDown(input, { key: 'Backspace' })
+
+    expect(screen.queryByText('清除作用域')).toBeNull()
+  })
+
+  it('默认无正文大纲时不显示 @toc 按钮且占位符不包含 @toc', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
+    expect(input.placeholder).not.toContain('@toc')
+    expect(screen.queryByRole('button', { name: /@toc/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /# 标签/ })).toBeTruthy()
+  })
+
+  it('存在正文大纲时，展示 @toc 快捷按钮且占位符提示 @toc', () => {
+    const heading = document.createElement('h2')
+    heading.id = 'sec-demo'
+    heading.textContent = '演示章节'
+    document.body.appendChild(heading)
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
+    expect(input.placeholder).toContain('@toc')
+    expect(screen.getByRole('button', { name: /@toc 大纲/ })).toBeTruthy()
+
+    document.body.removeChild(heading)
+  })
 })
+
 

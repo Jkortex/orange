@@ -61,6 +61,14 @@ describe('ThemeSelect 正常渲染', () => {
 
     expect(screen.queryByRole('menu')).toBeNull()
   })
+
+  it('菜单以非模态（modal=false）展开，不锁定背景与滚动', () => {
+    render(<ThemeSelect />)
+
+    const { button } = openMenu()
+    expect(button.getAttribute('aria-hidden')).toBeNull()
+    expect(document.body.style.overflow).toBe('')
+  })
 })
 
 describe('ThemeSelect 交互', () => {

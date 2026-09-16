@@ -39,8 +39,11 @@ export function entryMetadata(type: CollectionType, slug: string): Metadata {
 
 export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> }) {
   // 默认返回路径指向确定路由（无站内来源历史时兜底）：
-  // posts 默认回文章列表；life 默认回首页；若有站内来源（如从首页进文章）由 BackButton 动态接管
-  const fallback = entry.collection === 'posts' ? { href: '/posts', label: '文章列表' } : { href: '/', label: '首页' }
+  // posts 默认回文章列表；life 默认回生活列表；若有站内来源（如从首页进文章）由 BackButton 动态接管
+  const fallback =
+    entry.collection === 'posts'
+      ? { href: '/posts', label: '文章列表' }
+      : { href: '/life', label: '生活' }
   // 长文在正文前生成锚点目录（docs/specs/ui-ux.md §2.6）
   const headings = shouldShowToc(entry.body) ? extractToc(entry.body) : []
   // 阅读时长与字数估算
@@ -82,6 +85,12 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
               <time dateTime={entry.data.date.toISOString()} className="font-mono text-[13px] tabular-nums">
                 {formatDate(entry.data.date)}
               </time>
+              {'location' in entry.data && entry.data.location && (
+                <span className="text-sm">· 📍 {entry.data.location}</span>
+              )}
+              {'weather' in entry.data && entry.data.weather && (
+                <span className="text-sm">· {entry.data.weather}</span>
+              )}
               {words > 0 && (
                 <span className="text-sm">· 约 {minutes} 分钟阅读 · {words} 字</span>
               )}
