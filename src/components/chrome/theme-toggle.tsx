@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { Moon, Sun } from 'lucide-react'
 import { IconButton } from '@/components/primitives/icon-button'
 import { animateThemeChange } from '@/lib/theme-transition'
@@ -22,10 +21,10 @@ export function ThemeToggle() {
     const origin = rect
       ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
       : undefined
-    // 状态更新收进回调并 flushSync：保证 React 在新快照捕获前提交，
-    // 否则图标新旧态可能落在快照交接两侧造成闪动
+    // VT startViewTransition(update) 在 update() 返回后同步捕获快照，
+    // 无需 flushSync 强制同步提交，React 批量更新减少主线程阻塞
     animateThemeChange(() => {
-      flushSync(() => setDark(next))
+      setDark(next)
       document.documentElement.classList.toggle('dark', next)
       try {
         localStorage.setItem('theme-mode', next ? 'dark' : 'light')
@@ -44,8 +43,9 @@ export function ThemeToggle() {
       buttonClassName="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95"
       tipClassName="right-0 top-full mt-1.5"
     >
-      {/* key 随状态重挂图标，播放一次淡入缩放，表达明暗切换的即时反馈 */}
-      <span key={dark ? 'sun' : 'moon'} className="block animate-in fade-in-0 zoom-in-50 duration-200">
+      {/* key 随状态重挂图标，播放一次淡入缩放，表达明暗切换的即时反馈；
+          duration-100：图标在 VT 圆形扩散前 26% 完成，节奏紧凑 */}
+      <span key={dark ? 'sun' : 'moon'} className="block animate-in fade-in-0 zoom-in-50 duration-100">
         {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
       </span>
     </IconButton>

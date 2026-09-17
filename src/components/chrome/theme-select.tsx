@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 import {
   DropdownMenu,
@@ -28,10 +27,9 @@ export function ThemeSelect({ className = '' }: { className?: string } = {}) {
   }, [])
 
   function choose(next: string) {
-    // setTheme 收进回调并 flushSync：保证新快照捕获前提交，避免交接闪动；
     // 菜单关闭保持在外立即执行，不进快照
     animateThemeChange(() => {
-      flushSync(() => setTheme(next))
+      setTheme(next)
       document.documentElement.dataset.theme = next
       try {
         localStorage.setItem('theme-name', next)

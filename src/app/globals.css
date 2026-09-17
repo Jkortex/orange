@@ -81,7 +81,9 @@
   }
 
   html {
-    color-scheme: light;
+    /* color-scheme 由 JS 在 VT 动画中动态设置，不在 CSS 中硬编码，
+       避免切换时浏览器原生控件先于快照重绘导致闪烁 */
+    color-scheme: light; /* 默认值，首帧 fallback；正式切换由 animateThemeChange 控制 */
     /* 预留纵向滚动条槽位：内容长短页切换时居中容器不再左右横跳（文章 ↔ 技能） */
     scrollbar-gutter: stable;
   }
@@ -91,10 +93,6 @@
     html {
       overflow-y: scroll;
     }
-  }
-
-  html.dark {
-    color-scheme: dark;
   }
 
   /* Tailwind v4 起 button 默认 cursor 为 default，全站交互元素统一指回 pointer；
@@ -112,6 +110,16 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* 主题变量过渡：仅对颜色属性做短促插值，消除 VT 圆形扩散下的底层硬切闪屏；
+     duration 极短（80ms）不影响 VT 的 380ms 扩散节奏 */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, color, border-color, box-shadow;
+    transition-duration: 80ms;
+    transition-timing-function: ease-out;
   }
 
   /* 覆写 Radix / react-remove-scroll 的暴力挤压，配合 scrollbar-gutter: stable 彻底消除弹窗打开时的页面横跳与布局偏移 */

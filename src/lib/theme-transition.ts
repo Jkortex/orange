@@ -6,22 +6,27 @@
  * - 不支持 View Transitions 的环境瞬时同步生效，彻底避免全量 DOM 扫描与同步重排性能损耗。
  * - prefers-reduced-motion / 无真实绘制环境（jsdom）直接同步切换。
  * - update() 始终同步执行（VT 回调内 / 直接调用），测试断言不受影响。
+ * - 快速连续切换时排队等候，当前动画完成后自动执行下一次，保持完整过渡体验。
  */
 
 export type ThemeTransitionOrigin = { x: number; y: number }
 
-// 互斥：上一次过渡未完成时新的切换直接同步生效，避免两次快照交接撞车闪动
 let running = false
+let pendingUpdate: (() => void) | null = null
+let pendingOrigin: ThemeTransitionOrigin | undefined = undefined
 
-function finishAfter(ms: number) {
-  window.setTimeout(() => {
-    running = false
-  }, ms)
+function flushPending() {
+  if (pendingUpdate) {
+    const update = pendingUpdate
+    const origin = pendingOrigin
+    pendingUpdate = null
+    pendingOrigin = undefined
+    animateThemeChange(update, origin)
+  }
 }
 
 function defaultOrigin(): ThemeTransitionOrigin {
   if (typeof window === 'undefined') return { x: 0, y: 0 }
-  // 右上角：顶栏切换按钮方位
   return { x: window.innerWidth, y: 0 }
 }
 
@@ -38,19 +43,25 @@ export function animateThemeChange(update: () => void, origin?: ThemeTransitionO
     return
   }
 
-  // 路径一：View Transitions + Web Animations API（现代浏览器）
   const doc = document as Document & {
     startViewTransition?: (callback: () => void) => {
       ready?: Promise<void>
       finished?: Promise<unknown>
     }
   }
-  if (!running && typeof doc.startViewTransition === 'function') {
+
+  // 路径一：View Transitions + Web Animations API（现代浏览器）
+  if (typeof doc.startViewTransition === 'function') {
+    if (running) {
+      // 过渡中再次切换：排队，当前动画结束后自动执行
+      pendingUpdate = update
+      pendingOrigin = origin
+      return
+    }
     try {
       const o = origin ?? defaultOrigin()
       const w = window.innerWidth
       const h = window.innerHeight
-      // 精确半径 = 圆心到最远角 + 冗余
       const r =
         Math.max(
           Math.hypot(o.x, o.y),
@@ -63,6 +74,11 @@ export function animateThemeChange(update: () => void, origin?: ThemeTransitionO
       const t = doc.startViewTransition(update)
       t?.ready
         ?.then(() => {
+          // VT 快照已捕获 "after" 状态后，再切换 color-scheme；
+          // 此时浏览器原生控件重绘被圆形扩散遮罩覆盖，消除闪烁
+          const isDark = document.documentElement.classList.contains('dark')
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+
           const animation = document.documentElement.animate(
             {
               clipPath: [
@@ -81,34 +97,38 @@ export function animateThemeChange(update: () => void, origin?: ThemeTransitionO
         .then(
           () => {
             running = false
+            flushPending()
           },
           () => {
             running = false
+            flushPending()
           },
         )
 
-      // finished 释放 + 超时兜底（异常路径下 running 必须能复位）
       t?.finished?.then(
         () => {
           running = false
+          flushPending()
         },
         () => {
           running = false
+          flushPending()
         },
       )
-      finishAfter(600)
+      // 超时兜底（异常路径下 running 必须能复位并处理排队）
+      window.setTimeout(() => {
+        if (running) {
+          running = false
+          flushPending()
+        }
+      }, 600)
       return
     } catch {
       running = false
-      // 掉入退化路径
+      flushPending()
     }
   }
-  if (running) {
-    // 过渡中再次切换：直接同步生效，不开第二场过渡
-    update()
-    return
-  }
 
-  // 路径二：不支持 VT / jsdom 环境下的高性能退化（直接同步执行，零主线程重排开销）
+  // 路径二：不支持 VT / jsdom 环境下的高性能退化（直接同步执行）
   update()
 }
