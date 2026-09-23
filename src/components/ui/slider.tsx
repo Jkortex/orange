@@ -4,7 +4,7 @@ import * as React from 'react'
 import * as SliderPrimitive from '@radix-ui/react-slider'
 import { cn } from '@/lib/utils'
 
-/* shadcn/ui slider（registry 手工 vendor，与上游一致，未改动；播放条进度用，见 docs/specs/player.md） */
+/* shadcn/ui slider（registry 手工 vendor，与上游一致，未改动；播放条进度用） */
 
 function Slider({
   className,

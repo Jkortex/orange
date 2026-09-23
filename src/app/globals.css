@@ -315,7 +315,7 @@ html.dark code[data-theme] span[style*='--shiki'] {
   z-index: 9999;
 }
 
-/* 减少动态偏好全局兜底（docs/specs/ui-ux.md §3.5/§4.7）：
+/* 减少动态偏好全局兜底：
    入场动画与过渡降为瞬时，信息不依赖动效故零损失；
    单个组件不再各自判断媒体查询，统一在此收敛 */
 @media (prefers-reduced-motion: reduce) {

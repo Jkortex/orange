@@ -18,7 +18,7 @@ import { Tip } from '@/components/primitives/tip'
 import { formatTime } from '@/lib/format'
 
 /*
- * 全局播放条（docs/specs/player.md §5/§6，ui-ux.md §5）：
+ * 全局播放条：
  * - fixed bottom 悬浮层：不占文档流、footer 不让位，滚动到底时 footer 下缘被覆盖
  *   （Spotify/YouTube Music 式悬浮 chrome）；无队列时整体不渲染，零常驻留白
  * - 进度（可拖拽/键盘）+ 时间 + 音量（按钮/滑杆）+ 三键 + 关闭；音量组窄屏收起

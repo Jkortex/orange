@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   }
 }
 
-// 技能详情：包目录即导航（docs/specs/content-model.md §7），纯服务端渲染
+// 技能详情：包目录即导航，纯服务端渲染
 export default async function SkillPage({ params }: Params) {
   const { slug } = await params
   let pkg

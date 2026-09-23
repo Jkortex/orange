@@ -1,5 +1,5 @@
 /*
- * 文内目录（docs/specs/ui-ux.md §2.6）：
+ * 文内目录：
  * - 长文在正文前自动生成锚点目录，点击跳转对应章节；不做侧边悬浮与滚动高亮
  * - slug 规则是唯一事实源：extractToc（目录链接）与 rehype 标题 id 插件
  *   （markdown.tsx）同用 slugifyHeading + 同样的重名后缀，保证链接与锚点一致

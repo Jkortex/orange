@@ -6,11 +6,11 @@ import { usePlayer } from '@/components/player/player-provider'
 import { IconButton } from '@/components/primitives/icon-button'
 
 /*
- * 回到顶部（docs/specs/ui-ux.md §4.7-4.8）：
+ * 回到顶部：
  * - 滚动出现（阈值 300px），不常驻占位；滚回顶部后平滑消失
  * - 有播放队列时上移避让播放条（窄屏下给播放条让位）
  * - 动效尊重减少动态偏好；图标化按钮语义与全站一致（aria-label + hover 提示）
- * - 磨砂玻璃拟态 + 微浮动动效，增强视觉层次
+ * - 磨砂玻璃按钮，层次靠边框与背景，不靠阴影与浮动
  */
 
 export function BackToTop() {

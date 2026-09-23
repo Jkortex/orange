@@ -5,7 +5,7 @@ import { getAllTags, getEntriesByTag, type CollectionType } from '@/lib/content'
 import { formatDate } from '@/lib/format'
 import { TypeBadge } from '@/components/primitives/type-badge'
 
-// 标签聚合：有详情路由的类型（新增带路由类型时在此登记，见 docs/specs/content-model.md §6-7）
+// 标签聚合：有详情路由的类型（新增带路由类型时在此登记）
 const TAGGED_TYPES: CollectionType[] = ['posts', 'music', 'skills', 'life']
 
 export function generateStaticParams() {

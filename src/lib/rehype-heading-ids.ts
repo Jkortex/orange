@@ -2,7 +2,7 @@ import type { Element, Root, Text } from 'hast'
 import { slugifyHeading } from '@/lib/toc'
 
 /*
- * 标题锚点 id（docs/specs/ui-ux.md §2.6 文首目录的跳转目标）：
+ * 标题锚点 id（文首目录的跳转目标）：
  * - 只给 h2/h3 加 id（一级是文章标题、四级以下不入目录，与 extractToc 口径一致）
  * - slug 规则与去重后缀复用 toc.ts，保证渲染锚点与目录链接永远一致
  */

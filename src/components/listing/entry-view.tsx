@@ -46,7 +46,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
   const fallback = isLife
     ? { href: '/life', label: '生活' }
     : { href: '/posts', label: '文章列表' }
-  // 长文在正文前生成锚点目录（docs/specs/ui-ux.md §2.6）
+  // 长文在正文前生成锚点目录
   const headings = shouldShowToc(entry.body) ? extractToc(entry.body) : []
   // 阅读时长与字数估算
   const { words, minutes } = estimateReadingTime(entry.body)

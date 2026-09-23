@@ -1,5 +1,5 @@
 /*
- * 主题切换过渡（ui-ux.md §3.5 动效克制：仅状态过渡类微动效）：
+ * 主题切换过渡（动效克制：仅状态过渡类微动效）：
  * - 优先 View Transitions + Web Animations API (WAAPI) 圆形扩散：
  *   新页以触发按钮为圆心、clip-path circle 从 0 展开至全屏，由合成器（Compositor）直接加速；
  *   显式隔离混合模式（mix-blend-mode: normal），消除重影泛白与加色白边。

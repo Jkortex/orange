@@ -39,7 +39,7 @@ export function CodeBlock({ children, className = '', ...props }: ComponentProps
         {children}
       </pre>
 
-      {/* 复制代码按钮：悬浮平滑淡入 + 微缩放反馈 */}
+      {/* 复制代码按钮：悬浮平滑淡入 + 变色反馈 */}
       <button
         type="button"
         onClick={onCopy}

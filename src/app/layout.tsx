@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 全局播放状态 Provider：专辑卡/曲目列表经 usePlayer 入队，页面切换播放不中断（AGENTS.md 界面布局规范第 3 条）。
             播放条为 fixed 悬浮层（不占文档流、footer 不让位），无队列时零常驻留白 */}
         <PlayerProvider>
-          {/* 顶栏全宽两端对齐（docs/specs/ui-ux.md §1.2）：品牌居左、导航与工具居右，不随内容区收窄；
+          {/* 顶栏全宽两端对齐：品牌居左、导航与工具居右，不随内容区收窄；
               窄屏右侧组换行、各项仍可达 */}
           <header className="sticky top-0 z-40 border-b border-border/60 bg-background/75 shadow-[0_1px_0_rgb(0_0_0/0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
             <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
@@ -78,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="tabular-nums">© {new Date().getFullYear()}</span>
               </nav>
             </div>
-            {/* 播放条悬浮覆盖页脚下缘时，此处留白保证 footer 内容始终可读（ui-ux.md §1.7） */}
+            {/* 播放条悬浮覆盖页脚下缘时，此处留白保证 footer 内容始终可读 */}
             <div className="h-[env(safe-area-inset-bottom)]" aria-hidden="true" />
           </footer>
           <PlayerBar />
