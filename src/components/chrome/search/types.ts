@@ -1,27 +1,24 @@
-export type SearchScope = 'all' | 'life' | 'posts' | 'music' | 'skills'
+import type { ReactNode } from 'react'
 
-export type SearchMode = 'command' | 'category' | 'symbol' | 'search'
+export type SearchScope = 'all' | 'posts' | 'skills' | 'life' | 'music'
 
-export type Result = { url: string; title: string; excerpt: string }
+export type SearchItemKind = 'post' | 'outline' | 'category' | 'action'
 
-export type CommandItem = {
+export interface UnifiedSearchItem {
   id: string
+  kind: SearchItemKind
   title: string
-  desc: string
-  keys?: string
-  run: () => void
+  subtitle?: string
+  excerpt?: string
+  url?: string
+  icon?: ReactNode
+  badge?: string
+  keywords?: string[]
+  onSelect: () => void
 }
 
-export type SymbolItem = {
+export interface SearchGroup {
   id: string
-  title: string
-  depth: number
-}
-
-export type CategoryItem = {
-  name: string
   label: string
-  slug: string
-  desc?: string
-  href?: string
+  items: UnifiedSearchItem[]
 }

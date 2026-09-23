@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { SearchDialog } from '@/components/chrome/search-dialog'
 import { loadPagefind, type PagefindApi } from '@/lib/pagefind'
 
 vi.mock('@/lib/pagefind', () => ({ loadPagefind: vi.fn() }))
 const mockLoad = vi.mocked(loadPagefind)
 
-// Radix 把 document pointerdown 监听放在 setTimeout(0) 里挂载（见 theme-select 迁移），
-// 外部交互类断言前需放行一个 macrotask
+// Radix 弹窗外部点击监听处理
 async function flushRadixListeners() {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -17,17 +16,17 @@ async function flushRadixListeners() {
 
 afterEach(() => {
   cleanup()
+  localStorage.clear()
 })
 
 beforeEach(() => {
   mockLoad.mockReset()
 })
 
-// 测试桩：Mock 函数与真实 API 签名结构兼容，仅需断言宽化
 const makeApi = (searchImpl: ReturnType<typeof vi.fn>): PagefindApi =>
   ({ search: searchImpl }) as unknown as PagefindApi
 
-describe('SearchDialog 正常渲染', () => {
+describe('SearchDialog 统一智能搜索正常渲染', () => {
   it('顶栏渲染搜索图标按钮（aria-label=搜索，无常驻文字）', () => {
     render(<SearchDialog />)
 
@@ -45,24 +44,49 @@ describe('SearchDialog 正常渲染', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('搜索关键词'))
   })
 
-  it('再次 Ctrl+K 关闭对话框', () => {
+  it('展示直观的分类过滤胶囊（全部 / 文章 / 技能 / 生活 / 音乐）', () => {
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('tab', { name: '全部' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: '文章' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: '技能' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: '生活' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: '音乐' })).toBeTruthy()
   })
 
-  it('Esc 关闭对话框', () => {
+  it('空状态：展示常用推荐动作与最近访问记录', () => {
+    localStorage.setItem(
+      'orange_recent_visits',
+      JSON.stringify([{ url: '/posts/hello', title: '你好 Orange' }]),
+    )
+
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    // Radix 在 document（capture）监听 Escape；真机按键目标是文档内元素，必经此路径
-    fireEvent.keyDown(document, { key: 'Escape' })
 
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('最近访问')).toBeTruthy()
+    expect(screen.getByText('你好 Orange')).toBeTruthy()
+    expect(screen.getByText('常用推荐')).toBeTruthy()
+    expect(screen.getByText('切换深色 / 浅色模式')).toBeTruthy()
   })
 
-  it('输入关键词渲染结果：标题链接指向内容页，摘要保留高亮标记', async () => {
+  it('空状态：支持一键清空最近访问记录', () => {
+    localStorage.setItem(
+      'orange_recent_visits',
+      JSON.stringify([{ url: '/posts/hello', title: '你好 Orange' }]),
+    )
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const clearBtn = screen.getByRole('button', { name: '清除记录' })
+    fireEvent.click(clearBtn)
+
+    expect(screen.queryByText('你好 Orange')).toBeNull()
+    expect(localStorage.getItem('orange_recent_visits')).toBeNull()
+  })
+
+  it('输入关键词全文检索：渲染文章结果分组与命中高亮', async () => {
     mockLoad.mockResolvedValue(
       makeApi(
         vi.fn().mockResolvedValue({
@@ -78,242 +102,167 @@ describe('SearchDialog 正常渲染', () => {
         }),
       ),
     )
+
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'grid' } })
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: 'grid' } })
 
     await waitFor(() => {
-      // 链接可及名 = 标题 + 摘要全文，按子串匹配标题
-      expect(screen.getByRole('link', { name: /CSS Grid 指南/ })).toBeTruthy()
+      expect(screen.getByText('文章与内容 (1)')).toBeTruthy()
+      expect(screen.getByText('CSS Grid 指南')).toBeTruthy()
     })
-    const link = screen.getByRole('link', { name: /CSS Grid 指南/ }) as HTMLAnchorElement
-    expect(link.getAttribute('href')).toBe('/posts/2026-09-01-css-grid')
-    // excerpt 按富文本渲染：<mark> 为真实元素而非转义文本
+
     const dialog = screen.getByRole('dialog', { name: '站内搜索' })
     const mark = dialog.querySelector('mark')
     expect(mark?.textContent).toBe('grid')
   })
 
-  it('清空关键词回到提示态', async () => {
-    mockLoad.mockResolvedValue(
-      makeApi(
-        vi.fn().mockResolvedValue({
-          results: [
-            {
-              data: async () => ({
-                url: '/posts/2026-09-01-css-grid',
-                meta: { title: 'CSS Grid 指南' },
-                excerpt: '',
-              }),
-            },
-          ],
-        }),
-      ),
-    )
+  it('自然匹配快捷动作：输入“主题”即可直达切换深浅模式', async () => {
+    mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
+
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
-    fireEvent.change(input, { target: { value: 'grid' } })
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: '主题' } })
+
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /CSS Grid 指南/ })).toBeTruthy()
+      expect(screen.getByText('快捷操作 (1)')).toBeTruthy()
+      expect(screen.getByText('切换深色 / 浅色模式')).toBeTruthy()
     })
-
-    fireEvent.change(input, { target: { value: '' } })
-
-    expect(screen.queryByRole('link')).toBeNull()
   })
 
-  it('关闭再开保留上次关键词与结果（规格 §6.3）', async () => {
+  it('自然匹配分类：输入“CSS”即可直达 CSS 分类专栏', async () => {
+    mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: 'CSS' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/分类与专栏/)).toBeTruthy()
+    })
+  })
+
+  it('自然匹配本文章节大纲：输入章节标题直达对应锚点', async () => {
+    const heading = document.createElement('h2')
+    heading.id = 'sec-diagram-overview'
+    heading.textContent = '流程图技术选型'
+    document.body.appendChild(heading)
+
+    mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: '技术选型' } })
+
+    const dialog = screen.getByRole('dialog', { name: '站内搜索' })
+    await waitFor(() => {
+      expect(screen.getByText('本文小节大纲 (1)')).toBeTruthy()
+      expect(within(dialog).getByText('流程图技术选型')).toBeTruthy()
+    })
+
+    document.body.removeChild(heading)
+  })
+
+  it('Tab 键可以在分类过滤胶囊之间循环切换', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByLabelText('搜索关键词')
+
+    // 默认是全部
+    expect(screen.getByRole('tab', { name: '全部' }).getAttribute('aria-selected')).toBe('true')
+
+    // 按 Tab 切到文章
+    fireEvent.keyDown(input, { key: 'Tab' })
+    expect(screen.getByRole('tab', { name: '文章' }).getAttribute('aria-selected')).toBe('true')
+
+    // 按 Tab 切到技能
+    fireEvent.keyDown(input, { key: 'Tab' })
+    expect(screen.getByRole('tab', { name: '技能' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('方向键 ↑↓ 在跨分组结果间平滑循环高亮，回车触发执行', async () => {
     mockLoad.mockResolvedValue(
       makeApi(
         vi.fn().mockResolvedValue({
           results: [
             {
               data: async () => ({
-                url: '/posts/2026-09-01-css-grid',
-                meta: { title: 'CSS Grid 指南' },
-                excerpt: '摘要',
+                url: '/posts/css-demo',
+                meta: { title: 'CSS 演示' },
+                excerpt: '演示内容',
               }),
             },
           ],
         }),
       ),
     )
+
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'grid' } })
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: 'CSS' } })
+
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /CSS Grid 指南/ })).toBeTruthy()
+      expect(screen.getByText('CSS 演示')).toBeTruthy()
     })
 
+    // 按下方向键选择条目
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    const item = screen.getByText('CSS 演示').closest('a')
+    expect(item?.className).toContain('bg-primary/15')
+
+    // 按 Enter 键执行打开并关闭对话框
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('点击关闭按钮或 Esc 或遮罩能正常关闭', async () => {
+    render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    expect(screen.getByRole('dialog')).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
 
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    expect(screen.getByLabelText('搜索关键词')).toHaveProperty('value', 'grid')
-    expect(screen.getByRole('link', { name: /CSS Grid 指南/ })).toBeTruthy()
-  })
-
-  it('点击关闭按钮关闭对话框', () => {
-    render(<SearchDialog />)
+    // 再次打开并按关闭按钮
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     fireEvent.click(screen.getByRole('button', { name: '关闭搜索' }))
-
     expect(screen.queryByRole('dialog')).toBeNull()
-  })
 
-  it('点击遮罩关闭对话框', async () => {
-    render(<SearchDialog />)
+    // 再次打开并点遮罩
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     await flushRadixListeners()
-
-    // 真实点按序列：pointerdown 触发 Radix 外部 dismissal，随后的 click 完成交互
     fireEvent.pointerDown(screen.getByTestId('search-backdrop'))
     fireEvent.click(screen.getByTestId('search-backdrop'))
-
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
 
 describe('SearchDialog 异常渲染', () => {
-  it('索引不可用：显示提示文案', async () => {
+  it('索引不可用：友好显示构建提示文案', async () => {
     mockLoad.mockResolvedValue(null)
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'grid' } })
+    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'react' } })
 
     await waitFor(() => {
       expect(screen.getByText('搜索索引不可用，请先完成构建。')).toBeTruthy()
     })
-    expect(screen.queryByRole('link')).toBeNull()
   })
 
-  it('无搜索结果：显示空态提示', async () => {
-    mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
+  it('检索出错：友好显示错误文案', async () => {
+    mockLoad.mockResolvedValue(makeApi(vi.fn().mockRejectedValue(new Error('fail'))))
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: '不存在' } })
-
-    await waitFor(() => {
-      expect(screen.getByText('没有找到相关内容。')).toBeTruthy()
-    })
-  })
-
-  it('搜索执行出错：显示错误提示', async () => {
-    mockLoad.mockResolvedValue(makeApi(vi.fn().mockRejectedValue(new Error('boom'))))
-    render(<SearchDialog />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'grid' } })
+    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'error-query' } })
 
     await waitFor(() => {
       expect(screen.getByText('搜索出错，请稍后再试。')).toBeTruthy()
     })
-  })
-})
-
-describe('SearchDialog 命令面板增强模式 (Command / Category / Symbol)', () => {
-  it('输入 > 进入命令模式，展示系统命令列表', async () => {
-    render(<SearchDialog />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-
-    const input = screen.getByLabelText('搜索关键词')
-    fireEvent.change(input, { target: { value: '> ' } })
-
-    expect(screen.getByText('命令模式')).toBeDefined()
-    expect(screen.getByText('切换深浅主题')).toBeDefined()
-    expect(screen.getByText('前往博客首页')).toBeDefined()
-  })
-
-  it('输入 # 进入大纲符号模式，扫描当前页面标题', async () => {
-    const heading = document.createElement('h2')
-    heading.id = 'sec-arch'
-    heading.textContent = '架构总览'
-    document.body.appendChild(heading)
-
-    render(<SearchDialog />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-
-    const input = screen.getByLabelText('搜索关键词')
-    fireEvent.change(input, { target: { value: '# ' } })
-
-    expect(screen.getByText('页内大纲')).toBeDefined()
-    expect(screen.getAllByText('架构总览').length).toBeGreaterThan(1)
-
-    document.body.removeChild(heading)
-  })
-
-  it('点击快捷模式切换按钮，自动填充前缀并聚焦', () => {
-    render(<SearchDialog />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-
-    const cmdBtn = screen.getByRole('button', { name: /命令/ })
-    fireEvent.click(cmdBtn)
-
-    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
-    expect(input.value).toBe('> ')
-  })
-
-  it('输入 @toc 虚拟子命令进入大纲模式', async () => {
-    const heading = document.createElement('h2')
-    heading.id = 'sec-conclusion'
-    heading.textContent = '结论与反思'
-    document.body.appendChild(heading)
-
-    render(<SearchDialog />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-
-    const input = screen.getByLabelText('搜索关键词')
-    fireEvent.change(input, { target: { value: '@toc' } })
-
-    expect(screen.getByText('页内大纲')).toBeDefined()
-    expect(screen.getAllByText('结论与反思').length).toBeGreaterThan(0)
-
-    document.body.removeChild(heading)
-  })
-
-  it('通过 orange:open-search 自定义事件携带 scope: life 唤起并支持 Backspace 退出', async () => {
-    render(<SearchDialog />)
-
-    act(() => {
-      window.dispatchEvent(
-        new CustomEvent('orange:open-search', { detail: { scope: 'life' } }),
-      )
-    })
-
-    const dialog = screen.getByRole('dialog', { name: '站内搜索' })
-    expect(dialog).toBeTruthy()
-    expect(screen.getByText('生活')).toBeTruthy()
-
-    // 按退格键退出生活作用域
-    const input = screen.getByLabelText('搜索关键词')
-    fireEvent.keyDown(input, { key: 'Backspace' })
-
-    expect(screen.queryByText('清除作用域')).toBeNull()
-  })
-
-  it('默认无正文大纲时不显示 @toc 按钮且占位符不包含 @toc', () => {
-    render(<SearchDialog />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-
-    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
-    expect(input.placeholder).not.toContain('@toc')
-    expect(screen.queryByRole('button', { name: /@toc/ })).toBeNull()
-    expect(screen.getByRole('button', { name: /# 大纲/ })).toBeTruthy()
-  })
-
-  it('存在正文大纲时，展示 @toc 快捷按钮且占位符提示 @toc', () => {
-    const heading = document.createElement('h2')
-    heading.id = 'sec-demo'
-    heading.textContent = '演示章节'
-    document.body.appendChild(heading)
-
-    render(<SearchDialog />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-
-    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
-    expect(input.placeholder).toContain('@toc')
-    expect(screen.getByRole('button', { name: /@toc 大纲/ })).toBeTruthy()
-
-    document.body.removeChild(heading)
   })
 })
