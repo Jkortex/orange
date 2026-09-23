@@ -46,6 +46,7 @@ export function SearchDialog() {
 
   const inputRef = useRef<HTMLInputElement>(null)
   const seqRef = useRef(0)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const player = useOptionalPlayer()
 
   // 1. 快捷键 Ctrl/Cmd+K 唤起
@@ -57,7 +58,10 @@ export function SearchDialog() {
       }
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
   }, [])
 
   // 2. 打开弹窗时初始化：扫描大纲、读取最近访问
@@ -71,6 +75,8 @@ export function SearchDialog() {
       } catch {
         setRecentVisits([])
       }
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [open])
 
@@ -88,11 +94,15 @@ export function SearchDialog() {
     [headings],
   )
 
-  // 4. 执行 Pagefind 全文检索
-  async function handleInput(value: string) {
+  // 4. 执行 Pagefind 全文检索（轻量防抖优化输入体验）
+  function handleInput(value: string) {
     setQuery(value)
     setSelectedIndex(-1)
     const seq = ++seqRef.current
+
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+    }
 
     if (!value.trim()) {
       setPagefindItems(null)
@@ -102,50 +112,52 @@ export function SearchDialog() {
     }
 
     setLoading(true)
-    try {
-      const pagefind = await loadPagefind()
-      if (seq !== seqRef.current) return
-      if (!pagefind) {
-        setPagefindItems(null)
-        setError('搜索索引不可用，请先完成构建。')
-        setLoading(false)
-        return
-      }
-
-      const res = await pagefind.search(value)
-      if (seq !== seqRef.current) return
-      const items: PagefindResultItem[] = await Promise.all(res.results.map((r) => r.data()))
-      if (seq !== seqRef.current) return
-      setError(null)
-      setLoading(false)
-
-      const mapped: UnifiedSearchItem[] = items.map((it) => {
-        let badge = '文章'
-        if (it.url.startsWith('/life/')) badge = '生活'
-        else if (it.url.startsWith('/music/')) badge = '音乐'
-        else if (it.url.startsWith('/skills/')) badge = '技能'
-
-        return {
-          id: `pf-${it.url}`,
-          kind: 'post',
-          title: it.meta?.title ?? it.url,
-          excerpt: it.excerpt ?? '',
-          url: it.url,
-          badge,
-          onSelect: () => {
-            setOpen(false)
-            window.location.href = it.url
-          },
+    timerRef.current = setTimeout(async () => {
+      try {
+        const pagefind = await loadPagefind()
+        if (seq !== seqRef.current) return
+        if (!pagefind) {
+          setPagefindItems(null)
+          setError('搜索索引不可用，请先完成构建。')
+          setLoading(false)
+          return
         }
-      })
 
-      setPagefindItems(mapped)
-    } catch {
-      if (seq !== seqRef.current) return
-      setPagefindItems(null)
-      setError('搜索出错，请稍后再试。')
-      setLoading(false)
-    }
+        const res = await pagefind.search(value)
+        if (seq !== seqRef.current) return
+        const items: PagefindResultItem[] = await Promise.all(res.results.map((r) => r.data()))
+        if (seq !== seqRef.current) return
+        setError(null)
+        setLoading(false)
+
+        const mapped: UnifiedSearchItem[] = items.map((it) => {
+          let badge = '文章'
+          if (it.url.startsWith('/life/')) badge = '生活'
+          else if (it.url.startsWith('/music/')) badge = '音乐'
+          else if (it.url.startsWith('/skills/')) badge = '技能'
+
+          return {
+            id: `pf-${it.url}`,
+            kind: 'post',
+            title: it.meta?.title ?? it.url,
+            excerpt: it.excerpt ?? '',
+            url: it.url,
+            badge,
+            onSelect: () => {
+              setOpen(false)
+              window.location.href = it.url
+            },
+          }
+        })
+
+        setPagefindItems(mapped)
+      } catch {
+        if (seq !== seqRef.current) return
+        setPagefindItems(null)
+        setError('搜索出错，请稍后再试。')
+        setLoading(false)
+      }
+    }, 60)
   }
 
   // 5. 聚合分组结果（按当前 activeScope 过滤）
@@ -262,7 +274,7 @@ export function SearchDialog() {
   }
 
   const iconBtnClass =
-    'group relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95'
+    'group relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted/70 hover:text-foreground active:scale-95'
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -278,15 +290,15 @@ export function SearchDialog() {
           <Tip className={tooltipPosition}>搜索</Tip>
         </button>
       </DialogTrigger>
-      <DialogOverlay data-testid="search-backdrop" />
       <DialogContent
         aria-label="站内搜索"
         showCloseButton={false}
+        overlayProps={{ 'data-testid': 'search-backdrop' }}
         onOpenAutoFocus={(e) => {
           e.preventDefault()
           inputRef.current?.focus()
         }}
-        className="top-20 max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl backdrop-blur-xl bg-background/95"
+        className="top-20 max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl bg-background"
       >
         <DialogTitle className="sr-only">站内搜索</DialogTitle>
 

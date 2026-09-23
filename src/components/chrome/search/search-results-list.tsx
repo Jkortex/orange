@@ -49,7 +49,7 @@ export function SearchResultsList({
                           e.preventDefault()
                           onSelect(item)
                         }}
-                        className={`group flex flex-col rounded-lg p-2.5 transition-all text-left ${
+                        className={`group flex flex-col rounded-lg p-2.5 transition-colors duration-150 text-left ${
                           isSelected
                             ? 'bg-primary/15 ring-1 ring-primary/30 shadow-2xs'
                             : 'hover:bg-muted/70'
@@ -87,7 +87,7 @@ export function SearchResultsList({
                       ref={isSelected ? (el) => { selectedRef.current = el } : undefined}
                       type="button"
                       onClick={() => onSelect(item)}
-                      className={`group flex w-full items-center justify-between rounded-lg p-2.5 transition-all text-left ${
+                      className={`group flex w-full items-center justify-between rounded-lg p-2.5 transition-colors duration-150 text-left ${
                         isSelected
                           ? 'bg-primary/15 ring-1 ring-primary/30 shadow-2xs'
                           : 'hover:bg-muted/70'

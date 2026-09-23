@@ -35,7 +35,7 @@ export function SearchFilterChips({
             type="button"
             aria-selected={isActive}
             onClick={() => onSelectScope(chip.id)}
-            className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+            className={`rounded-full px-2.5 py-1 font-medium transition-colors duration-150 ${
               isActive
                 ? 'bg-primary/15 text-primary ring-1 ring-primary/30 shadow-2xs'
                 : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'

@@ -52,11 +52,11 @@ export function MobileTocDrawer({
       <IconButton
         label="文章目录"
         onClick={() => setIsOpen(true)}
-        wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-all duration-300 animate-in fade-in-0 zoom-in-90 ${bottomClass}`}
-        buttonClassName="flex size-9 items-center justify-center rounded-full border border-border/80 bg-card/85 text-muted-foreground shadow-md backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:text-primary hover:shadow-lg active:scale-95"
+        wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-[bottom,transform,opacity] duration-200 ease-out animate-in fade-in-0 zoom-in-90 ${bottomClass}`}
+        buttonClassName="flex size-9 items-center justify-center rounded-full border border-border/80 bg-card/85 text-muted-foreground shadow-md backdrop-blur-md transition-[transform,colors,box-shadow] duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:text-primary hover:shadow-lg active:scale-95"
         tipClassName="bottom-full right-0 mb-2"
       >
-        <List className="size-4 transition-transform duration-200 group-hover:scale-105" aria-hidden="true" />
+        <List className="size-4 transition-transform duration-150 group-hover:scale-105" aria-hidden="true" />
       </IconButton>
 
       {/* 移动端抽屉遮罩与内容区 */}
@@ -66,11 +66,11 @@ export function MobileTocDrawer({
           aria-modal="true"
           aria-label="文章目录抽屉"
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-background/60 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-background/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in-0"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[75vh] w-full max-w-lg rounded-t-2xl border-t border-border bg-background p-5 shadow-2xl overflow-hidden flex flex-col transition-transform animate-in slide-in-from-bottom duration-200"
+            className="max-h-[75vh] w-full max-w-lg rounded-t-2xl border-t border-border bg-background p-5 shadow-2xl overflow-hidden flex flex-col transition-transform animate-in slide-in-from-bottom duration-200 ease-out will-change-transform"
           >
             {/* 顶栏 */}
             <div className="mb-4 flex items-center justify-between border-b border-border/60 pb-3">

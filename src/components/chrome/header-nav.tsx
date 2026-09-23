@@ -35,7 +35,7 @@ export function HeaderNav({ items = defaultNavItems }: { items?: NavItem[] }) {
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            className={`rounded-full px-2.5 py-1.5 text-[15px] transition-all duration-200 sm:px-3 sm:text-base ${
+            className={`rounded-full px-2.5 py-1.5 text-[15px] transition-colors duration-150 sm:px-3 sm:text-base ${
               active
                 ? 'bg-primary/10 font-semibold text-primary'
                 : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
