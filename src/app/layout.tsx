@@ -38,6 +38,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://unpkg.com/harmonyos-sans-sc-webfont-splitted@1.1.0/dist/index.css"
         />
+        {/* 正文衬线：霞鹜文楷（unicode-range 分片，按需加载；--font-serif 首项） */}
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/lxgw-wenkai-webfont@1.7.0/style.css"
+        />
       </head>
       <body className="flex min-h-dvh flex-col">
         {/* 全局播放状态 Provider：专辑卡/曲目列表经 usePlayer 入队，页面切换播放不中断（AGENTS.md 界面布局规范第 3 条）。

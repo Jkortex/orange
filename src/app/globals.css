@@ -158,6 +158,8 @@ html.dark code[data-theme] span[style*='--shiki'] {
 /* 正文排版精细化增强：呼吸感节奏、高质感行内代码与引用块 */
 .prose {
   max-width: none;
+  /* 正文用衬线（霞鹜文楷）：与无衬线 UI 拉开层次，强化长文阅读的编辑感 */
+  font-family: var(--font-serif);
   text-wrap: pretty;
   word-break: break-word;
   --tw-prose-body: var(--foreground);
