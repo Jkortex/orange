@@ -111,7 +111,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             onClick={handleDownloadZip}
             disabled={downloading}
             aria-label="下载技能包"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/80 hover:shadow-md disabled:opacity-50"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors duration-200 hover:border-primary/40 hover:bg-muted/80 disabled:opacity-50"
           >
             {downloading ? (
               <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
@@ -130,7 +130,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
           <div className="sticky top-20 md:sticky md:top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
             <nav
               aria-label="技能导航"
-              className="space-y-4 rounded-xl border border-border/70 bg-card/60 p-3 shadow-xs backdrop-blur-sm"
+              className="space-y-4 rounded-xl border border-border/70 bg-card/60 p-3 backdrop-blur-sm"
             >
               {hasFiles && (
                 <div>

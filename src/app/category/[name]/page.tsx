@@ -32,7 +32,7 @@ export default async function CategoryPage({ params }: Params) {
         {entries.map((entry) => (
           <li
             key={`${entry.collection}/${entry.slug}`}
-            className="group flex items-center gap-3 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs"
+            className="group flex items-center gap-3 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card"
           >
             <time
               dateTime={entry.data.date.toISOString()}

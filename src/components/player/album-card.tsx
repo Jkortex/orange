@@ -33,14 +33,14 @@ export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCar
     <li className="group relative">
       {/* 封面容器不裁剪溢出，保证播放按钮 tooltip 完整显示 */}
       <div className="relative">
-        <div className="aspect-square overflow-hidden rounded-xl border border-border/60 bg-muted shadow-xs ring-1 ring-black/[0.04] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md">
+        <div className="aspect-square overflow-hidden rounded-xl border border-border/60 bg-muted">
           {cover ? (
             <img
               src={cover}
               alt={`${title} 封面`}
               loading="lazy"
               decoding="async"
-              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
@@ -52,7 +52,7 @@ export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCar
           type="button"
           aria-label={playLabel}
           onClick={() => (current ? toggle() : playAlbum(queueTracks))}
-          className="absolute bottom-2.5 right-2.5 z-10 flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-1 ring-black/10 transition-all duration-200 hover:scale-105 active:scale-95"
+          className="absolute bottom-2.5 right-2.5 z-10 flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:brightness-[1.05]"
         >
           {playingThis ? <Pause className="size-4" aria-hidden /> : <Play className="ml-px size-4" aria-hidden />}
           <Tip className="-top-8 right-0">{playLabel}</Tip>

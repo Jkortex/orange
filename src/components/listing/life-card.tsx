@@ -19,7 +19,7 @@ export function LifeCard({ entry }: LifeCardProps) {
     photoCount === 2 || photoCount === 4 ? 'grid-cols-2' : 'grid-cols-3'
 
   return (
-    <article className="group rounded-2xl border border-border/60 bg-card p-5 transition-all duration-200 hover:border-border hover:shadow-xs">
+    <article className="group rounded-2xl border border-border/60 bg-card p-5 transition-colors duration-200 hover:border-border">
       {/* 头部元信息：日期 · 标题 · 地点/天气 */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -78,7 +78,7 @@ export function LifeCard({ entry }: LifeCardProps) {
                 alt={entry.data.title}
                 loading="lazy"
                 onClick={() => setLightboxIndex(0)}
-                className="max-h-80 w-auto max-w-full cursor-zoom-in object-cover transition-transform duration-200 hover:scale-[1.02]"
+                className="max-h-80 w-auto max-w-full cursor-zoom-in object-cover"
               />
             </div>
           ) : (
@@ -93,7 +93,7 @@ export function LifeCard({ entry }: LifeCardProps) {
                     src={src}
                     alt={`${entry.data.title} - ${idx + 1}`}
                     loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
+                    className="h-full w-full object-cover"
                   />
                 </div>
               ))}
@@ -109,7 +109,7 @@ export function LifeCard({ entry }: LifeCardProps) {
             <Link
               key={tag}
               href={`/tags/${tag}`}
-              className="rounded-md bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              className="rounded-full bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               #{tag}
             </Link>

@@ -117,7 +117,7 @@ export function Explorer<T extends { category?: string }>({
                   <button
                     type="button"
                     onClick={() => setVisibleCount((prev) => Math.min(prev + pageSize, filtered.length))}
-                    className="rounded-full border border-border/70 bg-card px-5 py-2 text-sm text-foreground shadow-xs transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:text-primary hover:shadow-sm active:translate-y-0"
+                    className="rounded-full border border-border/70 bg-card px-5 py-2 text-sm text-foreground transition-colors duration-200 hover:border-primary/40 hover:text-primary"
                   >
                     加载更多（已显示 {displayed.length} / {filtered.length}）
                   </button>

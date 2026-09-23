@@ -25,7 +25,7 @@ export function MermaidDiagram({
 
   return (
     <div
-      className={`group/mermaid relative my-6 overflow-hidden rounded-xl border border-border/80 bg-card/60 shadow-xs transition-shadow hover:shadow-md ${className}`}
+      className={`group/mermaid relative my-6 overflow-hidden rounded-xl border border-border/80 bg-card/60 ${className}`}
       data-testid="mermaid-diagram"
     >
       {/* 顶部极简控制栏 */}

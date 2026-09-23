@@ -166,7 +166,7 @@ export function CodeDemo({
   })
 
   return (
-    <div className="group/demo not-prose my-8 overflow-hidden rounded-xl border border-border/80 bg-card shadow-xs transition-shadow hover:shadow-md">
+    <div className="group/demo not-prose my-8 overflow-hidden rounded-xl border border-border/80 bg-card">
       {/* 演示顶栏 */}
       <div className="flex items-center justify-between border-b border-border/50 bg-muted/40 px-4 py-2.5">
         <div className="flex items-center gap-2">

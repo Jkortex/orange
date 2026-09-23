@@ -10,7 +10,7 @@ export type HomeEntryItemProps = {
 
 export function HomeEntryItem({ entry }: HomeEntryItemProps) {
   return (
-    <li className="group flex items-start gap-3 px-3 py-3.5 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs">
+    <li className="group flex items-start gap-3 px-3 py-3.5 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card">
       <span className="pt-0.5">
         <TypeBadge type={entry.collection} />
       </span>
@@ -23,7 +23,7 @@ export function HomeEntryItem({ entry }: HomeEntryItemProps) {
                 alt=""
                 loading="lazy"
                 decoding="async"
-                className="size-12 shrink-0 rounded-lg border border-border/60 object-cover shadow-xs ring-1 ring-black/[0.04] transition-transform duration-200 group-hover:scale-[1.03]"
+                className="size-12 shrink-0 rounded-lg border border-border/60 object-cover"
               />
             )}
             <span className="min-w-0">

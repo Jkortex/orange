@@ -46,7 +46,7 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
           ref={prevRef}
           href={`/${collection}/${prev.slug}`}
           onClick={handleNav}
-          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-md"
+          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 transition-colors duration-200 hover:border-primary/50 hover:bg-card"
         >
           <div className="flex items-center justify-between text-[13px] text-muted-foreground">
             <span className="flex items-center gap-1.5 font-medium">
@@ -70,7 +70,7 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
           ref={nextRef}
           href={`/${collection}/${next.slug}`}
           onClick={handleNav}
-          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 text-right shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-md sm:col-start-2"
+          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 text-right transition-colors duration-200 hover:border-primary/50 hover:bg-card sm:col-start-2"
         >
           <div className="flex items-center justify-between text-[13px] text-muted-foreground">
             <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/80">

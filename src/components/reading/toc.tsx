@@ -49,7 +49,7 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
   return (
     <nav
       aria-label="文章目录"
-      className={`rounded-xl border border-border/70 bg-card/60 p-3.5 shadow-xs backdrop-blur-sm ${className}`}
+      className={`rounded-xl border border-border/70 bg-card/60 p-3.5 backdrop-blur-sm ${className}`}
     >
       <div className="mb-2.5 flex items-center justify-between px-1">
         <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">目录</p>

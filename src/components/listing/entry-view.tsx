@@ -105,7 +105,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
 
         {/* 窄屏/笔记本下正文前轻量折叠式目录 (< xl) */}
         {hasToc && (
-          <details className="group mb-6 overflow-hidden rounded-xl border border-border/70 bg-card/60 shadow-xs backdrop-blur-sm transition-shadow hover:shadow-sm xl:hidden">
+          <details className="group mb-6 overflow-hidden rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm xl:hidden">
             <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground select-none transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between">
                 文章目录 ({headings.length})

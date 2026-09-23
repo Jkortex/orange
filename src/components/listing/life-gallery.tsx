@@ -23,16 +23,16 @@ export function LifeGallery({ photos, title = '随手拍', className = '' }: Lif
       {count === 1 ? (
         <div
           onClick={() => setLightboxIndex(0)}
-          className="group relative cursor-zoom-in overflow-hidden rounded-2xl border border-border/70 bg-muted/20 shadow-xs transition-all duration-200 hover:border-primary/40 hover:shadow-md"
+          className="group relative cursor-zoom-in overflow-hidden rounded-2xl border border-border/70 bg-muted/20 transition-colors duration-200 hover:border-primary/40"
         >
           <img
             src={photos[0]}
             alt={title}
             loading="lazy"
             decoding="async"
-            className="w-full max-h-[30rem] object-cover transition-transform duration-300 group-hover:scale-[1.015]"
+            className="w-full max-h-[30rem] object-cover"
           />
-          <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium text-foreground/80 opacity-0 shadow-md backdrop-blur-xs transition-opacity duration-200 group-hover:opacity-100">
+          <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium text-foreground/80 opacity-0 backdrop-blur-xs transition-opacity duration-200 group-hover:opacity-100">
             <ZoomIn className="size-3.5 text-primary" aria-hidden />
             点击查看大图
           </span>
@@ -43,16 +43,16 @@ export function LifeGallery({ photos, title = '随手拍', className = '' }: Lif
             <div
               key={idx}
               onClick={() => setLightboxIndex(idx)}
-              className="group relative aspect-4/3 cursor-zoom-in overflow-hidden rounded-xl border border-border/70 bg-muted/20 shadow-xs transition-all duration-200 hover:border-primary/40 hover:shadow-md"
+              className="group relative aspect-4/3 cursor-zoom-in overflow-hidden rounded-xl border border-border/70 bg-muted/20 transition-colors duration-200 hover:border-primary/40"
             >
               <img
                 src={src}
                 alt={`${title} - 照片 ${idx + 1}`}
                 loading="lazy"
                 decoding="async"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="h-full w-full object-cover"
               />
-              <span className="absolute bottom-2 right-2 flex size-6 items-center justify-center rounded-full bg-background/80 text-foreground/80 opacity-0 shadow-xs backdrop-blur-xs transition-opacity duration-200 group-hover:opacity-100">
+              <span className="absolute bottom-2 right-2 flex size-6 items-center justify-center rounded-full bg-background/80 text-foreground/80 opacity-0 backdrop-blur-xs transition-opacity duration-200 group-hover:opacity-100">
                 <ZoomIn className="size-3 text-primary" aria-hidden />
               </span>
             </div>

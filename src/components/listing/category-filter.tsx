@@ -26,7 +26,7 @@ export function filterPillClass(active: boolean) {
   return [
     'flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[15px] transition-colors duration-150',
     active
-      ? 'border-primary/30 bg-primary/10 font-medium text-primary shadow-xs'
+      ? 'border-primary/30 bg-primary/10 font-medium text-primary'
       : 'border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/60 hover:text-foreground',
   ].join(' ')
 }

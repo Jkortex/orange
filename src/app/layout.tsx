@@ -47,8 +47,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               窄屏右侧组换行、各项仍可达 */}
           <header className="sticky top-0 z-40 border-b border-border/60 bg-background/75 shadow-[0_1px_0_rgb(0_0_0/0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
             <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
-              <Link href="/" className="group flex shrink-0 items-center gap-2 text-[17px] font-semibold tracking-tight transition-colors hover:text-primary">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20 transition-transform duration-200 group-hover:scale-105">
+              <Link href="/" className="flex shrink-0 items-center gap-2 text-[17px] font-semibold tracking-tight transition-colors hover:text-primary">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
                   <Citrus className="size-4 text-primary" aria-hidden />
                 </span>
                 Orange

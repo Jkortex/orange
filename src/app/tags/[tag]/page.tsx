@@ -33,7 +33,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
         {entries.map((entry) => (
           <li
             key={entry.slug}
-            className="group flex items-start gap-3 px-3 py-3 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs"
+            className="group flex items-start gap-3 px-3 py-3 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card"
           >
             <span className="pt-0.5">
               <TypeBadge type={entry.collection} />

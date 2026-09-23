@@ -20,7 +20,7 @@ export type PostItem = {
 const PAGE_SIZE = 15
 
 const POST_ROW_CLASS =
-  'group flex items-baseline gap-3 px-3 py-3 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs'
+  'group flex items-baseline gap-3 px-3 py-3 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card'
 
 export function PostsExplorer({ posts }: { posts: PostItem[] }) {
   return (

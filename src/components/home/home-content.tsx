@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Newspaper } from 'lucide-react'
 import type { CollectionEntry, CollectionType } from '@/lib/content'
 import { EmptyState } from '@/components/primitives/empty-state'
 import { HomeEntryItem } from './home-entry-item'
@@ -19,13 +18,8 @@ export function HomeContent({
 }: HomeContentProps) {
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
-            <Newspaper className="size-3.5 text-primary" aria-hidden />
-          </span>
-          {title}
-        </h2>
+      <div className="mb-4 flex items-baseline justify-between gap-2">
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
         <span className="font-mono text-[13px] tabular-nums text-muted-foreground/70">
           {entries.length} {countUnit}
         </span>

@@ -27,7 +27,7 @@ export function RelatedEntries({
             <Link
               key={`${entry.collection}-${entry.slug}`}
               href={href}
-              className="group flex flex-col justify-between rounded-xl border border-border/70 bg-card/50 p-3.5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-xs"
+              className="group flex flex-col justify-between rounded-xl border border-border/70 bg-card/50 p-3.5 transition-colors duration-200 hover:border-primary/50 hover:bg-card"
             >
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">

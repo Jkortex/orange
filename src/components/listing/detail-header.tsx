@@ -53,7 +53,7 @@ export function DetailHeader({
                     <Link
                       key={tag}
                       href={`/tags/${tag}`}
-                      className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-[13px] text-muted-foreground transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:text-primary"
+                      className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-[13px] text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-primary"
                     >
                       #{tag}
                     </Link>
