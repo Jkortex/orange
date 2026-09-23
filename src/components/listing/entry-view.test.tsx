@@ -65,3 +65,31 @@ describe('EntryView 异常渲染', () => {
     expect(html).not.toContain('文章目录')
   })
 })
+
+describe('EntryView 生活随笔详情渲染', () => {
+  it('生活随笔渲染照片画廊、地点天气与返回生活列表，且隐藏文章阅读时长', async () => {
+    const lifeEntry: CollectionEntry<'life'> = {
+      collection: 'life',
+      slug: '2026-09-12-westlake-sunset',
+      data: {
+        title: '西湖落日与黄昏',
+        date: new Date('2026-09-12'),
+        tags: ['摄影'],
+        location: '杭州 · 西湖长桥',
+        weather: '🌇 晴',
+        photos: ['/media/life/sunset.svg', '/media/life/coffee.svg'],
+      },
+      body: '傍晚西湖长桥的风很舒服。',
+    }
+
+    const html = await renderToHtml(lifeEntry)
+
+    expect(html).toContain('href="/life"')
+    expect(html).toContain('生活')
+    expect(html).toContain('杭州 · 西湖长桥')
+    expect(html).toContain('🌇 晴')
+    expect(html).toContain('/media/life/sunset.svg')
+    expect(html).toContain('/media/life/coffee.svg')
+    expect(html).not.toContain('分钟阅读')
+  })
+})

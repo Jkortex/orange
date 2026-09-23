@@ -100,7 +100,7 @@ export function Explorer<T extends { category?: string }>({
             {/* key 随分类重挂列表，播放一次淡入，表达过滤切换的即时反馈 */}
             <ul
               key={active ?? 'recent'}
-              className="divide-y divide-border/60 border-y border-border/60 animate-in fade-in-50 duration-200"
+              className="divide-y divide-border/40 py-1 animate-in fade-in-50 duration-200"
             >
               {displayed.map((item) => (
                 <li key={getKey(item)} className={rowClassName}>

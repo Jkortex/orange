@@ -34,7 +34,7 @@ export function HomeContent({
       {entries.length === 0 ? (
         <EmptyState message={emptyMessage} />
       ) : (
-        <ol className="divide-y divide-border/60 border-y border-border/60">
+        <ol className="divide-y divide-border/40 py-1">
           {entries.map((entry) => (
             <HomeEntryItem key={`${entry.collection}/${entry.slug}`} entry={entry} />
           ))}

@@ -24,7 +24,7 @@ export function aggregateCategories<T extends { category?: string }>(items: T[])
 /** 分类胶囊样式（active 高亮 / 默认弱化；正文 15px + 计数 13px，保证窄屏可读） */
 export function filterPillClass(active: boolean) {
   return [
-    'flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[15px] transition-all duration-200',
+    'flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[15px] transition-colors duration-150',
     active
       ? 'border-primary/30 bg-primary/10 font-medium text-primary shadow-xs'
       : 'border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/60 hover:text-foreground',

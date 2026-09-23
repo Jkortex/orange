@@ -23,7 +23,7 @@ export type SkillItem = {
 }
 
 const SKILL_ROW_CLASS =
-  'group px-3 py-4 transition-colors duration-200 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs'
+  'group px-3 py-4 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs'
 
 export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
   return (

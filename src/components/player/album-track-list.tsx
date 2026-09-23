@@ -38,7 +38,7 @@ export function AlbumTrackList({ tracks, cover, artist }: AlbumTrackListProps) {
         {isAlbumPlaying ? '暂停' : '播放全部'}
       </button>
 
-      <ol className="mt-4 overflow-hidden rounded-xl border border-border/70">
+      <ol className="mt-4 overflow-hidden rounded-xl border border-border/70 divide-y divide-border/50">
         {tracks.map((track, i) => {
           const current = isCurrent(i)
           const label = current && playing ? '暂停' : `播放《${track.title}》`

@@ -29,19 +29,28 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
   return (
     <section className="mx-auto w-full max-w-2xl">
       <h1 className="mb-6 text-2xl font-semibold">标签：{tag}</h1>
-      <ul className="space-y-4">
+      <ul className="divide-y divide-border/40 py-1">
         {entries.map((entry) => (
-          <li key={entry.slug}>
-            <Link
-              href={`/${entry.collection}/${entry.slug}`}
-              className="font-medium hover:text-primary"
-            >
-              {entry.data.title}
-            </Link>
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <li
+            key={entry.slug}
+            className="group flex items-start gap-3 px-3 py-3 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs"
+          >
+            <span className="pt-0.5">
               <TypeBadge type={entry.collection} />
-              <time dateTime={entry.data.date.toISOString()}>{formatDate(entry.data.date)}</time>
-            </p>
+            </span>
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/${entry.collection}/${entry.slug}`}
+                className="block truncate font-medium tracking-tight transition-colors group-hover:text-primary"
+              >
+                {entry.data.title}
+              </Link>
+              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <time dateTime={entry.data.date.toISOString()} className="tabular-nums font-mono text-[13px]">
+                  {formatDate(entry.data.date)}
+                </time>
+              </p>
+            </div>
           </li>
         ))}
       </ul>

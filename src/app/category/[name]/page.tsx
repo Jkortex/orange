@@ -28,19 +28,22 @@ export default async function CategoryPage({ params }: Params) {
   return (
     <section className="mx-auto w-full max-w-2xl">
       <h1 className="mb-6 text-2xl font-semibold">分类：{name}</h1>
-      <ol className="space-y-3">
+      <ol className="divide-y divide-border/40 py-1">
         {entries.map((entry) => (
-          <li key={`${entry.collection}/${entry.slug}`} className="flex items-center gap-3">
+          <li
+            key={`${entry.collection}/${entry.slug}`}
+            className="group flex items-center gap-3 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card sm:hover:shadow-xs"
+          >
             <time
               dateTime={entry.data.date.toISOString()}
-              className="w-24 shrink-0 text-sm text-muted-foreground"
+              className="w-20 shrink-0 font-mono text-[13px] tabular-nums text-muted-foreground/80"
             >
               {formatDate(entry.data.date)}
             </time>
             <TypeBadge type={entry.collection} />
             <Link
               href={`/${entry.collection}/${entry.slug}`}
-              className="min-w-0 truncate hover:text-primary"
+              className="min-w-0 flex-1 truncate font-medium tracking-tight transition-colors group-hover:text-primary"
             >
               {entry.data.title}
             </Link>

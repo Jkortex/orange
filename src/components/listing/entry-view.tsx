@@ -13,6 +13,8 @@ import { RelatedEntries } from '@/components/reading/related-entries'
 import { RecentTracker } from '@/components/chrome/recent-tracker'
 import { DetailHeader } from '@/components/listing/detail-header'
 
+import { LifeGallery } from '@/components/listing/life-gallery'
+
 /*
  * 集合详情页共用视图（posts/life 结构一致，提炼复用）：
  * 新增内容类型时按 SOP 复用 readEntry / entryMetadata / EntryView
@@ -38,21 +40,22 @@ export function entryMetadata(type: CollectionType, slug: string): Metadata {
 }
 
 export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> }) {
+  const isLife = entry.collection === 'life'
   // 默认返回路径指向确定路由（无站内来源历史时兜底）：
   // posts 默认回文章列表；life 默认回生活列表；若有站内来源（如从首页进文章）由 BackButton 动态接管
-  const fallback =
-    entry.collection === 'posts'
-      ? { href: '/posts', label: '文章列表' }
-      : { href: '/life', label: '生活' }
+  const fallback = isLife
+    ? { href: '/life', label: '生活' }
+    : { href: '/posts', label: '文章列表' }
   // 长文在正文前生成锚点目录（docs/specs/ui-ux.md §2.6）
   const headings = shouldShowToc(entry.body) ? extractToc(entry.body) : []
   // 阅读时长与字数估算
   const { words, minutes } = estimateReadingTime(entry.body)
-  // 相邻文章导航
-  const adjacent =
-    entry.collection === 'posts'
-      ? getAdjacentEntries('posts', entry.slug)
-      : { prev: null, next: null }
+  // 相邻条目导航（posts 与 life 均支持上一篇/下一篇）
+  const adjacent = getAdjacentEntries(entry.collection, entry.slug)
+
+  // 生活随笔随手拍照片
+  const photos = 'photos' in entry.data && Array.isArray(entry.data.photos) ? entry.data.photos : undefined
+  const contentWidth = isLife ? 'max-w-2xl' : 'max-w-3xl'
 
   const hasToc = headings.length > 0
   // 相关文章推荐
@@ -74,8 +77,8 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
       {/* 记录当前页面到最近访问列表 */}
       <RecentTracker url={`/${entry.collection}/${entry.slug}`} title={entry.data.title} />
 
-      {/* 顶部元信息：动态返回链接 + 标题与元数据，始终在 max-w-3xl mx-auto 中居中舒适对齐 */}
-      <div className="mx-auto w-full max-w-3xl mb-8">
+      {/* 顶部元信息：动态返回链接 + 标题与元数据 */}
+      <div className={`mx-auto w-full ${contentWidth} mb-8`}>
         <DetailHeader
           backHref={fallback.href}
           backLabel={fallback.label}
@@ -91,7 +94,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
               {'weather' in entry.data && entry.data.weather && (
                 <span className="text-sm">· {entry.data.weather}</span>
               )}
-              {words > 0 && (
+              {!isLife && words > 0 && (
                 <span className="text-sm">· 约 {minutes} 分钟阅读 · {words} 字</span>
               )}
             </>
@@ -126,6 +129,9 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
             {/* 中间正文列：48rem (max-w-3xl)，阅读空间舒展，与上方的 Header 严丝合缝对齐 */}
             <article className="min-w-0 w-full max-w-3xl mx-auto">
               <MarkdownRenderer>{entry.body}</MarkdownRenderer>
+              {photos && photos.length > 0 && (
+                <LifeGallery photos={photos} title={entry.data.title} />
+              )}
               <A11yScrollable />
 
               <RelatedEntries entries={related} />
@@ -144,8 +150,11 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
           <MobileTocDrawer headings={headings} />
         </div>
       ) : (
-        <article className="mx-auto w-full max-w-3xl">
+        <article className={`mx-auto w-full ${contentWidth}`}>
           <MarkdownRenderer>{entry.body}</MarkdownRenderer>
+          {photos && photos.length > 0 && (
+            <LifeGallery photos={photos} title={entry.data.title} />
+          )}
           <A11yScrollable />
 
           <RelatedEntries entries={related} />
