@@ -1,9 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { List, X } from 'lucide-react'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
+import { useOptionalPlayer } from '@/components/player/player-provider'
+import { IconButton } from '@/components/primitives/icon-button'
+
+/*
+ * 移动端/窄屏目录抽屉与悬浮入口（< xl）：
+ * - 与 BackToTop 共享同一垂直基准轴线（right-4 sm:right-6 md:right-8）与组件规范（IconButton size-9）
+ * - 页面滚动超过 300px（BackToTop 出现）时，平滑上浮腾出位置，形成视觉协调的双钮操作栈
+ * - 播放条出现时自适应同步抬升，严防层叠遮挡
+ */
 
 export function MobileTocDrawer({
   headings,
@@ -13,6 +22,16 @@ export function MobileTocDrawer({
   className?: string
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const player = useOptionalPlayer()
+  const hasPlayer = player !== null && player.index !== null
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 300)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   if (headings.length === 0) return null
 
@@ -22,17 +41,23 @@ export function MobileTocDrawer({
     setIsOpen(false)
   }
 
+  // 计算垂直底距：与 BackToTop 保持 8px（gap-2）紧凑协调间距
+  const bottomClass = !hasPlayer
+    ? (isScrolled ? 'bottom-[4.25rem]' : 'bottom-6')
+    : (isScrolled ? 'bottom-[7.75rem]' : 'bottom-20')
+
   return (
     <div className={`xl:hidden ${className}`}>
-      {/* 移动端悬浮目录触发按钮 */}
-      <button
-        type="button"
+      {/* 悬浮目录触发按钮：统一的尺寸、对齐线、磨砂质感与提示气泡 */}
+      <IconButton
+        label="文章目录"
         onClick={() => setIsOpen(true)}
-        aria-label="文章目录"
-        className="fixed right-4 bottom-20 z-40 flex h-11 w-11 min-h-[36px] min-w-[36px] items-center justify-center rounded-full border border-border/80 bg-background/85 text-muted-foreground shadow-lg backdrop-blur-md transition-all duration-200 hover:border-primary/60 hover:text-foreground hover:scale-105 active:scale-95"
+        wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-all duration-300 animate-in fade-in-0 zoom-in-90 ${bottomClass}`}
+        buttonClassName="flex size-9 items-center justify-center rounded-full border border-border/80 bg-card/85 text-muted-foreground shadow-md backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:text-primary hover:shadow-lg active:scale-95"
+        tipClassName="bottom-full right-0 mb-2"
       >
-        <List className="h-5 w-5" aria-hidden="true" />
-      </button>
+        <List className="size-4 transition-transform duration-200 group-hover:scale-105" aria-hidden="true" />
+      </IconButton>
 
       {/* 移动端抽屉遮罩与内容区 */}
       {isOpen && (

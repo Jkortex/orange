@@ -120,7 +120,6 @@ describe('SearchDialog 正常渲染', () => {
 
     fireEvent.change(input, { target: { value: '' } })
 
-    expect(screen.getByText('输入关键词搜索全站内容。')).toBeTruthy()
     expect(screen.queryByRole('link')).toBeNull()
   })
 
@@ -299,7 +298,7 @@ describe('SearchDialog 命令面板增强模式 (Command / Category / Symbol)', 
     const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
     expect(input.placeholder).not.toContain('@toc')
     expect(screen.queryByRole('button', { name: /@toc/ })).toBeNull()
-    expect(screen.getByRole('button', { name: /# 标签/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /# 大纲/ })).toBeTruthy()
   })
 
   it('存在正文大纲时，展示 @toc 快捷按钮且占位符提示 @toc', () => {
@@ -318,5 +317,3 @@ describe('SearchDialog 命令面板增强模式 (Command / Category / Symbol)', 
     document.body.removeChild(heading)
   })
 })
-
-

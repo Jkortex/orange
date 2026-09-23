@@ -112,6 +112,24 @@ describe('MarkdownRenderer 正常渲染', () => {
       expect(html).toContain(`<span>${item.text}</span>`)
     }
   })
+
+  it('支持 mermaid 流程图代码块渲染为 SVG', async () => {
+    const md = [
+      '```mermaid',
+      'graph TD',
+      '  A[客户端] --> B[网关]',
+      '  B --> C[微服务]',
+      '```',
+    ].join('\n')
+
+    const html = await renderToHtml(md)
+
+    expect(html).toContain('data-testid="mermaid-diagram"')
+    expect(html).toContain('<svg')
+    expect(html).toContain('客户端')
+    expect(html).toContain('微服务')
+    expect(html).toContain('var(--primary)')
+  })
 })
 
 describe('MarkdownRenderer 异常渲染', () => {
@@ -133,5 +151,16 @@ describe('MarkdownRenderer 异常渲染', () => {
     const html = await renderToHtml(long)
 
     expect(html.match(/<p>/g)?.length).toBeGreaterThanOrEqual(300)
+  })
+
+  it('语法非法的 mermaid 代码块不崩溃，降级为普通代码展示', async () => {
+    const md = [
+      '```mermaid',
+      'invalid mermaid syntax !!!',
+      '```',
+    ].join('\n')
+
+    const html = await renderToHtml(md)
+    expect(html).toContain('invalid mermaid syntax !!!')
   })
 })

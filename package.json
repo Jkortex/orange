@@ -33,6 +33,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
     "@tanstack/react-hotkeys": "^0.10.0",
+    "beautiful-mermaid": "^1.1.3",
     "clsx": "^2.1.1",
     "geist": "^1.7.2",
     "gray-matter": "^4.0.3",

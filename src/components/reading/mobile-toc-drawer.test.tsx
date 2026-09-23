@@ -21,10 +21,30 @@ describe('MobileTocDrawer 移动端目录抽屉组件', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('正常渲染移动端目录悬浮触发按钮', () => {
-    render(<MobileTocDrawer headings={mockHeadings} />)
+  it('正常渲染移动端目录悬浮触发按钮，水平与 BackToTop 对齐', () => {
+    const { container } = render(<MobileTocDrawer headings={mockHeadings} />)
     const trigger = screen.getByRole('button', { name: '文章目录' })
     expect(trigger).toBeDefined()
+
+    // 触发按钮容器共享同一对齐线
+    const wrapper = container.querySelector('.group.fixed')
+    expect(wrapper?.className).toContain('right-4 sm:right-6 md:right-8')
+    expect(wrapper?.className).toContain('bottom-6')
+  })
+
+  it('滚动超过 300px 时，触发按钮平滑上浮避让回到顶部按钮', () => {
+    const { container } = render(<MobileTocDrawer headings={mockHeadings} />)
+    const wrapper = container.querySelector('.group.fixed')
+
+    // 默认未滚动
+    expect(wrapper?.className).toContain('bottom-6')
+
+    // 模拟滚动超过 300px
+    Object.defineProperty(window, 'scrollY', { value: 350, configurable: true, writable: true })
+    fireEvent.scroll(window)
+
+    // 上浮至回到顶部上方
+    expect(wrapper?.className).toContain('bottom-[4.25rem]')
   })
 
   it('点击触发按钮打开抽屉，列出目录条目', () => {

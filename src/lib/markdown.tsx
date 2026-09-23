@@ -1,17 +1,19 @@
 import type { ComponentProps, CSSProperties } from 'react'
-import { createElement } from 'react'
+import { createElement, isValidElement } from 'react'
 import { MarkdownAsync } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkDirective from 'remark-directive'
 import rehypePrettyCode from 'rehype-pretty-code'
 import type { Components } from 'react-markdown'
 import { remarkCallouts } from '@/lib/remark-callouts'
+import { remarkMermaid } from '@/lib/remark-mermaid'
 import { remarkCodeDemo } from '@/lib/remark-code-demo'
 import { remarkDirectiveFallback } from '@/lib/remark-directive-fallback'
 import { rehypeKeepCssVars } from '@/lib/rehype-css-vars'
 import { rehypeHeadingIds } from '@/lib/rehype-heading-ids'
 import { CodeBlock } from '@/components/reading/code-block'
 import { CodeDemo, type CodeDemoProps } from '@/components/reading/code-demo'
+import { MermaidDiagram, type MermaidDiagramProps } from '@/components/reading/mermaid-diagram'
 import { HeadingWithAnchor } from '@/components/reading/heading-anchor'
 
 /*
@@ -73,9 +75,19 @@ const components = {
   'code-demo': ({ node: _node, ...rest }: CodeDemoProps & { node?: unknown }) => (
     <CodeDemo {...rest} />
   ),
-  pre: ({ node: _node, 'data-hast-style': style, ...rest }: StyledProps<'pre'>) => (
-    <CodeBlock {...rest} style={parseStyle(style)} />
+  'mermaid-diagram': ({ node: _node, ...rest }: MermaidDiagramProps & { node?: unknown }) => (
+    <MermaidDiagram {...rest} />
   ),
+  pre: ({ node: _node, 'data-hast-style': style, children, ...rest }: StyledProps<'pre'>) => {
+    // 若子节点为已处理的 Mermaid 图表，直接返回，避免外层套多余的代码块外壳
+    if (
+      isValidElement(children) &&
+      (children.type === MermaidDiagram || typeof (children.props as { svg?: unknown })?.svg === 'string')
+    ) {
+      return children
+    }
+    return <CodeBlock {...rest} style={parseStyle(style)}>{children}</CodeBlock>
+  },
   code: makeStyled('code'),
   span: makeStyled('span'),
   mark: makeStyled('mark'),
@@ -90,6 +102,7 @@ export async function MarkdownRenderer({ children }: { children: string }) {
           remarkGfm,
           remarkDirective,
           remarkCallouts,
+          remarkMermaid,
           remarkCodeDemo,
           remarkDirectiveFallback,
         ]}

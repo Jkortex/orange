@@ -50,6 +50,10 @@ describe('EntryView 文首目录', () => {
     expect(html).toContain('id="一"')
     // 目录出现在正文标题之前
     expect(html.indexOf('文章目录')).toBeLessThan(html.indexOf('id="一"'))
+    // 正文上方折叠式目录在桌面端（xl）隐藏，避免与右侧常驻目录重复
+    expect(html).toMatch(/<details[^>]*class="[^"]*xl:hidden[^"]*"/)
+    // 正文区域包含 mx-auto，确保在非 xl 单列大屏下与上方元信息完全居中对齐
+    expect(html).toMatch(/<article[^>]*class="[^"]*mx-auto[^"]*"/)
   })
 })
 

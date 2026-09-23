@@ -102,7 +102,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
 
         {/* 窄屏/笔记本下正文前轻量折叠式目录 (< xl) */}
         {hasToc && (
-          <details className="group mb-6 overflow-hidden rounded-xl border border-border/70 bg-card/60 shadow-xs backdrop-blur-sm transition-shadow hover:shadow-sm">
+          <details className="group mb-6 overflow-hidden rounded-xl border border-border/70 bg-card/60 shadow-xs backdrop-blur-sm transition-shadow hover:shadow-sm xl:hidden">
             <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground select-none transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between">
                 文章目录 ({headings.length})
@@ -124,7 +124,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
             <div className="hidden xl:block" aria-hidden="true" />
 
             {/* 中间正文列：48rem (max-w-3xl)，阅读空间舒展，与上方的 Header 严丝合缝对齐 */}
-            <article className="min-w-0 w-full max-w-3xl">
+            <article className="min-w-0 w-full max-w-3xl mx-auto">
               <MarkdownRenderer>{entry.body}</MarkdownRenderer>
               <A11yScrollable />
 
@@ -138,10 +138,10 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
                 <Toc headings={headings} />
               </div>
             </aside>
-
-            {/* 移动端目录抽屉 */}
-            <MobileTocDrawer headings={headings} />
           </div>
+
+          {/* 移动端目录抽屉（脱离 grid 容器，避免干扰正文网格流） */}
+          <MobileTocDrawer headings={headings} />
         </div>
       ) : (
         <article className="mx-auto w-full max-w-3xl">
