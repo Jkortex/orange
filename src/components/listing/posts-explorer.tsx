@@ -42,7 +42,7 @@ export function PostsExplorer({ posts }: { posts: PostItem[] }) {
           </time>
           <Link
             href={`/posts/${post.slug}`}
-            className="min-w-0 flex-1 truncate font-medium tracking-tight transition-colors group-hover:text-primary"
+            className="type-item min-w-0 flex-1 truncate transition-colors group-hover:text-primary"
           >
             {post.title}
           </Link>

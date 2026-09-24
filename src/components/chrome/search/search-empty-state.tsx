@@ -1,4 +1,4 @@
-import { History, Sparkles, X } from 'lucide-react'
+import { Command, History, X } from 'lucide-react'
 import type { UnifiedSearchItem } from './types'
 
 export interface RecentVisit {
@@ -43,7 +43,7 @@ export function SearchEmptyState({
                 <button
                   type="button"
                   onClick={() => onSelectRecent(item)}
-                  className="group flex w-full items-center justify-between rounded-lg p-2 text-left text-foreground transition-colors hover:bg-surface-hover"
+                  className="group flex w-full items-center justify-between rounded-lg p-2 text-left text-foreground transition-colors hover:bg-muted"
                 >
                   <span className="truncate transition-colors group-hover:text-primary">{item.title}</span>
                   <span className="type-caption max-w-[140px] truncate font-mono text-muted-foreground">
@@ -59,7 +59,7 @@ export function SearchEmptyState({
       {/* 快捷推荐 */}
       <div>
         <div className="type-caption flex items-center gap-1.5 px-2 pb-1.5 font-semibold text-muted-foreground uppercase tracking-wider">
-          <Sparkles className="size-3.5 text-primary" aria-hidden />
+          <Command className="size-3.5 text-primary" aria-hidden />
           <span>常用推荐</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">

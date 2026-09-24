@@ -16,10 +16,10 @@ export function CodeBlock({ children, className = '', ...props }: ComponentProps
   }
 
   return (
-    <div className="group/code relative my-6 overflow-hidden rounded-xl border border-border-subtle bg-muted/40">
+    <div className="surface-card group/code relative my-6 overflow-hidden">
       {/* 极简顶栏：仅语言标识徽章（原 macOS 三色点已移除，避免硬编码颜色） */}
       {lang && (
-        <div className="flex items-center border-b border-border-subtle bg-muted/60 px-3.5 py-2 select-none">
+        <div className="panel-bar flex items-center border-b border-border-subtle px-3.5 py-2 select-none">
           <span className="type-caption font-mono font-medium tracking-wider text-muted-foreground uppercase">
             {lang}
           </span>

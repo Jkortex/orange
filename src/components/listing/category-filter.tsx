@@ -21,13 +21,15 @@ export function aggregateCategories<T extends { category?: string }>(items: T[])
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** 分类胶囊样式（active 高亮 / 默认弱化） */
+/** 分类项样式（active 高亮 / 默认弱化）。
+ *  移动端是横滑小胶囊，选中态整行填充；
+ *  桌面端拉满侧栏宽度后改为行形状圆角，选中态靠可见边框表达（不填充，两侧仅边框有无之分）。 */
 export function filterPillClass(active: boolean) {
   return [
-    'type-meta flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors duration-150',
+    'type-meta flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors duration-150 md:w-full md:rounded-lg',
     active
-      ? 'border-primary/30 bg-primary/10 font-medium text-primary'
-      : 'border-transparent text-muted-foreground hover:border-border-subtle hover:bg-surface-hover hover:text-foreground',
+      ? 'border-primary/50 bg-primary/10 font-medium text-primary md:bg-transparent'
+      : 'border-transparent text-muted-foreground hover:border-border-subtle hover:bg-muted hover:text-foreground',
   ].join(' ')
 }
 
@@ -44,7 +46,7 @@ export function CategorySidebar({ categories, active, onSelect, navLabel }: Cate
   return (
     <aside className="sticky top-14 z-20 -mx-4 border-b border-border-subtle bg-background/85 px-4 py-2.5 backdrop-blur-md md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-2">
       <nav aria-label={navLabel}>
-        <ul className="flex gap-1.5 overflow-x-auto pb-0.5 md:flex-col md:items-start md:gap-1 md:overflow-visible md:pb-0 scrollbar-none">
+        <ul className="flex gap-1.5 overflow-x-auto pb-0.5 md:flex-col md:items-stretch md:gap-1 md:overflow-visible md:pb-0 scrollbar-none">
           <li>
             <button
               type="button"
@@ -64,7 +66,8 @@ export function CategorySidebar({ categories, active, onSelect, navLabel }: Cate
                 className={filterPillClass(active === name)}
               >
                 {name}{' '}
-                <span className="type-caption text-muted-foreground">{count}</span>
+                {/* 不写死颜色：随胶囊状态继承（active 时转品牌色），桌面端推到右缘成列 */}
+                <span className="type-caption tabular-nums md:ml-auto">{count}</span>
               </button>
             </li>
           ))}

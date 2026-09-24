@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { MapPin } from 'lucide-react'
 import { getAdjacentEntries, getEntry, getRelatedEntries, type CollectionEntry, type CollectionType } from '@/lib/content'
 import { estimateReadingTime, formatDate } from '@/lib/format'
 import { MarkdownRenderer } from '@/lib/markdown'
@@ -89,7 +90,11 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
                 {formatDate(entry.data.date)}
               </time>
               {'location' in entry.data && entry.data.location && (
-                <span>· 📍 {entry.data.location}</span>
+                <span className="inline-flex items-center gap-1">
+                  <span aria-hidden="true">·</span>
+                  <MapPin className="size-3 shrink-0" aria-hidden="true" />
+                  {entry.data.location}
+                </span>
               )}
               {'weather' in entry.data && entry.data.weather && (
                 <span>· {entry.data.weather}</span>
@@ -101,7 +106,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
           }
           tags={entry.data.tags}
         />
-        <div aria-hidden="true" className="mt-6 h-px bg-gradient-to-r from-border via-border-subtle to-transparent" />
+        <div aria-hidden="true" className="mt-6 h-px bg-border-subtle" />
 
         {/* 窄屏/笔记本下正文前轻量折叠式目录 (< xl) */}
         {hasToc && (
@@ -109,7 +114,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
             <summary className="type-meta cursor-pointer list-none px-4 py-3 font-medium text-foreground select-none transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between">
                 文章目录 ({headings.length})
-                <span aria-hidden="true" className="text-muted-foreground transition-transform duration-200 group-open:rotate-180">▾</span>
+                <span aria-hidden="true" className="text-muted-foreground transition-transform duration-150 group-open:rotate-180">▾</span>
               </span>
             </summary>
             <div className="border-t border-border-subtle px-2 pb-2 pt-2">

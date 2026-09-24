@@ -27,7 +27,7 @@ export function HomeHeader({
   return (
     <div className="mb-10 space-y-3">
       {badge && (
-        <p className="type-caption inline-flex items-center rounded-full border border-border-subtle px-2.5 py-1 font-medium text-muted-foreground">
+        <p className="chip chip-quiet">
           {badge}
         </p>
       )}

@@ -111,7 +111,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             onClick={handleDownloadZip}
             disabled={downloading}
             aria-label="下载技能包"
-            className="type-meta inline-flex shrink-0 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 py-2.5 font-medium text-foreground transition-colors duration-200 hover:border-primary/40 hover:bg-surface-hover disabled:opacity-50"
+            className="type-meta inline-flex shrink-0 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 py-2.5 font-medium text-foreground transition-colors duration-150 hover:border-primary/40 hover:bg-surface-hover disabled:opacity-50"
           >
             {downloading ? (
               <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
@@ -137,7 +137,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                     <p className="type-caption mb-2 px-2 font-semibold uppercase tracking-wider text-muted-foreground">
                       文件
                     </p>
-                  <ol className="space-y-1 text-sm">
+                  <ol className="space-y-1">
                     {renderedFiles.map((file) => (
                       <li key={file.path}>
                         <button
@@ -163,7 +163,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                     <p className="type-caption mb-2 px-2 font-semibold uppercase tracking-wider text-muted-foreground">
                       目录
                     </p>
-                  <ol className="space-y-1.5 text-sm">
+                  <ol className="space-y-1.5">
                     {headings.map((heading) => (
                       <li key={heading.id} className={heading.depth === 3 ? 'ml-3' : undefined}>
                         <a
@@ -206,7 +206,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             ))}
           </div>
 
-          <div className="surface-card mb-5 flex items-center justify-between px-3.5 py-2.5 shadow-card">
+          <div className="surface-float mb-5 flex items-center justify-between px-3.5 py-2.5">
             <span className="type-meta flex items-center gap-2 font-mono font-medium text-foreground">
               {getFileIcon(currentFile.path)}
               {currentFile.path}
@@ -243,7 +243,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                 {file.node ? (
                   file.node
                 ) : file.content !== null ? (
-                  <pre className="overflow-x-auto rounded-md border border-border bg-muted p-4 text-sm font-mono">
+                  <pre className="surface-card overflow-x-auto p-4 text-sm font-mono">
                     <code>{file.content}</code>
                   </pre>
                 ) : (
@@ -260,7 +260,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             {headings.length > 0 ? (
               <Toc headings={headings} />
             ) : (
-              <div className="type-meta rounded-md border border-border-subtle bg-muted/20 p-4 text-center text-muted-foreground">
+              <div className="surface-card border-dashed type-meta p-4 text-center text-muted-foreground">
                 本文档无子章节
               </div>
             )}

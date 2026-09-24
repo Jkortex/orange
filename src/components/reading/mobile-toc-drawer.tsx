@@ -96,7 +96,7 @@ export function MobileTocDrawer({
                   key={heading.id}
                   href={`#${heading.id}`}
                   onClick={(e) => handleHeadingClick(e, heading.id)}
-                  className={`type-meta block rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground active:bg-primary/10 ${
+                  className={`type-meta block rounded-lg px-3 py-2 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:bg-primary/10 ${
                     heading.depth === 3 ? 'pl-7 type-caption' : 'font-medium'
                   }`}
                 >

@@ -16,7 +16,7 @@ export function PageHeader({ title, description, icon }: PageHeaderProps) {
         {icon && (
           <span
             data-slot="page-header-icon"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20 [&_svg]:size-4"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:size-4"
           >
             {icon}
           </span>

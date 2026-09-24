@@ -23,11 +23,11 @@ export function HomeEntryItem({ entry }: HomeEntryItemProps) {
                 alt=""
                 loading="lazy"
                 decoding="async"
-                className="size-12 shrink-0 rounded-lg border border-border-subtle object-cover"
+                className="media-frame size-12 shrink-0 object-cover"
               />
             )}
             <span className="min-w-0">
-              <span className="block truncate font-medium tracking-tight transition-colors group-hover:text-primary">
+              <span className="type-item block truncate transition-colors group-hover:text-primary">
                 {entry.data.title}
               </span>
               <span className="type-meta mt-0.5 block truncate text-muted-foreground">
@@ -40,7 +40,7 @@ export function HomeEntryItem({ entry }: HomeEntryItemProps) {
           <>
             <Link
               href={`/${entry.collection}/${entry.slug}`}
-              className="block truncate font-medium tracking-tight transition-colors group-hover:text-primary"
+              className="type-item block truncate transition-colors group-hover:text-primary"
             >
               {entry.data.title}
             </Link>

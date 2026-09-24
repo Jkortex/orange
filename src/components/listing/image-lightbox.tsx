@@ -113,7 +113,7 @@ export function ImageLightbox({
                 key={idx}
                 type="button"
                 onClick={() => setCurrentIndex(idx)}
-                className={`h-1.5 rounded-full transition-all duration-200 ${
+                className={`h-1.5 rounded-full transition-all duration-150 ${
                   idx === currentIndex
                     ? 'w-5 bg-primary'
                     : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/60'

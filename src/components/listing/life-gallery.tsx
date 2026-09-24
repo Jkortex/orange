@@ -23,7 +23,7 @@ export function LifeGallery({ photos, title = '随手拍', className = '' }: Lif
       {count === 1 ? (
         <div
           onClick={() => setLightboxIndex(0)}
-          className="group relative cursor-zoom-in overflow-hidden rounded-2xl border border-border-subtle bg-muted/20 transition-colors duration-200 hover:border-primary/40"
+          className="media-frame group relative cursor-zoom-in transition-colors duration-150 hover:border-primary/40"
         >
           <img
             src={photos[0]}
@@ -43,7 +43,7 @@ export function LifeGallery({ photos, title = '随手拍', className = '' }: Lif
             <div
               key={idx}
               onClick={() => setLightboxIndex(idx)}
-              className="group relative aspect-4/3 cursor-zoom-in overflow-hidden rounded-xl border border-border-subtle bg-muted/20 transition-colors duration-200 hover:border-primary/40"
+              className="media-frame group relative aspect-4/3 cursor-zoom-in transition-colors duration-150 hover:border-primary/40"
             >
               <img
                 src={src}

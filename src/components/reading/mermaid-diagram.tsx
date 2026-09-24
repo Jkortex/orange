@@ -25,11 +25,11 @@ export function MermaidDiagram({
 
   return (
     <div
-      className={`group/mermaid relative my-6 overflow-hidden rounded-xl border border-border-subtle bg-surface ${className}`}
+      className={`surface-card group/mermaid relative my-6 overflow-hidden ${className}`}
       data-testid="mermaid-diagram"
     >
       {/* 顶部极简控制栏（原 macOS 三色点已移除，避免硬编码颜色） */}
-      <div className="flex items-center justify-between border-b border-border-subtle bg-muted/40 px-3.5 py-2 select-none">
+      <div className="panel-bar flex items-center justify-between border-b border-border-subtle px-3.5 py-2 select-none">
         <span className="type-caption font-medium text-muted-foreground">{title}</span>
 
         <div className="flex items-center gap-1.5">
@@ -75,7 +75,7 @@ export function MermaidDiagram({
 
       {/* 主体渲染区 */}
       {showCode ? (
-        <pre className="overflow-x-auto p-4 font-mono text-sm leading-relaxed text-foreground bg-muted/40">
+        <pre className="overflow-x-auto p-4 font-mono text-sm leading-relaxed text-foreground">
           <code>{code}</code>
         </pre>
       ) : svg ? (

@@ -52,7 +52,7 @@ export function SearchResultsList({
                         className={`group flex flex-col rounded-lg p-2.5 transition-colors duration-150 text-left ${
                           isSelected
                             ? 'bg-primary/10 ring-1 ring-primary/30'
-                            : 'hover:bg-surface-hover'
+                            : 'hover:bg-muted'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -60,7 +60,7 @@ export function SearchResultsList({
                             {item.title}
                           </span>
                           {item.badge && (
-                            <span className="type-caption shrink-0 rounded-md border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-medium text-muted-foreground">
+                            <span className="chip shrink-0">
                               {item.badge}
                             </span>
                           )}
@@ -90,7 +90,7 @@ export function SearchResultsList({
                       className={`group flex w-full items-center justify-between rounded-lg p-2.5 transition-colors duration-150 text-left ${
                         isSelected
                           ? 'bg-primary/10 ring-1 ring-primary/30'
-                          : 'hover:bg-surface-hover'
+                          : 'hover:bg-muted'
                       }`}
                     >
                       <div className="min-w-0 pr-2">
@@ -104,7 +104,7 @@ export function SearchResultsList({
                         )}
                       </div>
                       {item.badge && (
-                        <span className="type-caption shrink-0 rounded-md border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-medium text-muted-foreground">
+                        <span className="chip shrink-0">
                           {item.badge}
                         </span>
                       )}

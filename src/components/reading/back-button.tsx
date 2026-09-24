@@ -67,9 +67,9 @@ export function BackButton({ fallbackHref, fallbackLabel, className = '' }: Back
   return (
     <Link
       href={target.href}
-      className={`group inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary ${className}`}
+      className={`group type-meta inline-flex items-center gap-1.5 font-medium text-muted-foreground transition-colors hover:text-primary ${className}`}
     >
-      <span className="inline-block transition-transform duration-200 group-hover:-translate-x-1" aria-hidden="true">
+      <span className="inline-block transition-transform duration-150 group-hover:-translate-x-1" aria-hidden="true">
         ←
       </span>
       <span>{target.label}</span>

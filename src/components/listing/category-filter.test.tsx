@@ -32,6 +32,31 @@ describe('filterPillClass', () => {
     expect(filterPillClass(true)).toContain('text-primary')
     expect(filterPillClass(false)).toContain('text-muted-foreground')
   })
+
+  it('桌面端拉满侧栏宽度（计数才能右对齐成列）', () => {
+    expect(filterPillClass(true)).toContain('md:w-full')
+    expect(filterPillClass(false)).toContain('md:w-full')
+  })
+
+  it('桌面端改用行形状圆角（全宽胶囊会读成一颗大按钮）', () => {
+    expect(filterPillClass(false)).toContain('md:rounded-lg')
+  })
+
+  it('桌面端选中态用可见边框表达（全宽行 + 行圆角）', () => {
+    const on = filterPillClass(true)
+    expect(on, '选中行须有可见边框').toContain('border-primary/50')
+    expect(on, '桌面端不填充底色，靠边框区分').toContain('md:bg-transparent')
+  })
+
+  it('默认态边框透明：桌面端两侧仅靠边框有无区分', () => {
+    expect(filterPillClass(false)).toContain('border-transparent')
+  })
+
+  it('已废弃左侧竖条方案（不留死代码）', () => {
+    const on = filterPillClass(true)
+    expect(on).not.toContain('before:bg-primary')
+    expect(on).not.toContain('before:content')
+  })
 })
 
 describe('CategorySidebar 正常渲染', () => {
@@ -62,5 +87,12 @@ describe('CategorySidebar 正常渲染', () => {
     fireEvent.click(screen.getByRole('button', { name: 'meta 1' }))
     expect(screen.getByRole('button', { name: 'meta 1' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: '最近' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('计数跟随选中态颜色（不写死），且桌面端右对齐', () => {
+    render(<Harness />)
+    const count = screen.getByRole('button', { name: 'css 2' }).querySelector('span')
+    expect(count?.className, '计数写死颜色会导致 active 时仍是灰的').not.toContain('text-muted-foreground')
+    expect(count?.className, '桌面端计数须右对齐').toContain('md:ml-auto')
   })
 })

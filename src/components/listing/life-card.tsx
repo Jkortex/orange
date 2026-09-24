@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import { MapPin } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import { ImageLightbox } from '@/components/listing/image-lightbox'
 import type { CollectionEntry } from '@/lib/content'
@@ -28,8 +29,11 @@ export function LifeCard({ entry }: LifeCardProps) {
           </time>
           {entry.data.location && (
             <>
-              <span>·</span>
-              <span>📍 {entry.data.location}</span>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="size-3 shrink-0" aria-hidden="true" />
+                {entry.data.location}
+              </span>
             </>
           )}
           {entry.data.weather && (
@@ -72,7 +76,7 @@ export function LifeCard({ entry }: LifeCardProps) {
       {photoCount > 0 && (
         <div className="mt-3.5">
           {photoCount === 1 ? (
-            <div className="inline-block overflow-hidden rounded-xl border border-border-subtle bg-muted/40">
+            <div className="media-frame inline-block">
               <img
                 src={photos[0]}
                 alt={entry.data.title}
@@ -87,7 +91,7 @@ export function LifeCard({ entry }: LifeCardProps) {
                 <div
                   key={idx}
                   onClick={() => setLightboxIndex(idx)}
-                  className="aspect-square cursor-zoom-in overflow-hidden rounded-xl border border-border-subtle bg-muted/40"
+                  className="media-frame aspect-square cursor-zoom-in"
                 >
                   <img
                     src={src}
@@ -109,7 +113,7 @@ export function LifeCard({ entry }: LifeCardProps) {
             <Link
               key={tag}
               href={`/tags/${tag}`}
-              className="type-caption rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="chip chip-interactive"
             >
               #{tag}
             </Link>

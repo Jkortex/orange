@@ -5,7 +5,9 @@
 
 /* 语义 token → Tailwind 工具类映射（bg-background / text-foreground / border-border ...） */
 @theme inline {
-  --font-sans: var(--font-geist-sans), "HarmonyOS Sans SC", "HarmonyOS Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  /* UI 无衬线：HarmonyOS Sans SC（webfont 已在 layout head 引入）为第一优先，
+     不再使用 Geist Sans（Vercel 默认字体，观感偏「框架默认」）；正文另有 --font-serif */
+  --font-sans: "HarmonyOS Sans SC", "HarmonyOS Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --font-serif: "LXGW WenKai", "霞鹜文楷", "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
   --color-background: var(--background);
@@ -120,7 +122,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   /* 覆写 Radix / react-remove-scroll 的暴力挤压，配合 scrollbar-gutter: stable 彻底消除弹窗打开时的页面横跳与布局偏移 */
@@ -229,32 +230,126 @@
   }
 
   /*
-   * 列表行：全站统一的细分隔线表格（display 由调用方决定）。
-   * 关键约束：分隔线与悬停底色的横向范围必须一致。底色直接画在行盒上（background-clip: border-box），
-   * 于是「行盒 = 底色范围 = 描边范围」恒等，不可能出现底色超出分隔线的情况。
-   * - 横向内边距 + 等量负边距：文字内缩取得留白，同时行盒左右外扩——内容与表头文案对齐，
-   *   而分隔线/底色比文字各宽 0.75rem（表格 cell padding 的观感）
-   * - 不带圆角：只显示 border-top 的盒子一旦加圆角，分隔线两端会向下弯成"假圆角"，看着像瑕疵
-   * - 首行 border-top 即表头下方的分隔线；末行 border-bottom 收口，列表成为闭合表格
-   * 分隔线必须写在自身而非父级 divide-*：divide-* 落在 utilities 层，层优先级高于 components 层，
-   * 会覆盖这里的 border-color，导致每行常驻描边（踩过的坑，勿回退）。
+   * 列表行：全站统一的「可点行」配方（display 由调用方决定）。
+   * 分隔线（行盒自身的 border-top，通直满宽）与悬停高亮（行盒内的圆角伪元素）分属两个盒，
+   * 互不破坏——若把圆角加在带 border-top 的行盒上，线两端会向下弯成"假圆角"（踩过的坑，勿回退）。
+   * - 横向内边距 + 等量负边距：文字内缩取得留白，同时行盒左右外扩，高亮与分隔线同宽
+   * - 圆角只属于高亮：行盒保持方角，分隔线两端平直
+   * - 高亮竖向内缩（见 ::before），与上下分隔线留缝
+   * 不要给行盒加圆角，也不要与父级 divide-* 混用（divide-* 落在 utilities 层，
+   * 层优先级高于 components 层，会覆盖行样式）。
    */
   .list-row {
+    position: relative;
+    isolation: isolate;
     margin-inline: -0.75rem;
     padding: 0.75rem;
     border-top: 1px solid var(--border-subtle);
-    transition: background-color 0.15s;
   }
   .list-row:last-child {
     border-bottom: 1px solid var(--border-subtle);
   }
   /*
-   * 悬停底色取 --muted（全站既有的 hover 色调，见 icon-button 的 hover:bg-muted/70），
+   * 悬停高亮：竖向内缩 0.25rem，与上下分隔线留出细缝；圆角让高亮读成"可点行"而非"表格行"。
+   * z-index: -1 使其落在行内容之下——行盒 isolation: isolate 建立层叠上下文，
+   * 保证高亮仍在页面底色之上（否则负 z-index 会掉到页面背景之下而不可见）。
+   * 底色取 --muted（全站既有的 hover 色调，见 icon-button 的 hover:bg-muted/70），
    * 不用 --surface：后者在浅色主题下比页面更亮，整行会读成"浮起的卡片"而非"高亮行"。
-   * 底色必须落在行盒上：若改画在另行外扩的伪元素上，底色就会超出上下 border 的横向范围。
    */
-  .list-row:hover {
+  .list-row::before {
+    content: '';
+    position: absolute;
+    inset: 0.25rem 0;
+    z-index: -1;
+    border-radius: 0.5rem;
+    background-color: transparent;
+    transition: background-color 0.15s;
+  }
+  .list-row:hover::before {
     background-color: var(--muted);
+  }
+
+  /*
+   * 小标签（类型徽标 / 标签 / 关键词）：全站唯一配方。
+   * 取代此前散落的 6 套写法——圆角 full/md 不一、底色 muted/60 或 /40 或无、描边有无不定、
+   * 字阶 caption/meta 混用。字阶取 caption（元信息尺寸），需要更大时由调用方以 utilities 覆盖。
+   */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background-color: var(--muted);
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--muted-foreground);
+  }
+
+  /* 无底色变体：仅描边（首页 hero 徽标等纯标签场景） */
+  .chip-quiet {
+    background-color: transparent;
+  }
+
+  /* 可交互标签（标签链接）：悬停描边与文字转品牌色，时长与 .surface-interactive 对齐 */
+  .chip-interactive {
+    transition:
+      border-color 0.15s,
+      color 0.15s;
+  }
+  .chip-interactive:hover {
+    border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+    color: var(--primary);
+  }
+
+  /* 键盘键位：等宽小字号、方角微圆，与 .chip 同色系 */
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-subtle);
+    background-color: var(--muted);
+    padding: 0.125rem 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--muted-foreground);
+  }
+
+  /*
+   * 媒体框（封面 / 照片 / 缩略图 / 代码与图示面板）：统一为卡片圆角 + 中性底 + 裁剪溢出。
+   * 取代此前散落的组合——rounded-lg/xl/2xl × bg-muted / muted-40 / muted-20 / surface。
+   * 底色取 --muted：既是加载期占位，也让面板与页面底拉开一层。
+   */
+  .media-frame {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border-subtle);
+    background-color: var(--muted);
+    overflow: hidden;
+  }
+
+  /*
+   * 浮动卡片：悬浮在内容之上的工具栏/控件。静态卡片保持平坦（描边 + 底色），
+   * 高度只给真正浮起的元素——即 --elevation-card 的唯一归属，取代散落的手写 shadow-card。
+   */
+  .surface-float {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border-subtle);
+    background-color: var(--surface);
+    box-shadow: var(--elevation-card);
+  }
+
+  /*
+   * 面板/弹窗内的次级栏（代码顶栏、标签栏、搜索筛选栏、弹窗页脚）：
+   * 统一的浅色分隔条，取代此前 muted/20、/40、/50、/60 四种深浅不一的手写底色。
+   * 底取 --muted 的半透明——在 --surface 面板上仍能透出面板底色，形成一层而非一块。
+   */
+  .panel-bar {
+    background-color: color-mix(in oklab, var(--muted) 40%, transparent);
   }
 }
 

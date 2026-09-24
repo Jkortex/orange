@@ -16,7 +16,7 @@ const LABELS: Record<CollectionType, string> = {
 export function TypeBadge({ type }: { type: CollectionType }) {
   const label = LABELS[type as CollectionType] ?? '内容'
   return (
-    <span className="type-caption inline-flex shrink-0 items-center rounded-full border border-border-subtle bg-muted/60 px-2 py-px font-medium tracking-wide text-muted-foreground">
+    <span className="chip shrink-0">
       {label}
     </span>
   )

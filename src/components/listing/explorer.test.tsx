@@ -13,8 +13,7 @@ afterEach(() => {
 
 type Item = { key: string; label: string; category?: string }
 
-const POST_ROW =
-  'group flex items-baseline gap-3 px-3 py-3 transition-colors duration-200 hover:bg-muted/40'
+const POST_ROW = 'list-row group flex items-center gap-3'
 
 function renderRow(item: Item) {
   return <span>{item.label}</span>

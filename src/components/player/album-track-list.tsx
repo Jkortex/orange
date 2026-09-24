@@ -32,13 +32,13 @@ export function AlbumTrackList({ tracks, cover, artist }: AlbumTrackListProps) {
         type="button"
         aria-label={isAlbumPlaying ? '暂停专辑' : '播放全部'}
         onClick={() => (isAlbumPlaying ? toggle() : playAlbum(queueTracks))}
-        className="type-meta inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 font-medium text-primary-foreground transition-colors duration-200 hover:brightness-[1.05]"
+        className="type-meta inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 font-medium text-primary-foreground transition-colors duration-150 hover:brightness-[1.05]"
       >
         {isAlbumPlaying ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
         {isAlbumPlaying ? '暂停' : '播放全部'}
       </button>
 
-      <ol className="mt-4 overflow-hidden rounded-xl border border-border-subtle divide-y divide-border-subtle">
+      <ol className="surface-card mt-4 overflow-hidden divide-y divide-border-subtle">
         {tracks.map((track, i) => {
           const current = isCurrent(i)
           const label = current && playing ? '暂停' : `播放《${track.title}》`

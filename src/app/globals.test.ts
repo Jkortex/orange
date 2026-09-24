@@ -36,11 +36,16 @@ describe('globals.css @theme 映射', () => {
 })
 
 /*
- * 回归守卫（真实踩过的坑）：
- * .list-row 的常驻描边由自身控制，分隔线必须写在自身（border-top）。
- * 若父级再加 divide-*：divide-* 落在 utilities 层，CSS 层优先级高于 components 层
- * （层优先级压过选择器特异性），会覆盖 .list-row 的 border-color: transparent，
- * 导致除最后一行外每行常驻描边。
+ * .list-row 契约（用户反馈的真实观感问题）：
+ * 列表行 = 通直满宽的分隔线 + 竖向内缩的圆角悬停高亮。二者分属两个盒，互不破坏：
+ * 分隔线是行盒自身的 border-top（末行 border-bottom 收口），高亮是行盒内的圆角伪元素。
+ * 为什么必须解耦：只画上边框的盒子一旦加圆角，分隔线两端会向下弯成"假圆角"，
+ * 看着像瑕疵——圆角只能给高亮，不能给行盒（踩过的坑，勿回退）。
+ * 高亮竖向内缩是为了与上下分隔线留缝，否则圆角会顶到直线；
+ * 高亮用 z-index: -1 落在行内容之下，故行盒须 isolation: isolate 建立层叠上下文，
+ * 否则负 z-index 会掉到页面底色之下而不可见。
+ * 行盒不得自带圆角，也不得与父级 divide-* 混用——divide-* 落在 utilities 层，
+ * 层优先级高于 components 层，会覆盖行样式。
  */
 const SRC = fileURLToPath(new URL('..', import.meta.url))
 
@@ -60,10 +65,39 @@ function collectSourceFiles(dir: string, out: string[] = []): string[] {
 const sourceFiles = [...collectSourceFiles(`${SRC}/components`), ...collectSourceFiles(`${SRC}/app`)]
 const DIVIDE = /\bdivide-[a-z]/
 
-describe('.list-row 分隔线契约', () => {
-  it('components 层内 .list-row 自带 border-top 分隔线', () => {
-    const componentsLayer = css.slice(css.indexOf('@layer components'))
-    expect(componentsLayer).toMatch(/\.list-row\s*\{[^}]*border-top/)
+function componentsLayer(): string {
+  return css.slice(css.indexOf('@layer components'))
+}
+
+describe('.list-row 契约', () => {
+  it('行盒自带通直分隔线（首行 border-top，末行 border-bottom 收口）', () => {
+    expect(ruleBody('.list-row')).toContain('border-top')
+    expect(ruleBody('.list-row:last-child')).toContain('border-bottom')
+  })
+
+  it('行盒自身不带圆角（圆角会让分隔线两端弯成假圆角）', () => {
+    expect(ruleBody('.list-row')).not.toContain('border-radius')
+  })
+
+  it('悬停高亮是竖向内缩的圆角伪元素（与分隔线解耦）', () => {
+    const before = ruleBody('.list-row::before')
+    expect(before, '高亮须带圆角').toContain('border-radius')
+    expect(before, '高亮须竖向内缩，否则圆角会顶到分隔线').toMatch(/inset:\s*[\d.]+rem\s+0/)
+    expect(before, '高亮须落在行内容之下').toContain('z-index: -1')
+  })
+
+  it('悬停时给高亮上底色', () => {
+    expect(ruleBody('.list-row:hover::before')).toContain('background-color')
+  })
+
+  it('行盒建立层叠上下文（高亮 z-index:-1 才不会掉到页面底色之下）', () => {
+    expect(ruleBody('.list-row')).toContain('isolation: isolate')
+  })
+
+  it('横向内边距与负边距成对出现（文字内缩留白，高亮与分隔线同宽）', () => {
+    const body = ruleBody('.list-row')
+    expect(body, '行盒需要内边距给文字留白').toMatch(/padding:\s*[\d.]+rem/)
+    expect(body, '内边距必须配等量负边距，否则文字会与表头错位').toMatch(/margin-inline:\s*-/)
   })
 
   it('任何文件都不同时出现 list-row 与 divide-*', () => {
@@ -81,49 +115,55 @@ describe('.list-row 分隔线契约', () => {
 })
 
 /*
- * 形状契约（用户反馈的真实观感问题）：
- * 1. 只显示 border-top 的盒子一旦带圆角，分隔线两端会向下弯成"假圆角"，看着像瑕疵而不是有意为之。
- * 2. 悬停底色与上下 border 的横向范围必须一致——底色若画在另行外扩的伪元素上，就会超出分隔线两端。
- *    底色画在行盒上（background-clip: border-box）时「行盒 = 底色 = 描边」恒等，从机制上排除该问题。
- * 3. 首行 border-top 兼作表头下方的分隔线、末行 border-bottom 收口，列表才是闭合表格。
+ * 配方收敛守卫（AGENTS.md 表面系统）：
+ * 小标签 / 键位 / 媒体框 / 浮动卡片各自收敛为唯一配方，
+ * 组件不再手写「圆角 × 底色 × 描边」的散装组合（此前 chip 有 6 套、媒体框有 5 套写法）。
+ * 静态卡片 .surface-card 必须保持平坦——高度只属于真正浮起的 .surface-float。
  */
-function listRowRuleBodies(): string[] {
-  const componentsLayer = css.slice(css.indexOf('@layer components'))
-  return [...componentsLayer.matchAll(/\.list-row[^{]*\{([^}]*)\}/g)].map((m) => m[1])
+function ruleBody(selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = componentsLayer().match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))
+  if (!match) throw new Error(`缺少配方：${selector}`)
+  return match[1]
 }
 
-function componentsLayer(): string {
-  return css.slice(css.indexOf('@layer components'))
-}
-
-describe('.list-row 形状契约', () => {
-  it('规则内不得出现圆角（分隔线须两端平直）', () => {
-    const offenders = listRowRuleBodies().filter((body) => body.includes('border-radius'))
-    expect(offenders, `list-row 规则含圆角：${offenders.join(' | ')}`).toEqual([])
+describe('配方收敛守卫', () => {
+  it('.chip 是唯一小标签配方（胶囊 + 描边 + 中性底）', () => {
+    const body = ruleBody('.chip')
+    expect(body).toContain('border-radius: 999px')
+    expect(body).toContain('border: 1px solid var(--border-subtle)')
+    expect(body).toContain('background-color: var(--muted)')
   })
 
-  it('悬停底色直接画在行盒上，与 border 同宽', () => {
-    const hoverRule = componentsLayer().match(/\.list-row:hover\s*\{([^}]*)\}/)
-    expect(hoverRule?.[1] ?? '', '悬停必须设置 background-color').toContain('background-color')
+  it('.chip-quiet 仅去掉底色（保留描边）', () => {
+    expect(ruleBody('.chip-quiet')).toContain('background-color: transparent')
   })
 
-  it('悬停底色不得画在会另行外扩的伪元素上（否则底色会超出 border）', () => {
-    expect(componentsLayer()).not.toMatch(/\.list-row[^{]*::(before|after)/)
+  it('.chip-interactive 悬停转品牌色', () => {
+    expect(ruleBody('.chip-interactive:hover')).toContain('color: var(--primary)')
   })
 
-  it('横向内边距与负边距成对出现（文字内缩留白，同时行盒外扩让分隔线跟随）', () => {
-    const body = listRowRuleBodies().find((b) => b.includes('padding')) ?? ''
-    expect(body, '行盒需要内边距给文字留白').toMatch(/padding:\s*[\d.]+rem/)
-    expect(body, '内边距必须配等量负边距，否则文字会与表头错位').toMatch(/margin-inline:\s*-/)
+  it('.kbd 使用等宽字体', () => {
+    expect(ruleBody('.kbd')).toContain('font-family: var(--font-mono)')
   })
 
-  it('首行 border-top 兼作表头分隔线，末行 border-bottom 收口', () => {
-    const bodies = listRowRuleBodies().join('\n')
-    expect(bodies).toContain('border-top')
-    expect(bodies).toContain('border-bottom')
+  it('.media-frame 统一卡片圆角与中性底', () => {
+    const body = ruleBody('.media-frame')
+    expect(body).toContain('border-radius: var(--radius-card)')
+    expect(body).toContain('background-color: var(--muted)')
   })
 
-  it('不得再抑制首行 border-top（那会让表头下方缺一条分隔线）', () => {
-    expect(componentsLayer()).not.toMatch(/\.list-row:first-child/)
+  it('.surface-float 是唯一带高度的卡片配方，取 --elevation-card', () => {
+    expect(ruleBody('.surface-float')).toContain('box-shadow: var(--elevation-card)')
+  })
+
+  it('.surface-card 保持平坦（高度只属于浮动层）', () => {
+    expect(ruleBody('.surface-card')).not.toContain('box-shadow')
+  })
+
+  it('.panel-bar 是面板内次级栏的唯一底色', () => {
+    expect(ruleBody('.panel-bar')).toContain(
+      'background-color: color-mix(in oklab, var(--muted) 40%, transparent)',
+    )
   })
 })

@@ -37,7 +37,7 @@ export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
         <>
           <Link
             href={`/skills/${skill.slug}`}
-            className="font-medium tracking-tight transition-colors group-hover:text-primary"
+            className="type-item transition-colors group-hover:text-primary"
           >
             {skill.title}
           </Link>

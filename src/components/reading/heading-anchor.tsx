@@ -47,7 +47,7 @@ export function HeadingWithAnchor({
         type="button"
         onClick={handleCopyAnchor}
         aria-label={copied ? '已复制链接' : '复制标题链接'}
-        className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground focus:opacity-100 ${
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground focus:opacity-100 ${
           copied ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-100'
         }`}
       >

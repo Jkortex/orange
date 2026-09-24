@@ -1,65 +1,80 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="100%" height="100%">
+  <!--
+    架构示意图：以 <img> 载入，无法继承页面 CSS 变量，故用固定暖色盘 + 系统深浅色媒体查询。
+    色板取自站点：品牌橙 #c24700、暖中性 #2a2622 / #8c8378 / #a89684 / #d9c7b4 / #f6f1ea。
+  -->
   <defs>
     <style>
-      .bg-box { fill: var(--card, #ffffff); stroke: var(--border, #e2e8f0); stroke-width: 2; rx: 12px; }
-      .client-box { fill: color-mix(in oklab, var(--primary, #3b82f6) 10%, transparent); stroke: var(--primary, #3b82f6); stroke-width: 2; rx: 10px; }
-      .service-box { fill: color-mix(in oklab, var(--accent, #8b5cf6) 10%, transparent); stroke: var(--accent, #8b5cf6); stroke-width: 2; rx: 10px; }
-      .db-box { fill: color-mix(in oklab, var(--muted, #64748b) 12%, transparent); stroke: var(--muted-foreground, #64748b); stroke-width: 2; rx: 10px; }
-      .label-title { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 600; fill: var(--foreground, #0f172a); }
-      .label-sub { font-family: system-ui, sans-serif; font-size: 12px; fill: var(--muted-foreground, #64748b); }
-      .arrow { stroke: var(--primary, #3b82f6); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-      .arrowhead { fill: var(--primary, #3b82f6); }
-      .boundary { stroke: var(--border, #cbd5e1); stroke-width: 1.5; stroke-dasharray: 6 6; fill: none; rx: 16px; }
+      .frame { fill: none; stroke: #e2d9ce; stroke-width: 2; }
+      .client { fill: #f6e3d6; stroke: #c24700; stroke-width: 2; }
+      .service { fill: #ffffff; stroke: #8c8378; stroke-width: 2; }
+      .db { fill: #ecece7; stroke: #a89684; stroke-width: 2; }
+      .title { font-family: "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; font-size: 15px; font-weight: 600; fill: #2a2622; }
+      .sub { font-family: "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; font-size: 12px; fill: #8c8378; }
+      .arrow { stroke: #a89684; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .head { fill: #a89684; }
+      .boundary { stroke: #d9c7b4; stroke-width: 1.5; stroke-dasharray: 6 6; fill: none; }
+      @media (prefers-color-scheme: dark) {
+        .frame { stroke: #3a3a3a; }
+        .client { fill: #3a2418; stroke: #e08a46; }
+        .service { fill: #242424; stroke: #6e6e6e; }
+        .db { fill: #2a2a2a; stroke: #5a5a5a; }
+        .title { fill: #ededed; }
+        .sub { fill: #a0a0a0; }
+        .arrow { stroke: #6e6e6e; }
+        .head { fill: #6e6e6e; }
+        .boundary { stroke: #3a3a3a; }
+      }
     </style>
     <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" class="arrowhead" />
+      <path d="M 0 1 L 10 5 L 0 9 z" class="head" />
     </marker>
   </defs>
 
   <!-- 总体区域边界 -->
-  <rect x="20" y="20" width="760" height="380" class="bg-box" />
-  <rect x="220" y="45" width="530" height="330" class="boundary" />
-  <text x="240" y="75" class="label-sub" font-weight="600">云原生后端集群 / VPC Boundary</text>
+  <rect x="20" y="20" width="760" height="380" rx="12" class="frame" />
+  <rect x="220" y="45" width="530" height="330" rx="16" class="boundary" />
+  <text x="240" y="75" class="sub" font-weight="600">云原生后端集群 / VPC Boundary</text>
 
   <!-- 客户端层 -->
   <g transform="translate(50, 160)">
-    <rect x="0" y="0" width="130" height="70" class="client-box" />
-    <text x="65" y="32" text-anchor="middle" class="label-title">Web / App</text>
-    <text x="65" y="52" text-anchor="middle" class="label-sub">用户客户端</text>
+    <rect x="0" y="0" width="130" height="70" rx="10" class="client" />
+    <text x="65" y="32" text-anchor="middle" class="title">Web / App</text>
+    <text x="65" y="52" text-anchor="middle" class="sub">用户客户端</text>
   </g>
 
   <!-- API 网关 -->
   <g transform="translate(250, 160)">
-    <rect x="0" y="0" width="130" height="70" class="service-box" />
-    <text x="65" y="32" text-anchor="middle" class="label-title">API Gateway</text>
-    <text x="65" y="52" text-anchor="middle" class="label-sub">反向代理 &amp; 鉴权</text>
+    <rect x="0" y="0" width="130" height="70" rx="10" class="service" />
+    <text x="65" y="32" text-anchor="middle" class="title">API Gateway</text>
+    <text x="65" y="52" text-anchor="middle" class="sub">反向代理 &amp; 鉴权</text>
   </g>
 
   <!-- 微服务 A -->
   <g transform="translate(440, 100)">
-    <rect x="0" y="0" width="130" height="65" class="service-box" />
-    <text x="65" y="30" text-anchor="middle" class="label-title">文章服务</text>
-    <text x="65" y="48" text-anchor="middle" class="label-sub">Post Service</text>
+    <rect x="0" y="0" width="130" height="65" rx="10" class="service" />
+    <text x="65" y="30" text-anchor="middle" class="title">文章服务</text>
+    <text x="65" y="48" text-anchor="middle" class="sub">Post Service</text>
   </g>
 
   <!-- 微服务 B -->
   <g transform="translate(440, 220)">
-    <rect x="0" y="0" width="130" height="65" class="service-box" />
-    <text x="65" y="30" text-anchor="middle" class="label-title">搜索服务</text>
-    <text x="65" y="48" text-anchor="middle" class="label-sub">Search Engine</text>
+    <rect x="0" y="0" width="130" height="65" rx="10" class="service" />
+    <text x="65" y="30" text-anchor="middle" class="title">搜索服务</text>
+    <text x="65" y="48" text-anchor="middle" class="sub">Search Engine</text>
   </g>
 
   <!-- 存储/缓存 -->
   <g transform="translate(620, 100)">
-    <rect x="0" y="0" width="110" height="65" class="db-box" />
-    <text x="55" y="30" text-anchor="middle" class="label-title">PostgreSQL</text>
-    <text x="55" y="48" text-anchor="middle" class="label-sub">主数据库</text>
+    <rect x="0" y="0" width="110" height="65" rx="10" class="db" />
+    <text x="55" y="30" text-anchor="middle" class="title">PostgreSQL</text>
+    <text x="55" y="48" text-anchor="middle" class="sub">主数据库</text>
   </g>
 
   <g transform="translate(620, 220)">
-    <rect x="0" y="0" width="110" height="65" class="db-box" />
-    <text x="55" y="30" text-anchor="middle" class="label-title">Redis Cluster</text>
-    <text x="55" y="48" text-anchor="middle" class="label-sub">分布式缓存</text>
+    <rect x="0" y="0" width="110" height="65" rx="10" class="db" />
+    <text x="55" y="30" text-anchor="middle" class="title">Redis Cluster</text>
+    <text x="55" y="48" text-anchor="middle" class="sub">分布式缓存</text>
   </g>
 
   <!-- 连线与箭头 -->

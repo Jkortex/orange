@@ -35,7 +35,7 @@ const SIZE_CLASS: Record<IconButtonSize, string> = {
 }
 
 const BASE_CLASS =
-  'flex items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted/70 hover:text-foreground active:scale-95'
+  'flex items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95'
 
 export function IconButton({
   label,

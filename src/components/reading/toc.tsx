@@ -55,7 +55,7 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
         <p className="type-caption font-semibold uppercase tracking-wider text-muted-foreground">目录</p>
         <span className="type-caption font-mono text-muted-foreground">{headings.length} 节</span>
       </div>
-      <ol className="relative space-y-1 border-l border-border-subtle pl-2.5 text-sm">
+      <ol className="relative space-y-1 border-l border-border-subtle pl-2.5">
         {headings.map((heading) => {
           const isActive = activeId === heading.id
           return (
@@ -63,10 +63,10 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
               <a
                 href={`#${heading.id}`}
                 onClick={(e) => handleHeadingClick(e, heading.id)}
-                className={`group flex items-center rounded-md px-2 py-1.5 type-meta transition-all duration-200 ${
+                className={`group flex items-center rounded-md px-2 py-1.5 type-meta transition-all duration-150 ${
                   isActive
                     ? 'bg-primary/10 font-medium text-primary'
-                    : 'text-muted-foreground hover:bg-surface-hover hover:text-foreground hover:translate-x-0.5'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-0.5'
                 }`}
               >
                 <span className="truncate">{heading.text}</span>

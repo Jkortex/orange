@@ -78,10 +78,10 @@ export function HotkeyHelpModal() {
           {SHORTCUTS.map(({ keys, desc }) => (
             <div
               key={keys}
-              className="type-meta flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-surface-hover"
+              className="type-meta flex items-center justify-between rounded-lg px-3 py-2 transition-colors duration-150 hover:bg-muted"
             >
               <span className="text-muted-foreground">{desc}</span>
-              <kbd className="type-caption inline-flex items-center gap-1 rounded-md border border-border-subtle bg-muted/70 px-2 py-0.5 font-mono font-medium text-foreground">
+              <kbd className="kbd gap-1 font-medium text-foreground">
                 {keys}
               </kbd>
             </div>
@@ -89,7 +89,7 @@ export function HotkeyHelpModal() {
         </div>
 
         <div className="type-caption mt-5 border-t border-border-subtle pt-3 text-center text-muted-foreground">
-          按 <kbd className="rounded border border-border-subtle px-1 font-mono">Esc</kbd> 或点击外部关闭
+          按 <kbd className="kbd">Esc</kbd> 或点击外部关闭
         </div>
       </div>
     </div>

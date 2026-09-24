@@ -51,7 +51,7 @@ export function DetailHeader({
                     <Link
                       key={tag}
                       href={`/tags/${tag}`}
-                      className="type-meta inline-flex items-center rounded-full border border-border-subtle bg-muted/60 px-2.5 py-0.5 text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-primary"
+                      className="chip chip-interactive"
                     >
                       #{tag}
                     </Link>

@@ -166,9 +166,9 @@ export function CodeDemo({
   })
 
   return (
-    <div className="group/demo not-prose my-8 overflow-hidden rounded-xl border border-border-subtle bg-surface">
+    <div className="surface-card group/demo not-prose my-8 overflow-hidden">
       {/* 演示顶栏 */}
-      <div className="flex items-center justify-between border-b border-border-subtle bg-muted/40 px-4 py-2.5">
+      <div className="panel-bar flex items-center justify-between border-b border-border-subtle px-4 py-2.5">
         <div className="flex items-center gap-2">
           <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Code2 className="size-3.5" aria-hidden />
@@ -184,7 +184,7 @@ export function CodeDemo({
             onClick={() => setIframeKey((k) => k + 1)}
             aria-label="重置演示"
             title="重置演示"
-            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground active:scale-95"
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
           >
             <RotateCcw className="size-3.5" aria-hidden />
           </button>
@@ -195,7 +195,7 @@ export function CodeDemo({
               onClick={() => setExpanded(!expanded)}
               aria-expanded={expanded}
               aria-label={expanded ? '收起代码' : '查看代码'}
-              className="type-caption inline-flex items-center gap-1 rounded-md border border-border-subtle bg-background/80 px-2.5 py-1 font-medium text-muted-foreground shadow-card transition-all hover:bg-accent hover:text-accent-foreground active:scale-95"
+              className="surface-float type-caption inline-flex items-center gap-1 px-2.5 py-1 font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
             >
               <span>{expanded ? '收起代码' : '查看代码'}</span>
               {expanded ? (
@@ -224,9 +224,9 @@ export function CodeDemo({
 
       {/* 折叠代码区 */}
       {expanded && availableTabs.length > 0 && (
-        <div className="border-t border-border-subtle bg-muted/20">
+        <div className="border-t border-border-subtle">
           {/* Tab 栏 + 复制 */}
-          <div className="flex items-center justify-between border-b border-border-subtle bg-muted/50 px-3 py-1.5">
+          <div className="panel-bar flex items-center justify-between border-b border-border-subtle px-3 py-1.5">
             <div className="flex items-center gap-1">
               {availableTabs.map((tab) => (
                 <button
@@ -237,7 +237,7 @@ export function CodeDemo({
                   className={`rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors ${
                     activeTab === tab.id
                       ? 'bg-background text-foreground shadow-card'
-                      : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   {tab.label}
@@ -249,7 +249,7 @@ export function CodeDemo({
               type="button"
               onClick={() => copyText(activeCode)}
               aria-label={copied ? '已复制' : '复制代码'}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground active:scale-95"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 type-caption text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
             >
               {copied ? (
                 <>

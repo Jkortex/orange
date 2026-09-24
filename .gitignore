@@ -11,3 +11,6 @@ next-env.d.ts
 # misc
 .DS_Store
 npm-debug.log*
+
+# editor tooling（本地 skills，不入库）
+/.codebuddy/

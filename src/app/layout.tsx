@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Citrus } from 'lucide-react'
 import { ThemeSelect } from '@/components/chrome/theme-select'
 import { ThemeToggle } from '@/components/chrome/theme-toggle'
 import { PlayerProvider } from '@/components/player/player-provider'
@@ -9,9 +8,9 @@ import { BackToTop } from '@/components/chrome/back-to-top'
 import { SearchDialog } from '@/components/chrome/search-dialog'
 import { HotkeyHelpModal } from '@/components/chrome/hotkey-help-modal'
 import { RouteScrollReset } from '@/components/chrome/route-scroll-reset'
-import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { HeaderNav } from '@/components/chrome/header-nav'
+import { BrandMark } from '@/components/chrome/brand-mark'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -28,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="zh-CN"
       data-theme="default"
-      className={`${GeistSans.variable} ${GeistMono.variable}`}
+      className={GeistMono.variable}
       suppressHydrationWarning
     >
       <head>
@@ -54,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
               <Link href="/" className="type-item flex shrink-0 items-center gap-2 font-semibold transition-colors hover:text-primary">
                 <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
-                  <Citrus className="size-4 text-primary" aria-hidden />
+                  <BrandMark className="size-4 text-primary" />
                 </span>
                 Orange
               </Link>
@@ -70,14 +69,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* 宽度由各页面自持（文章页双栏 max-w-5xl，其余 max-w-2xl 居中），main 只管弹性与留白 */}
           <main className="w-full flex-1 px-4 py-10 sm:px-6 sm:py-12 pb-20">{children}</main>
           <footer className="border-t border-border-subtle">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="type-meta flex w-full flex-col gap-3 px-4 py-8 text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="flex items-center gap-1.5">
-                <Citrus className="size-4 text-primary/70" aria-hidden />
+                <BrandMark className="size-4 text-primary/70" />
                 <span>
                   Orange · 记录编程技术、生活随想与音乐
                 </span>
               </p>
-              <nav aria-label="页脚" className="flex items-center gap-4 text-sm">
+              <nav aria-label="页脚" className="type-meta flex items-center gap-4">
                 <Link href="/rss.xml" className="transition-colors hover:text-foreground">RSS</Link>
                 <span aria-hidden="true" className="h-3 w-px bg-border" />
                 <span className="tabular-nums">© {new Date().getFullYear()}</span>

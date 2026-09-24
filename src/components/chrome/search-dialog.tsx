@@ -274,7 +274,7 @@ export function SearchDialog() {
   }
 
   const iconBtnClass =
-    'group relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted/70 hover:text-foreground active:scale-95'
+    'group relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95'
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -348,7 +348,7 @@ export function SearchDialog() {
         {/* 结果区域 */}
         <div className="max-h-[22rem] overflow-y-auto p-1 scrollbar-thin">
           {error ? (
-            <p className="p-6 text-center text-sm text-destructive">{error}</p>
+            <p className="type-meta p-6 text-center text-destructive">{error}</p>
           ) : !query.trim() ? (
             <SearchEmptyState
               recentVisits={recentVisits}
@@ -361,7 +361,7 @@ export function SearchDialog() {
               onSelectAction={(action) => action.onSelect()}
             />
           ) : flatItems.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
+            <div className="type-meta p-8 text-center text-muted-foreground">
               未找到与 &quot;<span className="text-foreground font-medium">{query}</span>&quot; 相关的结果
             </div>
           ) : (
@@ -374,7 +374,7 @@ export function SearchDialog() {
         </div>
 
         {/* 底栏快捷说明 */}
-        <div className="type-caption flex items-center justify-between border-t border-border-subtle bg-muted/20 px-3.5 py-2 text-muted-foreground select-none">
+        <div className="panel-bar type-caption flex items-center justify-between border-t border-border-subtle px-3.5 py-2 text-muted-foreground select-none">
           <div className="flex items-center gap-3">
             <span>↑↓ 导航</span>
             <span>↵ 打开</span>

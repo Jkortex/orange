@@ -31,10 +31,10 @@ export default async function MusicDetailPage({ params }: Params) {
             <img
               src={cover}
               alt={`${title} 封面`}
-              className="aspect-square w-full rounded-lg border border-border-subtle object-cover"
+              className="media-frame aspect-square w-full object-cover"
             />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-border-subtle bg-muted text-muted-foreground">
+            <div className="media-frame flex aspect-square w-full items-center justify-center text-muted-foreground">
               <Music className="size-12" aria-hidden />
             </div>
           )}

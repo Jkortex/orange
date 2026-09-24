@@ -24,7 +24,7 @@ export function SearchFilterChips({
     <div
       role="tablist"
       aria-label="搜索范围过滤"
-      className="type-caption flex items-center gap-1.5 border-b border-border-subtle bg-muted/20 px-3.5 py-1.5 overflow-x-auto select-none"
+      className="panel-bar type-caption flex items-center gap-1.5 border-b border-border-subtle px-3.5 py-1.5 overflow-x-auto select-none"
     >
       {SCOPE_CHIPS.map((chip) => {
         const isActive = activeScope === chip.id
@@ -38,7 +38,7 @@ export function SearchFilterChips({
             className={`rounded-full px-2.5 py-1 font-medium transition-colors duration-150 ${
               isActive
                 ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-                : 'text-muted-foreground hover:bg-surface-hover hover:text-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
             {chip.label}

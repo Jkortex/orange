@@ -2,7 +2,6 @@ import Link from 'next/link'
 import type { RelatedEntry } from '@/lib/content'
 import { formatDate } from '@/lib/format'
 import { TypeBadge } from '@/components/primitives/type-badge'
-import { Sparkles } from 'lucide-react'
 
 export function RelatedEntries({
   entries,
@@ -15,9 +14,8 @@ export function RelatedEntries({
 
   return (
     <section aria-label="相关推荐" className={`mt-12 not-prose ${className}`}>
-      <div className="type-caption mb-4 flex items-center gap-1.5 font-semibold uppercase tracking-wider text-muted-foreground">
-        <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-        <span>相关推荐</span>
+      <div className="type-caption mb-4 font-semibold uppercase tracking-wider text-muted-foreground">
+        相关推荐
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">

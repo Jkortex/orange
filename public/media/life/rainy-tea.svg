@@ -1,17 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
-  <defs>
-    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4a5568" />
-      <stop offset="50%" stop-color="#2d3748" />
-      <stop offset="100%" stop-color="#1a202c" />
-    </linearGradient>
-    <linearGradient id="tea" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#d69e2e" />
-      <stop offset="100%" stop-color="#b7791f" />
-    </linearGradient>
-  </defs>
-  <rect width="800" height="600" fill="url(#g1)" />
-  <circle cx="400" cy="300" r="140" fill="#2d3748" stroke="#4a5568" stroke-width="8" />
-  <circle cx="400" cy="300" r="110" fill="url(#tea)" />
-  <text x="400" y="520" text-anchor="middle" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="24" letter-spacing="2">雨后桂花乌龙</text>
+  <!-- 雨后桂花乌龙：冷调底 + 雨丝 + 暖调茶汤 -->
+  <rect width="800" height="600" fill="#ecece7" />
+  <g fill="none" stroke="#b9c0c6" stroke-width="7" stroke-linecap="round">
+    <path d="M152 92 L124 164" />
+    <path d="M234 58 L206 130" />
+    <path d="M598 106 L570 178" />
+    <path d="M692 74 L664 146" />
+  </g>
+  <ellipse cx="400" cy="486" rx="176" ry="28" fill="#d9c7b4" />
+  <path d="M300 312 L500 312 L478 430 Q472 458 444 458 L356 458 Q328 458 322 430 Z" fill="#2a2622" />
+  <ellipse cx="400" cy="312" rx="100" ry="22" fill="#2a2622" />
+  <ellipse cx="400" cy="312" rx="84" ry="16" fill="#c98a2e" />
+  <g fill="#e0a93b">
+    <circle cx="362" cy="306" r="7" />
+    <circle cx="430" cy="316" r="6" />
+    <circle cx="396" cy="321" r="5" />
+  </g>
 </svg>

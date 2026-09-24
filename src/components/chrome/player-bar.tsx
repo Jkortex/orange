@@ -54,9 +54,9 @@ export function PlayerBar() {
     <div data-bar className="fixed inset-x-0 bottom-0 z-50 border-t border-border-subtle bg-background/85 shadow-bar backdrop-blur-xl animate-in slide-in-from-bottom duration-300">
       <div className="mx-auto flex h-16 max-w-2xl items-center gap-3 px-4">
         {track.cover ? (
-          <img src={track.cover} alt="" className="size-10 rounded-lg border border-border-subtle object-cover" />
+          <img src={track.cover} alt="" className="media-frame size-10 object-cover" />
         ) : (
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-muted text-muted-foreground">
+          <span className="media-frame flex size-10 shrink-0 items-center justify-center text-muted-foreground">
             <Music className="size-5" aria-hidden />
           </span>
         )}
@@ -101,7 +101,7 @@ export function PlayerBar() {
               type="button"
               aria-label={playLabel}
               onClick={toggle}
-              className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:brightness-[1.05]"
+              className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors duration-150 hover:brightness-[1.05]"
             >
               {playing ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
             </button>

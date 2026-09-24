@@ -32,12 +32,12 @@ export function LifeStream({ entries }: LifeStreamProps) {
         <button
           type="button"
           onClick={handleOpenSearch}
-          className="type-caption inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-muted/40 px-2.5 py-1 text-muted-foreground transition hover:border-border-strong hover:bg-muted hover:text-foreground active:scale-95"
+          className="chip chip-interactive gap-1.5 active:scale-95"
           aria-label="搜索生活记录"
         >
           <Search className="size-3" />
           <span>检索动态</span>
-          <kbd className="type-caption hidden rounded border border-border-subtle bg-background/80 px-1 font-mono text-muted-foreground sm:inline-block">
+          <kbd className="kbd hidden sm:inline-block">
             ⌘K
           </kbd>
         </button>

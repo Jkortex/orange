@@ -28,7 +28,7 @@ describe('LifeCard 碎碎念生活卡片组件', () => {
 
     expect(screen.getByText('雨后漫步')).toBeTruthy()
     expect(screen.getByText('雨停后在西湖边走走，桂花初开。')).toBeTruthy()
-    expect(screen.getByText('📍 杭州')).toBeTruthy()
+    expect(screen.getByText('杭州')).toBeTruthy()
     expect(screen.getByText('🌧️ 小雨')).toBeTruthy()
     expect(screen.getByText('#日常')).toBeTruthy()
     expect(screen.getByText('#散步')).toBeTruthy()

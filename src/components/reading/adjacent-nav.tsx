@@ -50,10 +50,10 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
         >
           <div className="type-meta flex items-center justify-between text-muted-foreground">
             <span className="flex items-center gap-1.5 font-medium">
-              <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+              <span className="transition-transform duration-150 group-hover:-translate-x-1">←</span>
               <span>上一篇</span>
             </span>
-            <kbd className="type-caption hidden rounded border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-mono text-muted-foreground sm:inline-block">
+            <kbd className="kbd hidden sm:inline-block">
               [
             </kbd>
           </div>
@@ -73,12 +73,12 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
           className="surface-card surface-interactive group flex flex-col justify-between p-4 text-right sm:col-start-2"
         >
           <div className="type-meta flex items-center justify-between text-muted-foreground">
-            <kbd className="type-caption hidden rounded border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-mono text-muted-foreground sm:inline-block">
+            <kbd className="kbd hidden sm:inline-block">
               ]
             </kbd>
             <span className="flex items-center gap-1.5 font-medium">
               <span>下一篇</span>
-              <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              <span className="transition-transform duration-150 group-hover:translate-x-1">→</span>
             </span>
           </div>
           <span className="mt-2 block truncate font-medium text-foreground transition-colors group-hover:text-primary">

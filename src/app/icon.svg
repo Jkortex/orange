@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <style>
+    .ring { stroke: #c24700; }
+    .leaf { fill: #c24700; }
+    @media (prefers-color-scheme: dark) {
+      .ring { stroke: #e08a46; }
+      .leaf { fill: #e08a46; }
+    }
+  </style>
+  <circle class="ring" cx="15.5" cy="19.5" r="9.5" stroke-width="5.2" />
+  <path class="leaf" d="M19 9.2Q28.06 10.51 27.2 1.4Q18.14 0.09 19 9.2Z" />
+</svg>

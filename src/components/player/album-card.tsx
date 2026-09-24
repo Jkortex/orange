@@ -33,7 +33,7 @@ export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCar
     <li className="group relative">
       {/* 封面容器不裁剪溢出，保证播放按钮 tooltip 完整显示 */}
       <div className="relative">
-        <div className="aspect-square overflow-hidden rounded-xl border border-border-subtle bg-muted">
+        <div className="media-frame aspect-square">
           {cover ? (
             <img
               src={cover}
@@ -52,7 +52,7 @@ export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCar
           type="button"
           aria-label={playLabel}
           onClick={() => (current ? toggle() : playAlbum(queueTracks))}
-          className="absolute bottom-2.5 right-2.5 z-10 flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:brightness-[1.05]"
+          className="absolute bottom-2.5 right-2.5 z-10 flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors duration-150 hover:brightness-[1.05]"
         >
           {playingThis ? <Pause className="size-4" aria-hidden /> : <Play className="ml-px size-4" aria-hidden />}
           <Tip className="-top-8 right-0">{playLabel}</Tip>

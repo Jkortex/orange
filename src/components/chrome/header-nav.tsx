@@ -38,7 +38,7 @@ export function HeaderNav({ items = defaultNavItems }: { items?: NavItem[] }) {
             className={`type-meta rounded-full px-2.5 py-1.5 transition-colors duration-150 sm:px-3 sm:text-base ${
               active
                 ? 'bg-primary/10 font-semibold text-primary'
-                : 'text-muted-foreground hover:bg-surface-hover hover:text-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
             {item.label}
