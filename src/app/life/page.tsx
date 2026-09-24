@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { NotebookPen } from 'lucide-react'
 import { getCollection } from '@/lib/content'
 import { PageHeader } from '@/components/listing/page-header'
 import { LifeStream } from '@/components/listing/life-stream'
@@ -16,6 +17,7 @@ export default function LifePage() {
       <PageHeader
         title="生活"
         description="日常碎片、即兴随笔与随手记录。"
+        icon={<NotebookPen aria-hidden />}
       />
       <div className="mt-6">
         <LifeStream entries={entries} />

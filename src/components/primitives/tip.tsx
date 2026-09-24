@@ -7,7 +7,7 @@
  */
 
 const baseClass =
-  'pointer-events-none absolute whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'
+  'type-caption pointer-events-none absolute whitespace-nowrap rounded-md border border-border-subtle bg-surface px-2 py-1 text-foreground opacity-0 shadow-pop transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'
 
 export function Tip({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (

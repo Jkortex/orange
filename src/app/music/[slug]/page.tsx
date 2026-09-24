@@ -31,21 +31,21 @@ export default async function MusicDetailPage({ params }: Params) {
             <img
               src={cover}
               alt={`${title} 封面`}
-              className="aspect-square w-full rounded-lg border border-border object-cover"
+              className="aspect-square w-full rounded-lg border border-border-subtle object-cover"
             />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
+            <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-border-subtle bg-muted text-muted-foreground">
               <Music className="size-12" aria-hidden />
             </div>
           )}
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{artist}</p>
-          <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="type-meta text-muted-foreground">{artist}</p>
+          <h1 className="type-display mt-1">{title}</h1>
+          <p className="type-meta mt-2 text-muted-foreground">
             {[year, `${tracks.length} 首曲目`].filter((item) => item !== undefined).join(' · ')}
           </p>
-          {description && <p className="mt-3 text-sm text-muted-foreground">{description}</p>}
+          {description && <p className="type-body mt-3 text-muted-foreground">{description}</p>}
         </div>
       </header>
       <AlbumTrackList tracks={tracks} cover={cover} artist={artist} />

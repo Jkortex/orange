@@ -33,7 +33,7 @@ export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCar
     <li className="group relative">
       {/* 封面容器不裁剪溢出，保证播放按钮 tooltip 完整显示 */}
       <div className="relative">
-        <div className="aspect-square overflow-hidden rounded-xl border border-border/60 bg-muted">
+        <div className="aspect-square overflow-hidden rounded-xl border border-border-subtle bg-muted">
           {cover ? (
             <img
               src={cover}
@@ -58,13 +58,13 @@ export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCar
           <Tip className="-top-8 right-0">{playLabel}</Tip>
         </button>
       </div>
-      <h2 className="mt-2.5 truncate font-medium tracking-tight">
+      <h2 className="type-item mt-2.5 truncate">
         {/* stretched-link：::after 铺满最近的定位祖先（li），整卡可点 */}
         <Link href={`/music/${slug}`} className="transition-colors hover:text-primary after:absolute after:inset-0">
           {title}
         </Link>
       </h2>
-      <p className="mt-0.5 truncate text-sm text-muted-foreground">
+      <p className="type-meta mt-0.5 truncate text-muted-foreground">
         {artist}
         {year !== undefined && <span className="tabular-nums"> · {year}</span>}
       </p>

@@ -20,6 +20,20 @@ describe('CodeBlock', () => {
     expect(screen.getByTestId('pre')).toBeTruthy()
   })
 
+  it('不渲染 macOS 三色指示点（硬编码颜色已清除），保留语言标签', () => {
+    const { container } = render(
+      <CodeBlock data-language="ts">
+        <code>x</code>
+      </CodeBlock>,
+    )
+
+    expect(
+      container.querySelectorAll('[class*="bg-red-"], [class*="bg-amber-"], [class*="bg-emerald-"]'),
+    ).toHaveLength(0)
+    expect(screen.getByText('ts')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '复制代码' })).toBeTruthy()
+  })
+
   it('点击复制后调用 clipboard API', async () => {
     const writeTextMock = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, {

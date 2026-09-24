@@ -40,7 +40,6 @@ export function ThemeToggle() {
     <IconButton
       label={label}
       onClick={toggle}
-      buttonClassName="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95"
       tipClassName="right-0 top-full mt-1.5"
     >
       {/* key 随状态重挂图标，播放一次淡入缩放，表达明暗切换的即时反馈；

@@ -50,9 +50,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PlayerProvider>
           {/* 顶栏全宽两端对齐：品牌居左、导航与工具居右，不随内容区收窄；
               窄屏右侧组换行、各项仍可达 */}
-          <header className="sticky top-0 z-40 border-b border-border/60 bg-background/75 shadow-[0_1px_0_rgb(0_0_0/0.02)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+          <header className="sticky top-0 z-40 border-b border-border-subtle bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
             <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
-              <Link href="/" className="flex shrink-0 items-center gap-2 text-[17px] font-semibold tracking-tight transition-colors hover:text-primary">
+              <Link href="/" className="type-item flex shrink-0 items-center gap-2 font-semibold transition-colors hover:text-primary">
                 <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
                   <Citrus className="size-4 text-primary" aria-hidden />
                 </span>
@@ -69,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </header>
           {/* 宽度由各页面自持（文章页双栏 max-w-5xl，其余 max-w-2xl 居中），main 只管弹性与留白 */}
           <main className="w-full flex-1 px-4 py-10 sm:px-6 sm:py-12 pb-20">{children}</main>
-          <footer className="border-t border-border/60">
+          <footer className="border-t border-border-subtle">
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="flex items-center gap-1.5">
                 <Citrus className="size-4 text-primary/70" aria-hidden />

@@ -19,8 +19,7 @@ export type PostItem = {
 
 const PAGE_SIZE = 15
 
-const POST_ROW_CLASS =
-  'group flex items-baseline gap-3 px-3 py-3 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card'
+const POST_ROW_CLASS = 'list-row group flex items-center gap-3'
 
 export function PostsExplorer({ posts }: { posts: PostItem[] }) {
   return (
@@ -37,7 +36,7 @@ export function PostsExplorer({ posts }: { posts: PostItem[] }) {
         <>
           <time
             dateTime={post.date}
-            className="w-20 shrink-0 font-mono text-[13px] tabular-nums text-muted-foreground/80"
+            className="type-meta w-20 shrink-0 font-mono tabular-nums text-muted-foreground"
           >
             {formatDateISO(post.date)}
           </time>

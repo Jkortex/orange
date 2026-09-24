@@ -53,7 +53,7 @@ export function MobileTocDrawer({
         label="文章目录"
         onClick={() => setIsOpen(true)}
         wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-[bottom,transform,opacity] duration-200 ease-out animate-in fade-in-0 zoom-in-90 ${bottomClass}`}
-        buttonClassName="flex size-9 items-center justify-center rounded-full border border-border/80 bg-card/85 text-muted-foreground backdrop-blur-md transition-colors duration-150 hover:border-primary/50 hover:bg-card hover:text-primary"
+        buttonClassName="border border-border-strong bg-surface/85 backdrop-blur-md hover:border-primary/50 hover:bg-surface hover:text-primary"
         tipClassName="bottom-full right-0 mb-2"
       >
         <List className="size-4" aria-hidden="true" />
@@ -70,14 +70,14 @@ export function MobileTocDrawer({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[75vh] w-full max-w-lg rounded-t-2xl border-t border-border bg-background p-5 shadow-2xl overflow-hidden flex flex-col transition-transform animate-in slide-in-from-bottom duration-200 ease-out will-change-transform"
+            className="max-h-[75vh] w-full max-w-lg rounded-t-2xl border-t border-border bg-background p-5 shadow-overlay overflow-hidden flex flex-col transition-transform animate-in slide-in-from-bottom duration-200 ease-out will-change-transform"
           >
             {/* 顶栏 */}
-            <div className="mb-4 flex items-center justify-between border-b border-border/60 pb-3">
+            <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-3">
               <div className="flex items-center gap-2">
                 <List className="h-4 w-4 text-primary" aria-hidden="true" />
-                <h2 className="text-base font-semibold text-foreground">文章目录</h2>
-                <span className="font-mono text-[13px] text-muted-foreground">({headings.length} 节)</span>
+                <h2 className="type-section text-foreground">文章目录</h2>
+                <span className="type-caption font-mono text-muted-foreground">({headings.length} 节)</span>
               </div>
               <button
                 type="button"
@@ -96,8 +96,8 @@ export function MobileTocDrawer({
                   key={heading.id}
                   href={`#${heading.id}`}
                   onClick={(e) => handleHeadingClick(e, heading.id)}
-                  className={`block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:bg-primary/10 ${
-                    heading.depth === 3 ? 'pl-7 text-[13px]' : 'font-medium'
+                  className={`type-meta block rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground active:bg-primary/10 ${
+                    heading.depth === 3 ? 'pl-7 type-caption' : 'font-medium'
                   }`}
                 >
                   {heading.text}

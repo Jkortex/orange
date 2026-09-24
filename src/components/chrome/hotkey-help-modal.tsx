@@ -57,12 +57,12 @@ export function HotkeyHelpModal() {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl transition-all"
+        className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 shadow-overlay transition-all"
       >
-        <div className="mb-5 flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="mb-5 flex items-center justify-between border-b border-border-subtle pb-3">
           <div className="flex items-center gap-2">
             <Keyboard className="h-5 w-5 text-primary" aria-hidden="true" />
-            <h2 className="text-base font-semibold text-foreground">快捷键指南</h2>
+            <h2 className="type-section text-foreground">快捷键指南</h2>
           </div>
           <button
             type="button"
@@ -78,18 +78,18 @@ export function HotkeyHelpModal() {
           {SHORTCUTS.map(({ keys, desc }) => (
             <div
               key={keys}
-              className="flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted/60"
+              className="type-meta flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-surface-hover"
             >
               <span className="text-muted-foreground">{desc}</span>
-              <kbd className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-muted/70 px-2 py-0.5 font-mono text-xs font-medium text-foreground">
+              <kbd className="type-caption inline-flex items-center gap-1 rounded-md border border-border-subtle bg-muted/70 px-2 py-0.5 font-mono font-medium text-foreground">
                 {keys}
               </kbd>
             </div>
           ))}
         </div>
 
-        <div className="mt-5 border-t border-border/60 pt-3 text-center text-[13px] text-muted-foreground/70">
-          按 <kbd className="rounded border border-border px-1 font-mono text-xs">Esc</kbd> 或点击外部关闭
+        <div className="type-caption mt-5 border-t border-border-subtle pt-3 text-center text-muted-foreground">
+          按 <kbd className="rounded border border-border-subtle px-1 font-mono">Esc</kbd> 或点击外部关闭
         </div>
       </div>
     </div>

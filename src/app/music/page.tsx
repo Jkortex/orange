@@ -16,11 +16,7 @@ export default function MusicPage() {
       <PageHeader
         title="音乐"
         description="一篇内容即一张专辑 · 点击封面进入详情，不进详情页也可直接播放。"
-        icon={
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
-            <Music className="size-4 text-primary" aria-hidden />
-          </span>
-        }
+        icon={<Music aria-hidden />}
       />
       {albums.length === 0 ? (
         <EmptyState message="还没有内容。" />

@@ -298,12 +298,12 @@ export function SearchDialog() {
           e.preventDefault()
           inputRef.current?.focus()
         }}
-        className="top-20 max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl bg-background"
+        className="top-20 max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border-subtle p-0 shadow-overlay bg-background"
       >
         <DialogTitle className="sr-only">站内搜索</DialogTitle>
 
         {/* 顶部输入框 */}
-        <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+        <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
           {loading ? (
             <Loader2 className="size-4 shrink-0 text-primary animate-spin" aria-hidden />
           ) : (
@@ -318,7 +318,7 @@ export function SearchDialog() {
             onKeyDown={handleKeyDown}
             placeholder="搜索全站文章、生活、音乐与章节大纲..."
             aria-label="搜索关键词"
-            className="h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+            className="h-8 w-full bg-transparent type-meta outline-none placeholder:text-muted-foreground"
           />
 
           {query && (
@@ -335,7 +335,7 @@ export function SearchDialog() {
           <IconButton
             label="关闭搜索"
             onClick={() => setOpen(false)}
-            buttonClassName="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95"
+            size="sm"
             tipClassName={tooltipPosition}
           >
             <X className="size-4" aria-hidden />
@@ -374,7 +374,7 @@ export function SearchDialog() {
         </div>
 
         {/* 底栏快捷说明 */}
-        <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-3.5 py-2 text-xs text-muted-foreground select-none">
+        <div className="type-caption flex items-center justify-between border-t border-border-subtle bg-muted/20 px-3.5 py-2 text-muted-foreground select-none">
           <div className="flex items-center gap-3">
             <span>↑↓ 导航</span>
             <span>↵ 打开</span>

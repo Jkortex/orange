@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Newspaper } from 'lucide-react'
 import { getCollection } from '@/lib/content'
 import { PostsExplorer, type PostItem } from '@/components/listing/posts-explorer'
 import { PageHeader } from '@/components/listing/page-header'
@@ -17,7 +18,11 @@ export default function PostsPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
-      <PageHeader title="文章" description="分类即过滤器 · 切换即时、无跳转，默认「最近」为全部倒序。" />
+      <PageHeader
+        title="文章"
+        description="分类即过滤器 · 切换即时、无跳转，默认「最近」为全部倒序。"
+        icon={<Newspaper aria-hidden />}
+      />
       <PostsExplorer posts={posts} />
     </div>
   )

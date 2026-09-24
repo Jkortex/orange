@@ -16,20 +16,15 @@ export function CodeBlock({ children, className = '', ...props }: ComponentProps
   }
 
   return (
-    <div className="group/code relative my-6 overflow-hidden rounded-xl border border-border/80 bg-muted/40">
-      {/* 极简顶栏：macOS 风格三态微指示点 + 语言标识徽章 */}
-      <div className="flex items-center justify-between border-b border-border/40 bg-muted/60 px-3.5 py-2 text-xs select-none">
-        <div className="flex items-center gap-1.5 opacity-60" aria-hidden="true">
-          <span className="size-2.5 rounded-full bg-red-400/80 dark:bg-red-500/60" />
-          <span className="size-2.5 rounded-full bg-amber-400/80 dark:bg-amber-500/60" />
-          <span className="size-2.5 rounded-full bg-emerald-400/80 dark:bg-emerald-500/60" />
-        </div>
-        {lang && (
-          <span className="font-mono text-xs font-medium tracking-wider text-muted-foreground/80 uppercase">
+    <div className="group/code relative my-6 overflow-hidden rounded-xl border border-border-subtle bg-muted/40">
+      {/* 极简顶栏：仅语言标识徽章（原 macOS 三色点已移除，避免硬编码颜色） */}
+      {lang && (
+        <div className="flex items-center border-b border-border-subtle bg-muted/60 px-3.5 py-2 select-none">
+          <span className="type-caption font-mono font-medium tracking-wider text-muted-foreground uppercase">
             {lang}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       <pre
         ref={preRef}

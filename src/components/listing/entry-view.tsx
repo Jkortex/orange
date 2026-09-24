@@ -85,35 +85,35 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
           title={entry.data.title}
           meta={
             <>
-              <time dateTime={entry.data.date.toISOString()} className="font-mono text-[13px] tabular-nums">
+              <time dateTime={entry.data.date.toISOString()} className="font-mono tabular-nums">
                 {formatDate(entry.data.date)}
               </time>
               {'location' in entry.data && entry.data.location && (
-                <span className="text-sm">· 📍 {entry.data.location}</span>
+                <span>· 📍 {entry.data.location}</span>
               )}
               {'weather' in entry.data && entry.data.weather && (
-                <span className="text-sm">· {entry.data.weather}</span>
+                <span>· {entry.data.weather}</span>
               )}
               {!isLife && words > 0 && (
-                <span className="text-sm">· 约 {minutes} 分钟阅读 · {words} 字</span>
+                <span>· 约 {minutes} 分钟阅读 · {words} 字</span>
               )}
             </>
           }
           tags={entry.data.tags}
         />
-        <div aria-hidden="true" className="mt-6 h-px bg-gradient-to-r from-border via-border/40 to-transparent" />
+        <div aria-hidden="true" className="mt-6 h-px bg-gradient-to-r from-border via-border-subtle to-transparent" />
 
         {/* 窄屏/笔记本下正文前轻量折叠式目录 (< xl) */}
         {hasToc && (
-          <details className="group mb-6 overflow-hidden rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm xl:hidden">
-            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground select-none transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
+          <details className="surface-card group mb-6 overflow-hidden xl:hidden">
+            <summary className="type-meta cursor-pointer list-none px-4 py-3 font-medium text-foreground select-none transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between">
                 文章目录 ({headings.length})
                 <span aria-hidden="true" className="text-muted-foreground transition-transform duration-200 group-open:rotate-180">▾</span>
               </span>
             </summary>
-            <div className="border-t border-border/50 px-2 pb-2 pt-2">
-              <Toc headings={headings} className="border-0 bg-transparent shadow-none backdrop-blur-none" />
+            <div className="border-t border-border-subtle px-2 pb-2 pt-2">
+              <Toc headings={headings} className="border-0 bg-transparent shadow-none" />
             </div>
           </details>
         )}

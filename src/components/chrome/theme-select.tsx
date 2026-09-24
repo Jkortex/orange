@@ -48,7 +48,7 @@ export function ThemeSelect({ className = '' }: { className?: string } = {}) {
         <button
           type="button"
           aria-label="选择主题"
-          className={`flex items-center gap-1 rounded-full border border-border/70 bg-card/60 px-3 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm transition-colors duration-200 hover:border-primary/30 hover:text-foreground ${className}`}
+          className={`type-meta flex items-center gap-1 rounded-full border border-border-subtle bg-surface px-3 py-1.5 font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/30 hover:text-foreground ${className}`}
         >
           {current.label}
           <ChevronDown className="size-3.5" aria-hidden />

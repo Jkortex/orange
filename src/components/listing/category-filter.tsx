@@ -21,13 +21,13 @@ export function aggregateCategories<T extends { category?: string }>(items: T[])
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** 分类胶囊样式（active 高亮 / 默认弱化；正文 15px + 计数 13px，保证窄屏可读） */
+/** 分类胶囊样式（active 高亮 / 默认弱化） */
 export function filterPillClass(active: boolean) {
   return [
-    'flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[15px] transition-colors duration-150',
+    'type-meta flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors duration-150',
     active
       ? 'border-primary/30 bg-primary/10 font-medium text-primary'
-      : 'border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/60 hover:text-foreground',
+      : 'border-transparent text-muted-foreground hover:border-border-subtle hover:bg-surface-hover hover:text-foreground',
   ].join(' ')
 }
 
@@ -42,7 +42,7 @@ export type CategorySidebarProps = {
 
 export function CategorySidebar({ categories, active, onSelect, navLabel }: CategorySidebarProps) {
   return (
-    <aside className="sticky top-14 z-20 -mx-4 border-b border-border/40 bg-background/85 px-4 py-2.5 backdrop-blur-md md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-2">
+    <aside className="sticky top-14 z-20 -mx-4 border-b border-border-subtle bg-background/85 px-4 py-2.5 backdrop-blur-md md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-2">
       <nav aria-label={navLabel}>
         <ul className="flex gap-1.5 overflow-x-auto pb-0.5 md:flex-col md:items-start md:gap-1 md:overflow-visible md:pb-0 scrollbar-none">
           <li>
@@ -64,7 +64,7 @@ export function CategorySidebar({ categories, active, onSelect, navLabel }: Cate
                 className={filterPillClass(active === name)}
               >
                 {name}{' '}
-                <span className="text-[13px] text-muted-foreground">{count}</span>
+                <span className="type-caption text-muted-foreground">{count}</span>
               </button>
             </li>
           ))}

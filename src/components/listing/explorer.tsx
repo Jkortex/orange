@@ -87,8 +87,8 @@ export function Explorer<T extends { category?: string }>({
       <section className="min-w-0">
         {/* 条数在 h2 外：保持标题可及名干净（仅分类名） */}
         <div className="mb-3 flex items-baseline gap-2">
-          <h2 className="text-lg font-semibold tracking-tight">{active ?? '最近'}</h2>
-          <span className="font-mono text-[13px] tabular-nums text-muted-foreground/70">
+          <h2 className="type-section">{active ?? '最近'}</h2>
+          <span className="type-meta font-mono tabular-nums text-muted-foreground">
             共 {filtered.length} {unit}
           </span>
         </div>
@@ -100,7 +100,7 @@ export function Explorer<T extends { category?: string }>({
             {/* key 随分类重挂列表，播放一次淡入，表达过滤切换的即时反馈 */}
             <ul
               key={active ?? 'recent'}
-              className="divide-y divide-border/40 py-1 animate-in fade-in-50 duration-200"
+              className="animate-in fade-in-50 duration-200"
             >
               {displayed.map((item) => (
                 <li key={getKey(item)} className={rowClassName}>
@@ -117,16 +117,16 @@ export function Explorer<T extends { category?: string }>({
                   <button
                     type="button"
                     onClick={() => setVisibleCount((prev) => Math.min(prev + pageSize, filtered.length))}
-                    className="rounded-full border border-border/70 bg-card px-5 py-2 text-sm text-foreground transition-colors duration-200 hover:border-primary/40 hover:text-primary"
+                    className="type-meta rounded-full border border-border-subtle bg-surface px-5 py-2 text-foreground transition-colors duration-200 hover:border-border-strong hover:text-primary"
                   >
                     加载更多（已显示 {displayed.length} / {filtered.length}）
                   </button>
                 </div>
               ) : filtered.length > pageSize ? (
-                <div className="mt-8 flex items-center justify-center gap-3 text-[13px] text-muted-foreground/70">
-                  <span aria-hidden="true" className="h-px w-8 bg-border/70" />
+                <div className="type-meta mt-8 flex items-center justify-center gap-3 text-muted-foreground">
+                  <span aria-hidden="true" className="h-px w-8 bg-border-subtle" />
                   {allShownText(filtered.length)}
-                  <span aria-hidden="true" className="h-px w-8 bg-border/70" />
+                  <span aria-hidden="true" className="h-px w-8 bg-border-subtle" />
                 </div>
               ) : null)}
           </>

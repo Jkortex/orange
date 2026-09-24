@@ -33,6 +33,29 @@ describe('IconButton 正常渲染', () => {
   })
 })
 
+describe('IconButton 尺寸契约', () => {
+  it('默认 36px 触摸目标并输出 data-size', () => {
+    render(<IconButton label="默认" />)
+    const button = screen.getByRole('button', { name: '默认' })
+    expect(button.className).toContain('size-9')
+    expect(button.getAttribute('data-size')).toBe('md')
+  })
+
+  it('size="sm" 收窄到 32px', () => {
+    render(<IconButton label="小号" size="sm" />)
+    const button = screen.getByRole('button', { name: '小号' })
+    expect(button.className).toContain('size-8')
+    expect(button.getAttribute('data-size')).toBe('sm')
+  })
+
+  it('调用方可覆盖尺寸（tailwind-merge 取后者）', () => {
+    render(<IconButton label="覆盖" size="sm" buttonClassName="size-10" />)
+    const button = screen.getByRole('button', { name: '覆盖' })
+    expect(button.className).toContain('size-10')
+    expect(button.className).not.toContain('size-8')
+  })
+})
+
 describe('IconButton 异常渲染', () => {
   it('无 label 时依然渲染按钮（调用方失误不白屏）', () => {
     render(<IconButton label="" buttonClassName="p-2" />)

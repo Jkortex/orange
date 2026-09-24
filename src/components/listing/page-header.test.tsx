@@ -19,4 +19,16 @@ describe('PageHeader 正常渲染', () => {
     expect(screen.getByRole('heading', { name: '技能' })).toBeTruthy()
     expect(screen.queryByRole('paragraph')).toBeNull()
   })
+
+  it('传入图标时由组件统一包裹徽章框', () => {
+    const { container } = render(<PageHeader title="音乐" icon={<svg data-testid="icon" />} />)
+    const badge = container.querySelector('[data-slot="page-header-icon"]')
+    expect(badge).not.toBeNull()
+    expect(badge?.querySelector('[data-testid="icon"]')).not.toBeNull()
+  })
+
+  it('无图标时不渲染徽章框', () => {
+    const { container } = render(<PageHeader title="文章" />)
+    expect(container.querySelector('[data-slot="page-header-icon"]')).toBeNull()
+  })
 })

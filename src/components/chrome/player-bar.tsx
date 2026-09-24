@@ -51,21 +51,21 @@ export function PlayerBar() {
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2
 
   return (
-    <div data-bar className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/85 shadow-[0_-12px_40px_-16px_rgb(0_0_0/0.3)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300">
+    <div data-bar className="fixed inset-x-0 bottom-0 z-50 border-t border-border-subtle bg-background/85 shadow-bar backdrop-blur-xl animate-in slide-in-from-bottom duration-300">
       <div className="mx-auto flex h-16 max-w-2xl items-center gap-3 px-4">
         {track.cover ? (
-          <img src={track.cover} alt="" className="size-10 rounded-lg border border-border/60 object-cover" />
+          <img src={track.cover} alt="" className="size-10 rounded-lg border border-border-subtle object-cover" />
         ) : (
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted text-muted-foreground">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-muted text-muted-foreground">
             <Music className="size-5" aria-hidden />
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium tracking-tight">{track.title}</p>
-          {track.artist && <p className="truncate text-[13px] text-muted-foreground">{track.artist}</p>}
+          <p className="type-meta truncate font-medium">{track.title}</p>
+          {track.artist && <p className="type-caption truncate text-muted-foreground">{track.artist}</p>}
         </div>
         <div role="group" aria-label="播放进度" className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="hidden font-mono text-xs tabular-nums text-muted-foreground/80 sm:inline">
+          <span className="type-caption hidden font-mono tabular-nums text-muted-foreground sm:inline">
             {formatTime(currentTime)}
           </span>
           <Slider
@@ -75,16 +75,12 @@ export function PlayerBar() {
             value={[finite ? Math.min(currentTime, duration) : 0]}
             onValueChange={([v]) => seekTo(v ?? 0)}
           />
-          <span className="hidden font-mono text-xs tabular-nums text-muted-foreground/80 sm:inline">
+          <span className="type-caption hidden font-mono tabular-nums text-muted-foreground sm:inline">
             {formatTime(duration)}
           </span>
         </div>
         <div data-volume role="group" aria-label="音量" className="hidden shrink-0 items-center gap-1 md:flex">
-          <IconButton
-            label={muteLabel}
-            onClick={toggleMute}
-            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
-          >
+          <IconButton label={muteLabel} onClick={toggleMute}>
             <VolumeIcon className="size-5" aria-hidden />
           </IconButton>
           <Slider
@@ -97,11 +93,7 @@ export function PlayerBar() {
           />
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <IconButton
-            label="上一首"
-            onClick={prev}
-            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
-          >
+          <IconButton label="上一首" onClick={prev}>
             <ChevronLeft className="size-5" aria-hidden />
           </IconButton>
           <span className="group relative inline-flex">
@@ -115,18 +107,10 @@ export function PlayerBar() {
             </button>
             <Tip className="bottom-full right-0 mb-1.5">{playLabel}</Tip>
           </span>
-          <IconButton
-            label="下一首"
-            onClick={next}
-            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
-          >
+          <IconButton label="下一首" onClick={next}>
             <ChevronRight className="size-5" aria-hidden />
           </IconButton>
-          <IconButton
-            label="关闭播放条"
-            onClick={clear}
-            buttonClassName="rounded-md p-2 text-muted-foreground hover:text-foreground"
-          >
+          <IconButton label="关闭播放条" onClick={clear}>
             <X className="size-5" aria-hidden />
           </IconButton>
         </div>

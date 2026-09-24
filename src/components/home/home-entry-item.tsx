@@ -10,7 +10,7 @@ export type HomeEntryItemProps = {
 
 export function HomeEntryItem({ entry }: HomeEntryItemProps) {
   return (
-    <li className="group flex items-start gap-3 px-3 py-3.5 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card">
+    <li className="list-row group flex items-start gap-3">
       <span className="pt-0.5">
         <TypeBadge type={entry.collection} />
       </span>
@@ -23,14 +23,14 @@ export function HomeEntryItem({ entry }: HomeEntryItemProps) {
                 alt=""
                 loading="lazy"
                 decoding="async"
-                className="size-12 shrink-0 rounded-lg border border-border/60 object-cover"
+                className="size-12 shrink-0 rounded-lg border border-border-subtle object-cover"
               />
             )}
             <span className="min-w-0">
               <span className="block truncate font-medium tracking-tight transition-colors group-hover:text-primary">
                 {entry.data.title}
               </span>
-              <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+              <span className="type-meta mt-0.5 block truncate text-muted-foreground">
                 {entry.data.artist}
                 {entry.data.year !== undefined && ` · ${entry.data.year}`}
               </span>
@@ -44,7 +44,7 @@ export function HomeEntryItem({ entry }: HomeEntryItemProps) {
             >
               {entry.data.title}
             </Link>
-            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <p className="type-meta mt-0.5 flex items-center gap-1.5 text-muted-foreground">
               <time dateTime={entry.data.date.toISOString()} className="tabular-nums">
                 {formatDate(entry.data.date)}
               </time>

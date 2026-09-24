@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Wrench } from 'lucide-react'
 import { getSkillEntries } from '@/lib/content'
 import { SkillsExplorer, type SkillItem } from '@/components/listing/skills-explorer'
 import { PageHeader } from '@/components/listing/page-header'
@@ -21,7 +22,11 @@ export default function SkillsPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
-      <PageHeader title="技能" description="可交互的开发技能包与工作流 · 按分类过滤，即时切换。" />
+      <PageHeader
+        title="技能"
+        description="可交互的开发技能包与工作流 · 按分类过滤，即时切换。"
+        icon={<Wrench aria-hidden />}
+      />
       <SkillsExplorer skills={skills} />
     </div>
   )

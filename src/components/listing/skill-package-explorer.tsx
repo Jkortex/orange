@@ -91,13 +91,13 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
         title={pkg.data.title}
         meta={
           <>
-            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[13px] text-foreground font-medium">
+            <code className="type-caption rounded bg-muted px-1.5 py-0.5 font-mono font-medium text-foreground">
               {pkg.data.name}
             </code>
-              {pkg.data.version !== undefined && <span className="font-mono text-[13px]">v{pkg.data.version}</span>}
+              {pkg.data.version !== undefined && <span className="font-mono">v{pkg.data.version}</span>}
               {pkg.data.author !== undefined && <span>· {pkg.data.author}</span>}
               <span>·</span>
-              <time dateTime={pkg.data.date.toISOString()} className="font-mono text-[13px]">
+              <time dateTime={pkg.data.date.toISOString()} className="font-mono">
               {formatDate(pkg.data.date)}
             </time>
           </>
@@ -111,7 +111,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             onClick={handleDownloadZip}
             disabled={downloading}
             aria-label="下载技能包"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors duration-200 hover:border-primary/40 hover:bg-muted/80 disabled:opacity-50"
+            className="type-meta inline-flex shrink-0 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 py-2.5 font-medium text-foreground transition-colors duration-200 hover:border-primary/40 hover:bg-surface-hover disabled:opacity-50"
           >
             {downloading ? (
               <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
@@ -130,11 +130,11 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
           <div className="sticky top-20 md:sticky md:top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
             <nav
               aria-label="技能导航"
-              className="space-y-4 rounded-xl border border-border/70 bg-card/60 p-3 backdrop-blur-sm"
+              className="surface-card space-y-4 p-3"
             >
               {hasFiles && (
                 <div>
-                    <p className="mb-2 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <p className="type-caption mb-2 px-2 font-semibold uppercase tracking-wider text-muted-foreground">
                       文件
                     </p>
                   <ol className="space-y-1 text-sm">
@@ -143,9 +143,9 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                         <button
                           type="button"
                           onClick={() => setActivePath(file.path)}
-                          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left font-mono text-[13px] transition-colors ${
+                          className={`type-meta flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left font-mono transition-colors ${
                             activePath === file.path
-                              ? 'bg-primary/15 font-medium text-primary'
+                              ? 'bg-primary/10 font-medium text-primary'
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                           }`}
                         >
@@ -159,8 +159,8 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
               )}
               {/* 中等屏 (< lg) 下将当前目录也收在左侧导航内 */}
               {headings.length > 0 && (
-                <div className="lg:hidden border-t border-border pt-3">
-                    <p className="mb-2 px-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="border-t border-border-subtle pt-3 lg:hidden">
+                    <p className="type-caption mb-2 px-2 font-semibold uppercase tracking-wider text-muted-foreground">
                       目录
                     </p>
                   <ol className="space-y-1.5 text-sm">
@@ -172,7 +172,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                             e.preventDefault()
                             scrollToHeading(heading.id)
                           }}
-                          className="block truncate text-[13px] text-muted-foreground hover:text-foreground"
+                          className="type-meta block truncate text-muted-foreground hover:text-foreground"
                         >
                           {heading.text}
                         </a>
@@ -194,10 +194,10 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                 key={file.path}
                 type="button"
                 onClick={() => setActivePath(file.path)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-[13px] font-mono transition-colors ${
+                className={`type-meta flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono transition-colors ${
                   activePath === file.path
-                    ? 'border-primary/50 bg-primary/10 text-primary font-medium'
-                    : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                    ? 'border-primary/50 bg-primary/10 font-medium text-primary'
+                    : 'border-border-subtle bg-surface text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {getFileIcon(file.path)}
@@ -206,8 +206,8 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             ))}
           </div>
 
-          <div className="mb-5 flex items-center justify-between rounded-xl border border-border/70 bg-card/60 px-3.5 py-2.5 shadow-2xs backdrop-blur-sm">
-            <span className="flex items-center gap-2 font-mono text-[13px] font-medium text-foreground/80">
+          <div className="surface-card mb-5 flex items-center justify-between px-3.5 py-2.5 shadow-card">
+            <span className="type-meta flex items-center gap-2 font-mono font-medium text-foreground">
               {getFileIcon(currentFile.path)}
               {currentFile.path}
             </span>
@@ -215,7 +215,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
               <button
                 type="button"
                 onClick={copyCurrentContent}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
+                className="type-meta flex items-center gap-1.5 rounded-md px-2 py-1 text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
               >
                 {copied ? (
                   <>
@@ -247,7 +247,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                     <code>{file.content}</code>
                   </pre>
                 ) : (
-                  <p className="text-sm text-muted-foreground">二进制文件，仅列出路径：{file.path}</p>
+                  <p className="type-meta text-muted-foreground">二进制文件，仅列出路径：{file.path}</p>
                 )}
               </section>
             )
@@ -260,7 +260,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             {headings.length > 0 ? (
               <Toc headings={headings} />
             ) : (
-              <div className="rounded-md border border-border/50 bg-muted/20 p-4 text-center text-[13px] text-muted-foreground">
+              <div className="type-meta rounded-md border border-border-subtle bg-muted/20 p-4 text-center text-muted-foreground">
                 本文档无子章节
               </div>
             )}

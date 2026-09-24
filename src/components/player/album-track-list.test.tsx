@@ -114,10 +114,12 @@ describe('AlbumTrackList 交互', () => {
 })
 
 describe('AlbumTrackList 异常渲染', () => {
-  it('行内播放按钮具备足够触摸目标（p-2.5 ≈ 36px，移动端可点中）', () => {
+  it('行内播放按钮具备足够触摸目标（size-9 = 36px，移动端可点中）', () => {
     renderList()
 
-    expect(screen.getByRole('button', { name: '播放《曲目一》' }).className).toContain('p-2.5')
+    const button = screen.getByRole('button', { name: '播放《曲目一》' })
+    expect(button.className).toContain('size-9')
+    expect(button.getAttribute('data-size')).toBe('md')
   })
 
   it('tracks 为空时整体不渲染', () => {

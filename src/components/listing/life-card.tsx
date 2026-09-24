@@ -19,11 +19,11 @@ export function LifeCard({ entry }: LifeCardProps) {
     photoCount === 2 || photoCount === 4 ? 'grid-cols-2' : 'grid-cols-3'
 
   return (
-    <article className="group rounded-2xl border border-border/60 bg-card p-5 transition-colors duration-200 hover:border-border">
+    <article className="surface-card surface-interactive group p-5">
       {/* 头部元信息：日期 · 标题 · 地点/天气 */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+      <div className="type-caption flex flex-wrap items-center justify-between gap-2 text-muted-foreground">
         <div className="flex flex-wrap items-center gap-1.5">
-          <time dateTime={entry.data.date.toISOString()} className="font-medium text-foreground/80">
+          <time dateTime={entry.data.date.toISOString()} className="font-medium text-foreground">
             {formatDate(entry.data.date)}
           </time>
           {entry.data.location && (
@@ -42,7 +42,7 @@ export function LifeCard({ entry }: LifeCardProps) {
 
         <Link
           href={`/life/${entry.slug}`}
-          className="text-xs text-muted-foreground/70 hover:text-primary transition-colors"
+          className="type-caption text-muted-foreground transition-colors hover:text-primary"
           title="查看单条详情"
         >
           详情 →
@@ -51,7 +51,7 @@ export function LifeCard({ entry }: LifeCardProps) {
 
       {/* 标题 */}
       {entry.data.title && (
-        <h2 className="mt-2 text-base font-semibold tracking-tight text-foreground">
+        <h2 className="type-section mt-2 text-foreground">
           <Link
             href={`/life/${entry.slug}`}
             className="hover:text-primary transition-colors"
@@ -63,7 +63,7 @@ export function LifeCard({ entry }: LifeCardProps) {
 
       {/* 正文文本 */}
       {entry.body && (
-        <div className="mt-2.5 text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap break-words">
+        <div className="type-body mt-2.5 whitespace-pre-wrap break-words text-foreground">
           {entry.body}
         </div>
       )}
@@ -72,7 +72,7 @@ export function LifeCard({ entry }: LifeCardProps) {
       {photoCount > 0 && (
         <div className="mt-3.5">
           {photoCount === 1 ? (
-            <div className="inline-block overflow-hidden rounded-xl border border-border/50 bg-muted/30">
+            <div className="inline-block overflow-hidden rounded-xl border border-border-subtle bg-muted/40">
               <img
                 src={photos[0]}
                 alt={entry.data.title}
@@ -87,7 +87,7 @@ export function LifeCard({ entry }: LifeCardProps) {
                 <div
                   key={idx}
                   onClick={() => setLightboxIndex(idx)}
-                  className="aspect-square cursor-zoom-in overflow-hidden rounded-xl border border-border/50 bg-muted/30"
+                  className="aspect-square cursor-zoom-in overflow-hidden rounded-xl border border-border-subtle bg-muted/40"
                 >
                   <img
                     src={src}
@@ -109,7 +109,7 @@ export function LifeCard({ entry }: LifeCardProps) {
             <Link
               key={tag}
               href={`/tags/${tag}`}
-              className="rounded-full bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="type-caption rounded-full bg-muted/60 px-2 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               #{tag}
             </Link>

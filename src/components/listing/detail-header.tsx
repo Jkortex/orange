@@ -36,16 +36,14 @@ export function DetailHeader({
       <header
         className={
           divided
-            ? 'flex flex-col gap-4 border-b border-border/70 pb-6 sm:flex-row sm:items-start sm:justify-between'
+            ? 'flex flex-col gap-4 border-b border-border-subtle pb-6 sm:flex-row sm:items-start sm:justify-between'
             : undefined
         }
       >
         <div className={divided ? 'space-y-2.5' : 'space-y-4'}>
-          <h1 className="text-balance text-3xl font-bold leading-[1.2] tracking-tight sm:text-4xl sm:leading-[1.15]">
-            {title}
-          </h1>
+          <h1 className="type-display text-balance">{title}</h1>
           {(meta || tags.length > 0) && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            <div className="type-meta flex flex-wrap items-center gap-x-3 gap-y-2 text-muted-foreground">
               {meta}
               {tags.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -53,7 +51,7 @@ export function DetailHeader({
                     <Link
                       key={tag}
                       href={`/tags/${tag}`}
-                      className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-[13px] text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-primary"
+                      className="type-meta inline-flex items-center rounded-full border border-border-subtle bg-muted/60 px-2.5 py-0.5 text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-primary"
                     >
                       #{tag}
                     </Link>
@@ -63,7 +61,7 @@ export function DetailHeader({
             </div>
           )}
           {description && (
-            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground/90">{description}</p>
+            <p className="type-body max-w-3xl text-muted-foreground">{description}</p>
           )}
         </div>
         {actions}

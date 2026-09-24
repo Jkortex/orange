@@ -166,14 +166,14 @@ export function CodeDemo({
   })
 
   return (
-    <div className="group/demo not-prose my-8 overflow-hidden rounded-xl border border-border/80 bg-card">
+    <div className="group/demo not-prose my-8 overflow-hidden rounded-xl border border-border-subtle bg-surface">
       {/* 演示顶栏 */}
-      <div className="flex items-center justify-between border-b border-border/50 bg-muted/40 px-4 py-2.5">
+      <div className="flex items-center justify-between border-b border-border-subtle bg-muted/40 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Code2 className="size-3.5" aria-hidden />
           </span>
-          <span className="text-xs font-semibold tracking-tight text-foreground/90">
+          <span className="type-caption font-semibold tracking-tight text-foreground">
             {title || '实时演示'}
           </span>
         </div>
@@ -195,7 +195,7 @@ export function CodeDemo({
               onClick={() => setExpanded(!expanded)}
               aria-expanded={expanded}
               aria-label={expanded ? '收起代码' : '查看代码'}
-              className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-2xs transition-all hover:bg-accent hover:text-accent-foreground active:scale-95"
+              className="type-caption inline-flex items-center gap-1 rounded-md border border-border-subtle bg-background/80 px-2.5 py-1 font-medium text-muted-foreground shadow-card transition-all hover:bg-accent hover:text-accent-foreground active:scale-95"
             >
               <span>{expanded ? '收起代码' : '查看代码'}</span>
               {expanded ? (
@@ -224,9 +224,9 @@ export function CodeDemo({
 
       {/* 折叠代码区 */}
       {expanded && availableTabs.length > 0 && (
-        <div className="border-t border-border/50 bg-muted/20">
+        <div className="border-t border-border-subtle bg-muted/20">
           {/* Tab 栏 + 复制 */}
-          <div className="flex items-center justify-between border-b border-border/40 bg-muted/50 px-3 py-1.5">
+          <div className="flex items-center justify-between border-b border-border-subtle bg-muted/50 px-3 py-1.5">
             <div className="flex items-center gap-1">
               {availableTabs.map((tab) => (
                 <button
@@ -236,7 +236,7 @@ export function CodeDemo({
                   aria-pressed={activeTab === tab.id}
                   className={`rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-background text-foreground shadow-2xs'
+                      ? 'bg-background text-foreground shadow-card'
                       : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                   }`}
                 >
@@ -270,7 +270,7 @@ export function CodeDemo({
             {matchingChild ? (
               matchingChild
             ) : (
-              <pre className="m-0 p-2 text-foreground/90 whitespace-pre">
+              <pre className="m-0 p-2 text-foreground whitespace-pre">
                 <code>{activeCode}</code>
               </pre>
             )}

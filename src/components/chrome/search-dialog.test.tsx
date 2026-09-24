@@ -214,7 +214,7 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     // 按下方向键选择条目
     fireEvent.keyDown(input, { key: 'ArrowDown' })
     const item = screen.getByText('CSS 演示').closest('a')
-    expect(item?.className).toContain('bg-primary/15')
+    expect(item?.className).toContain('bg-primary/10')
 
     // 按 Enter 键执行打开并关闭对话框
     fireEvent.keyDown(input, { key: 'Enter' })

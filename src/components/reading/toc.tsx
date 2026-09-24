@@ -49,13 +49,13 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
   return (
     <nav
       aria-label="文章目录"
-      className={`rounded-xl border border-border/70 bg-card/60 p-3.5 backdrop-blur-sm ${className}`}
+      className={`surface-card p-3.5 ${className}`}
     >
       <div className="mb-2.5 flex items-center justify-between px-1">
-        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">目录</p>
-        <span className="font-mono text-xs text-muted-foreground/70">{headings.length} 节</span>
+        <p className="type-caption font-semibold uppercase tracking-wider text-muted-foreground">目录</p>
+        <span className="type-caption font-mono text-muted-foreground">{headings.length} 节</span>
       </div>
-      <ol className="relative space-y-1 border-l border-border/50 pl-2.5 text-sm">
+      <ol className="relative space-y-1 border-l border-border-subtle pl-2.5 text-sm">
         {headings.map((heading) => {
           const isActive = activeId === heading.id
           return (
@@ -63,10 +63,10 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
               <a
                 href={`#${heading.id}`}
                 onClick={(e) => handleHeadingClick(e, heading.id)}
-                className={`group flex items-center rounded-md px-2 py-1.5 text-[13px] transition-all duration-200 ${
+                className={`group flex items-center rounded-md px-2 py-1.5 type-meta transition-all duration-200 ${
                   isActive
-                    ? 'bg-primary/12 font-medium text-primary shadow-2xs'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:translate-x-0.5'
+                    ? 'bg-primary/10 font-medium text-primary'
+                    : 'text-muted-foreground hover:bg-surface-hover hover:text-foreground hover:translate-x-0.5'
                 }`}
               >
                 <span className="truncate">{heading.text}</span>

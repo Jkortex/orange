@@ -29,7 +29,7 @@ export function SearchResultsList({
         return (
           <div key={group.id} className="space-y-1">
             {/* 分组标题 */}
-            <div className="px-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            <div className="type-caption px-2 font-semibold tracking-wider text-muted-foreground uppercase">
               {`${group.label} (${group.items.length})`}
             </div>
 
@@ -51,28 +51,28 @@ export function SearchResultsList({
                         }}
                         className={`group flex flex-col rounded-lg p-2.5 transition-colors duration-150 text-left ${
                           isSelected
-                            ? 'bg-primary/15 ring-1 ring-primary/30 shadow-2xs'
-                            : 'hover:bg-muted/70'
+                            ? 'bg-primary/10 ring-1 ring-primary/30'
+                            : 'hover:bg-surface-hover'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`font-medium truncate text-sm ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                          <span className={`type-meta font-medium truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
                             {item.title}
                           </span>
                           {item.badge && (
-                            <span className="shrink-0 rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            <span className="type-caption shrink-0 rounded-md border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-medium text-muted-foreground">
                               {item.badge}
                             </span>
                           )}
                         </div>
                         {item.excerpt && (
                           <span
-                            className="mt-1 block text-xs text-muted-foreground line-clamp-2 [&>mark]:bg-primary/20 [&>mark]:text-foreground [&>mark]:font-medium"
+                            className="type-caption mt-1 block text-muted-foreground line-clamp-2 [&>mark]:bg-primary/20 [&>mark]:text-foreground [&>mark]:font-medium"
                             dangerouslySetInnerHTML={{ __html: item.excerpt }}
                           />
                         )}
                         {!item.excerpt && item.subtitle && (
-                          <span className="mt-0.5 block text-xs text-muted-foreground truncate">
+                          <span className="type-caption mt-0.5 block truncate text-muted-foreground">
                             {item.subtitle}
                           </span>
                         )}
@@ -89,22 +89,22 @@ export function SearchResultsList({
                       onClick={() => onSelect(item)}
                       className={`group flex w-full items-center justify-between rounded-lg p-2.5 transition-colors duration-150 text-left ${
                         isSelected
-                          ? 'bg-primary/15 ring-1 ring-primary/30 shadow-2xs'
-                          : 'hover:bg-muted/70'
+                          ? 'bg-primary/10 ring-1 ring-primary/30'
+                          : 'hover:bg-surface-hover'
                       }`}
                     >
                       <div className="min-w-0 pr-2">
-                        <span className={`font-medium truncate text-sm block ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                        <span className={`type-meta font-medium truncate block ${isSelected ? 'text-primary' : 'text-foreground'}`}>
                           {item.title}
                         </span>
                         {item.subtitle && (
-                          <span className="mt-0.5 block text-xs text-muted-foreground truncate">
+                          <span className="type-caption mt-0.5 block truncate text-muted-foreground">
                             {item.subtitle}
                           </span>
                         )}
                       </div>
                       {item.badge && (
-                        <span className="shrink-0 rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        <span className="type-caption shrink-0 rounded-md border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-medium text-muted-foreground">
                           {item.badge}
                         </span>
                       )}

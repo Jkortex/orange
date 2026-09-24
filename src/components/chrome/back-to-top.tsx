@@ -41,7 +41,7 @@ export function BackToTop() {
       wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-[bottom,transform,opacity] duration-200 ease-out animate-in fade-in-0 zoom-in-90 slide-in-from-bottom-2 ${
         index === null ? 'bottom-6' : 'bottom-20'
       }`}
-      buttonClassName="flex size-9 items-center justify-center rounded-full border border-border/80 bg-card/85 text-muted-foreground backdrop-blur-md transition-colors duration-150 hover:border-primary/50 hover:bg-card hover:text-primary"
+      buttonClassName="border border-border-strong bg-surface/85 backdrop-blur-md hover:border-primary/50 hover:bg-surface hover:text-primary"
       tipClassName="bottom-full right-0 mb-2"
     >
       <ArrowUp className="size-4 transition-transform duration-150 group-hover:-translate-y-0.5" aria-hidden />

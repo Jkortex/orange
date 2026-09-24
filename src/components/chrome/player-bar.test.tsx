@@ -111,12 +111,15 @@ describe('PlayerBar 交互', () => {
     expect(bar?.className).not.toContain('sticky')
   })
 
-  it('上一首/下一首按钮具备足够触摸目标（p-2 ≈ 36px，移动端可点中）', () => {
+  it('上一首/下一首按钮具备足够触摸目标（size-9 = 36px，移动端可点中）', () => {
     renderBar()
     fireEvent.click(screen.getByRole('button', { name: '开始播放' }))
 
-    expect(screen.getByRole('button', { name: '上一首' }).className).toContain('p-2')
-    expect(screen.getByRole('button', { name: '下一首' }).className).toContain('p-2')
+    for (const name of ['上一首', '下一首']) {
+      const button = screen.getByRole('button', { name })
+      expect(button.className).toContain('size-9')
+      expect(button.getAttribute('data-size')).toBe('md')
+    }
   })
 
   it('上一首/下一首切换当前曲目', () => {

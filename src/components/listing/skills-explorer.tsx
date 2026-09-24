@@ -22,8 +22,7 @@ export type SkillItem = {
   tags: string[]
 }
 
-const SKILL_ROW_CLASS =
-  'group px-3 py-4 transition-colors duration-150 hover:bg-muted/40 sm:mx-[-0.75rem] sm:rounded-xl sm:border sm:border-transparent sm:hover:border-border/60 sm:hover:bg-card'
+const SKILL_ROW_CLASS = 'list-row group'
 
 export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
   return (
@@ -42,8 +41,8 @@ export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
           >
             {skill.title}
           </Link>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <code className="rounded bg-muted px-1 py-px font-mono text-[13px]">{skill.name}</code>
+          <p className="type-meta mt-1 text-muted-foreground">
+            <code className="type-caption rounded bg-muted px-1 py-px font-mono">{skill.name}</code>
             {skill.version !== undefined && ` · v${skill.version}`}
             {skill.author !== undefined && ` · ${skill.author}`}
             {' · '}
@@ -52,7 +51,7 @@ export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
             </time>
           </p>
           {skill.description && (
-            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground/90">
+            <p className="type-meta mt-1 line-clamp-2 text-muted-foreground">
               {skill.description}
             </p>
           )}

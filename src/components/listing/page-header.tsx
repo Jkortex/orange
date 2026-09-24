@@ -1,6 +1,6 @@
 /*
- * 列表页眉（posts / skills / music 路由页共用，同属列表组装）：
- * - 标题 + 说明文案；music 传入小图标徽章
+ * 列表页眉（posts / life / music / skills 路由页共用，同属列表组装）：
+ * - 标题 + 说明文案；icon 传入裸图标，徽章框由组件统一包裹（四个索引页风格一致）
  */
 
 export type PageHeaderProps = {
@@ -12,13 +12,18 @@ export type PageHeaderProps = {
 export function PageHeader({ title, description, icon }: PageHeaderProps) {
   return (
     <div className="mb-8 space-y-2">
-      <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight sm:text-3xl">
-        {icon}
+      <h1 className="type-title flex items-center gap-2.5">
+        {icon && (
+          <span
+            data-slot="page-header-icon"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20 [&_svg]:size-4"
+          >
+            {icon}
+          </span>
+        )}
         {title}
       </h1>
-      {description && (
-        <p className="text-[15px] leading-relaxed text-muted-foreground">{description}</p>
-      )}
+      {description && <p className="type-body text-muted-foreground">{description}</p>}
     </div>
   )
 }

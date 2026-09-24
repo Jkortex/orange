@@ -64,7 +64,7 @@ export function ImageLightbox({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl p-2 sm:p-4 bg-background/95 border-border/80 shadow-2xl flex flex-col items-center justify-center overflow-hidden"
+        className="max-w-4xl p-2 sm:p-4 bg-background/95 border-border-subtle shadow-overlay flex flex-col items-center justify-center overflow-hidden"
         showCloseButton={true}
       >
         <DialogTitle className="sr-only">
@@ -86,7 +86,7 @@ export function ImageLightbox({
                   e.stopPropagation()
                   showPrev()
                 }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground/80 shadow-md backdrop-blur-xs transition hover:bg-background hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground shadow-pop backdrop-blur-xs transition hover:bg-background hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="上一张图片"
               >
                 <ChevronLeft className="size-5" />
@@ -97,7 +97,7 @@ export function ImageLightbox({
                   e.stopPropagation()
                   showNext()
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground/80 shadow-md backdrop-blur-xs transition hover:bg-background hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground shadow-pop backdrop-blur-xs transition hover:bg-background hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="下一张图片"
               >
                 <ChevronRight className="size-5" />

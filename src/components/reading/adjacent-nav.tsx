@@ -39,25 +39,25 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
   return (
     <nav
       aria-label="相邻文章"
-      className={`mt-12 grid grid-cols-1 gap-4 border-t border-border/80 pt-8 sm:grid-cols-2 not-prose ${className}`}
+      className={`mt-12 grid grid-cols-1 gap-4 border-t border-border-subtle pt-8 sm:grid-cols-2 not-prose ${className}`}
     >
       {prev ? (
         <Link
           ref={prevRef}
           href={`/${collection}/${prev.slug}`}
           onClick={handleNav}
-          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 transition-colors duration-200 hover:border-primary/50 hover:bg-card"
+          className="surface-card surface-interactive group flex flex-col justify-between p-4"
         >
-          <div className="flex items-center justify-between text-[13px] text-muted-foreground">
+          <div className="type-meta flex items-center justify-between text-muted-foreground">
             <span className="flex items-center gap-1.5 font-medium">
               <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
               <span>上一篇</span>
             </span>
-            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/80">
+            <kbd className="type-caption hidden rounded border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-mono text-muted-foreground sm:inline-block">
               [
             </kbd>
           </div>
-          <span className="mt-2 block font-medium text-foreground transition-colors group-hover:text-primary truncate">
+          <span className="mt-2 block truncate font-medium text-foreground transition-colors group-hover:text-primary">
             {prev.title}
           </span>
         </Link>
@@ -70,10 +70,10 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
           ref={nextRef}
           href={`/${collection}/${next.slug}`}
           onClick={handleNav}
-          className="group flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 text-right transition-colors duration-200 hover:border-primary/50 hover:bg-card sm:col-start-2"
+          className="surface-card surface-interactive group flex flex-col justify-between p-4 text-right sm:col-start-2"
         >
-          <div className="flex items-center justify-between text-[13px] text-muted-foreground">
-            <kbd className="hidden sm:inline-block rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/80">
+          <div className="type-meta flex items-center justify-between text-muted-foreground">
+            <kbd className="type-caption hidden rounded border border-border-subtle bg-muted/60 px-1.5 py-0.5 font-mono text-muted-foreground sm:inline-block">
               ]
             </kbd>
             <span className="flex items-center gap-1.5 font-medium">
@@ -81,7 +81,7 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
               <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
             </span>
           </div>
-          <span className="mt-2 block font-medium text-foreground transition-colors group-hover:text-primary truncate">
+          <span className="mt-2 block truncate font-medium text-foreground transition-colors group-hover:text-primary">
             {next.title}
           </span>
         </Link>

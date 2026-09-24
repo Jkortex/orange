@@ -27,6 +27,16 @@
   --input: oklch(0.87 0 0);
   --ring: oklch(0.56 0.17 42);
   --radius: 0.5rem;
+
+  /* 表面 / 边框 / 阴影层级：全站统一的"表面系统"（组件不再手搓透明度） */
+  --surface: oklch(1 0 0);
+  --surface-hover: oklch(0.975 0 0);
+  --border-subtle: oklch(0.9 0 0);
+  --border-strong: oklch(0.8 0 0);
+  --elevation-card: 0 1px 2px oklch(0 0 0 / 0.05), 0 1px 3px oklch(0 0 0 / 0.04);
+  --elevation-pop: 0 4px 12px -2px oklch(0 0 0 / 0.1), 0 2px 6px -2px oklch(0 0 0 / 0.06);
+  --elevation-overlay: 0 24px 48px -12px oklch(0 0 0 / 0.25);
+  --elevation-bar: 0 -12px 40px -16px oklch(0 0 0 / 0.3);
 }
 
 /* ===== default 主题 · dark ===== */
@@ -50,6 +60,16 @@
   --border: oklch(0.3 0 0);
   --input: oklch(0.3 0 0);
   --ring: oklch(0.72 0.16 45);
+
+  /* 表面 / 边框 / 阴影层级（暗色下阴影需更高不透明度才可见） */
+  --surface: oklch(0.21 0 0);
+  --surface-hover: oklch(0.25 0 0);
+  --border-subtle: oklch(0.28 0 0);
+  --border-strong: oklch(0.4 0 0);
+  --elevation-card: 0 1px 2px oklch(0 0 0 / 0.4);
+  --elevation-pop: 0 4px 12px -2px oklch(0 0 0 / 0.5);
+  --elevation-overlay: 0 24px 48px -12px oklch(0 0 0 / 0.6);
+  --elevation-bar: 0 -12px 40px -16px oklch(0 0 0 / 0.45);
 }
 
 /* ===== catppuccin 主题 · light（Latte，官方 hex，对比度经 WCAG 验算） ===== */
@@ -73,6 +93,17 @@
   --input: #bcc0cc;
   --ring: #8839ef;
   --radius: 0.5rem;
+
+  /* 表面 / 边框 / 阴影层级（Latte：surface 取白，比 base 底更亮一层，与 default 浅色主题同构——
+     surface 必须亮于 background，否则卡片轮廓只能靠描边撑、且列表行 hover 提亮不可见） */
+  --surface: #ffffff;
+  --surface-hover: #e6e9ef;
+  --border-subtle: #dce0e8;
+  --border-strong: #bcc0cc;
+  --elevation-card: 0 1px 2px oklch(0 0 0 / 0.05), 0 1px 3px oklch(0 0 0 / 0.04);
+  --elevation-pop: 0 4px 12px -2px oklch(0 0 0 / 0.1), 0 2px 6px -2px oklch(0 0 0 / 0.06);
+  --elevation-overlay: 0 24px 48px -12px oklch(0 0 0 / 0.25);
+  --elevation-bar: 0 -12px 40px -16px oklch(0 0 0 / 0.3);
 }
 
 /* ===== catppuccin 主题 · dark（Mocha，官方 hex，对比度经 WCAG 验算） ===== */
@@ -96,4 +127,14 @@
   --input: #45475a;
   --ring: #cba6f7;
   --radius: 0.5rem;
+
+  /* 表面 / 边框 / 阴影层级（Mocha） */
+  --surface: #313244;
+  --surface-hover: #45475a;
+  --border-subtle: #45475a;
+  --border-strong: #585b70;
+  --elevation-card: 0 1px 2px oklch(0 0 0 / 0.4);
+  --elevation-pop: 0 4px 12px -2px oklch(0 0 0 / 0.5);
+  --elevation-overlay: 0 24px 48px -12px oklch(0 0 0 / 0.6);
+  --elevation-bar: 0 -12px 40px -16px oklch(0 0 0 / 0.45);
 }

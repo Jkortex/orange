@@ -26,18 +26,18 @@ export function LifeStream({ entries }: LifeStreamProps) {
   return (
     <div className="space-y-4">
       {/* 顶部极简信息与唤起按钮：保持页面纯净阅读感，无大表单打扰 */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground px-1 pb-1">
+      <div className="type-caption flex items-center justify-between px-1 pb-1 text-muted-foreground">
         <span>共 {entries.length} 条生活记录 · 按时间倒序</span>
 
         <button
           type="button"
           onClick={handleOpenSearch}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground transition hover:border-border hover:bg-muted hover:text-foreground active:scale-95"
+          className="type-caption inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-muted/40 px-2.5 py-1 text-muted-foreground transition hover:border-border-strong hover:bg-muted hover:text-foreground active:scale-95"
           aria-label="搜索生活记录"
         >
           <Search className="size-3" />
           <span>检索动态</span>
-          <kbd className="hidden sm:inline-block font-mono text-[10px] text-muted-foreground/70 bg-background/80 px-1 rounded border border-border/50">
+          <kbd className="type-caption hidden rounded border border-border-subtle bg-background/80 px-1 font-mono text-muted-foreground sm:inline-block">
             ⌘K
           </kbd>
         </button>

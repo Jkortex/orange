@@ -26,9 +26,20 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  /* 表面系统：卡片/行/边框/阴影统一取自语义 token（不再手搓 /40~/80 透明度） */
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+  --radius-card: 0.75rem;
+  /* 主题层变量名用 --elevation-*：Tailwind v4 已占用 --shadow-* 命名空间，直接同名会自引用 */
+  --shadow-card: var(--elevation-card);
+  --shadow-pop: var(--elevation-pop);
+  --shadow-overlay: var(--elevation-overlay);
+  --shadow-bar: var(--elevation-bar);
 }
 
 @layer base {
@@ -131,6 +142,119 @@
   /* 图片默认质感：圆角 + 边框 + 懒载淡入由各组件控制，此处只定基调 */
   article img {
     border-radius: 0.75rem;
+  }
+}
+
+/*
+ * 设计系统组件层（AGENTS.md 主题规范）：
+ * - 字号角色把 size + weight + tracking 打包，组件不再手搓 text-[15px] / leading-[1.2] 等任意值
+ * - 表面/行配方收敛全站 ~6 套卡片写法与 4 档行内边距
+ * - 位于 components 层，utilities 层仍可单点覆盖（如 empty-state 的 border-dashed）
+ */
+@layer components {
+  .type-display {
+    font-size: 1.875rem;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 40rem) {
+    .type-display {
+      font-size: 2.25rem;
+    }
+  }
+
+  .type-title {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 40rem) {
+    .type-title {
+      font-size: 1.875rem;
+    }
+  }
+
+  .type-section {
+    font-size: 1.125rem;
+    line-height: 1.35;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* 列表条目标题：全站出现频率最高的文本（首页/文章/技能/分类/标签/专辑卡） */
+  .type-item {
+    font-size: 1rem;
+    line-height: 1.45;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .type-body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    font-weight: 400;
+  }
+
+  .type-meta {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  .type-caption {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  /* 卡片：一套配方取代 6 套（圆角/边框/底色统一取自语义 token） */
+  .surface-card {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border-subtle);
+    background-color: var(--surface);
+  }
+
+  /* 可交互卡片：hover 统一为中性描边 + 表面提亮 */
+  .surface-interactive {
+    transition:
+      background-color 0.15s,
+      border-color 0.15s;
+  }
+  .surface-interactive:hover {
+    border-color: var(--border-strong);
+    background-color: var(--surface-hover);
+  }
+
+  /*
+   * 列表行：全站统一的细分隔线表格（display 由调用方决定）。
+   * 关键约束：分隔线与悬停底色的横向范围必须一致。底色直接画在行盒上（background-clip: border-box），
+   * 于是「行盒 = 底色范围 = 描边范围」恒等，不可能出现底色超出分隔线的情况。
+   * - 横向内边距 + 等量负边距：文字内缩取得留白，同时行盒左右外扩——内容与表头文案对齐，
+   *   而分隔线/底色比文字各宽 0.75rem（表格 cell padding 的观感）
+   * - 不带圆角：只显示 border-top 的盒子一旦加圆角，分隔线两端会向下弯成"假圆角"，看着像瑕疵
+   * - 首行 border-top 即表头下方的分隔线；末行 border-bottom 收口，列表成为闭合表格
+   * 分隔线必须写在自身而非父级 divide-*：divide-* 落在 utilities 层，层优先级高于 components 层，
+   * 会覆盖这里的 border-color，导致每行常驻描边（踩过的坑，勿回退）。
+   */
+  .list-row {
+    margin-inline: -0.75rem;
+    padding: 0.75rem;
+    border-top: 1px solid var(--border-subtle);
+    transition: background-color 0.15s;
+  }
+  .list-row:last-child {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  /*
+   * 悬停底色取 --muted（全站既有的 hover 色调，见 icon-button 的 hover:bg-muted/70），
+   * 不用 --surface：后者在浅色主题下比页面更亮，整行会读成"浮起的卡片"而非"高亮行"。
+   * 底色必须落在行盒上：若改画在另行外扩的伪元素上，底色就会超出上下 border 的横向范围。
+   */
+  .list-row:hover {
+    background-color: var(--muted);
   }
 }
 

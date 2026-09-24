@@ -5,7 +5,7 @@
 
 export function EmptyState({ message }: { message: string }) {
   return (
-    <p className="rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-10 text-center text-sm text-muted-foreground">
+    <p className="surface-card type-meta border-dashed px-4 py-10 text-center text-muted-foreground">
       {message}
     </p>
   )

@@ -20,6 +20,13 @@ describe('MermaidDiagram 正常渲染与交互', () => {
     expect(screen.getByTestId('sample-svg')).toBeTruthy()
   })
 
+  it('不渲染 macOS 三色指示点（硬编码颜色已清除）', () => {
+    const { container } = render(<MermaidDiagram svg={sampleSvg} code={sampleCode} />)
+    expect(
+      container.querySelectorAll('[class*="bg-red-"], [class*="bg-amber-"], [class*="bg-emerald-"]'),
+    ).toHaveLength(0)
+  })
+
   it('点击查看源码按钮，在图表和代码之间切换', () => {
     render(<MermaidDiagram svg={sampleSvg} code={sampleCode} />)
 
