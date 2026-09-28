@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, renderHook } from '@testing-library/react'
-import { PlayerProvider, usePlayer, type PlayerTrack } from '@/components/player/player-provider'
+import { act, cleanup, render, renderHook, screen } from '@testing-library/react'
+import { PlayerProvider, usePlayer, usePlayerIndex, type PlayerTrack } from '@/components/player/player-provider'
 import { stubAudio, type MockAudio } from '@/components/test-utils/mock-audio'
 
 const tracks: PlayerTrack[] = [
@@ -206,6 +206,45 @@ describe('PlayerProvider 异常边界', () => {
   it('usePlayer 在 Provider 之外使用时抛错', () => {
     // 直接渲染 hook 不包 wrapper
     expect(() => renderHook(() => usePlayer())).toThrowError()
+  })
+
+  it('进度更新不重渲染只订阅播放索引的消费者', () => {
+    let indexRenders = 0
+
+    function IndexObserver() {
+      usePlayerIndex()
+      indexRenders += 1
+      return null
+    }
+
+    function Controls() {
+      const { playAlbum } = usePlayer()
+      return (
+        <button type="button" onClick={() => playAlbum(tracks)}>
+          开始播放
+        </button>
+      )
+    }
+
+    render(
+      <PlayerProvider>
+        <IndexObserver />
+        <Controls />
+      </PlayerProvider>,
+    )
+
+    const beforeQueue = indexRenders
+    act(() => {
+      screen.getByRole('button', { name: '开始播放' }).click()
+    })
+    const afterQueue = indexRenders
+    expect(afterQueue).toBeGreaterThan(beforeQueue)
+
+    act(() => {
+      audio.emit('timeupdate')
+    })
+
+    expect(indexRenders).toBe(afterQueue)
   })
 })
 

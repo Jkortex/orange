@@ -1,10 +1,7 @@
-'use client'
-
-import * as React from 'react'
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { formatDate } from '@/lib/format'
-import { ImageLightbox } from '@/components/listing/image-lightbox'
+import { PhotoGallery } from '@/components/listing/photo-gallery'
 import type { CollectionEntry } from '@/lib/content'
 
 export interface LifeCardProps {
@@ -12,12 +9,7 @@ export interface LifeCardProps {
 }
 
 export function LifeCard({ entry }: LifeCardProps) {
-  const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
-
   const photos = entry.data.photos ?? []
-  const photoCount = photos.length
-  const gridCols =
-    photoCount === 2 || photoCount === 4 ? 'grid-cols-2' : 'grid-cols-3'
 
   return (
     <article className="surface-card surface-interactive group p-5">
@@ -72,39 +64,8 @@ export function LifeCard({ entry }: LifeCardProps) {
         </div>
       )}
 
-      {/* 图片网格 */}
-      {photoCount > 0 && (
-        <div className="mt-3.5">
-          {photoCount === 1 ? (
-            <div className="media-frame inline-block">
-              <img
-                src={photos[0]}
-                alt={entry.data.title}
-                loading="lazy"
-                onClick={() => setLightboxIndex(0)}
-                className="max-h-80 w-auto max-w-full cursor-zoom-in object-cover"
-              />
-            </div>
-          ) : (
-            <div className={`grid ${gridCols} gap-2 max-w-md`}>
-              {photos.map((src, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setLightboxIndex(idx)}
-                  className="media-frame aspect-square cursor-zoom-in"
-                >
-                  <img
-                    src={src}
-                    alt={`${entry.data.title} - ${idx + 1}`}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* 图片交互独立为客户端岛，静态卡片正文无需整体 hydration */}
+      {photos.length > 0 && <PhotoGallery photos={photos} alt={entry.data.title} />}
 
       {/* 标签列表 */}
       {entry.data.tags.length > 0 && (
@@ -119,17 +80,6 @@ export function LifeCard({ entry }: LifeCardProps) {
             </Link>
           ))}
         </div>
-      )}
-
-      {/* 大图预览灯箱 */}
-      {lightboxIndex !== null && (
-        <ImageLightbox
-          photos={photos}
-          initialIndex={lightboxIndex}
-          open={lightboxIndex !== null}
-          onOpenChange={(open) => !open && setLightboxIndex(null)}
-          alt={entry.data.title}
-        />
       )}
     </article>
   )

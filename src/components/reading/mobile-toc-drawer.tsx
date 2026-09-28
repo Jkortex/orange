@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { List, X } from 'lucide-react'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
-import { useOptionalPlayer } from '@/components/player/player-provider'
+import { useOptionalPlayerIndex } from '@/components/player/player-provider'
 import { IconButton } from '@/components/primitives/icon-button'
 
 /*
@@ -23,8 +23,8 @@ export function MobileTocDrawer({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const player = useOptionalPlayer()
-  const hasPlayer = player !== null && player.index !== null
+  const playerIndex = useOptionalPlayerIndex()
+  const hasPlayer = playerIndex !== null
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 300)

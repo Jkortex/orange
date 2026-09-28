@@ -1,8 +1,9 @@
 // 界面日期格式：统一 YYYY-MM-DD
+// 内容日期由 YAML 的日历日期解析为 UTC；统一取 UTC 字段，避免服务端/浏览器时区导致日期漂移。
 export function formatDate(date: Date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
+  const y = date.getUTCFullYear()
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(date.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
 

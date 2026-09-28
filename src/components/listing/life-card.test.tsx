@@ -39,9 +39,10 @@ describe('LifeCard 碎碎念生活卡片组件', () => {
 
     const images = screen.getAllByRole('img')
     expect(images.length).toBe(2)
+    expect(screen.getAllByRole('button', { name: /查看大图/ })).toHaveLength(2)
 
     // 点击第一张缩略图
-    fireEvent.click(images[0])
+    fireEvent.click(screen.getAllByRole('button', { name: /查看大图/ })[0])
 
     // 灯箱 dialog 应该弹出
     const dialog = screen.getByRole('dialog')

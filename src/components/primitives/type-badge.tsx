@@ -8,7 +8,6 @@ import type { CollectionType } from '@/lib/content'
 const LABELS: Record<CollectionType, string> = {
   posts: '文章',
   life: '生活',
-  photos: '照片',
   music: '音乐',
   skills: '技能',
 }

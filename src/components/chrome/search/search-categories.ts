@@ -1,36 +1,46 @@
 import type { UnifiedSearchItem } from './types'
 
-export interface CategoryDef {
-  slug: string
-  label: string
-  desc: string
+export interface SearchCategory {
+  /** 内容层聚合出的英文分类 slug */
+  name: string
+  /** 该分类下的条目数，用于搜索结果摘要 */
+  count?: number
+  /** 可选的显示名/描述；默认由 slug 生成 */
+  label?: string
+  description?: string
   href?: string
 }
 
-export const SITE_CATEGORIES: CategoryDef[] = [
-  { slug: 'cheerful', label: '开怀', desc: '轻松幽默与生活趣事' },
-  { slug: 'css', label: 'CSS', desc: '样式设计、布局与现代 CSS 特性' },
-  { slug: 'database', label: '数据库', desc: 'PostgreSQL、MySQL 与数据建模' },
-  { slug: 'engineering', label: '工程', desc: '架构设计、CI/CD 与代码规范' },
-  { slug: 'meta', label: '博客元信息', desc: '关于本站的设计理念与技术演进' },
-  { slug: 'methodology', label: '方法论', desc: '思维模型、经验与工程法则' },
-  { slug: 'product', label: '产品', desc: '产品思考、交互设计与用户体验' },
-  { slug: 'typescript', label: 'TypeScript', desc: '类型系统、前端工程与实战' },
-]
+function displayLabel(category: SearchCategory): string {
+  if (category.label) return category.label
+  return category.name
+    .split('-')
+    .map((part) => (part.length <= 3 ? part.toUpperCase() : part))
+    .join(' ')
+}
 
-export function getCategoryItems(onClose: () => void): UnifiedSearchItem[] {
-  return SITE_CATEGORIES.map((cat) => ({
-    id: `cat-${cat.slug}`,
-    kind: 'category',
-    title: cat.label,
-    subtitle: cat.desc,
-    badge: '分类',
-    url: cat.href || `/category/${cat.slug}`,
-    onSelect: () => {
-      onClose()
-      window.location.href = cat.href || `/category/${cat.slug}`
-    },
-  }))
+export function getCategoryItems(
+  categories: SearchCategory[],
+  onClose: () => void,
+  navigate: (url: string) => void,
+): UnifiedSearchItem[] {
+  return categories.map((category) => {
+    const url = category.href ?? `/category/${category.name}`
+    return {
+      id: `cat-${category.name}`,
+      kind: 'category',
+      title: displayLabel(category),
+      subtitle:
+        category.description ??
+        (category.count === undefined ? '内容分类' : `${category.count} 篇内容`),
+      badge: '分类',
+      url,
+      onSelect: () => {
+        onClose()
+        navigate(url)
+      },
+    }
+  })
 }
 
 export function filterCategories(categories: UnifiedSearchItem[], query: string): UnifiedSearchItem[] {

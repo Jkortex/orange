@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getAllTags, getEntriesByTag, type CollectionType } from '@/lib/content'
+import { getAllTags, getEntriesByTag, TAGGED_TYPES } from '@/lib/content'
 import { formatDate } from '@/lib/format'
 import { TypeBadge } from '@/components/primitives/type-badge'
 import { PageHeader } from '@/components/listing/page-header'
 
-// 标签聚合：有详情路由的类型（新增带路由类型时在此登记）
-const TAGGED_TYPES: CollectionType[] = ['posts', 'music', 'skills', 'life']
+// 标签聚合类型由内容层统一登记，避免页面、sitemap 与 manifest 各自维护清单。
+export const dynamicParams = false
 
 export function generateStaticParams() {
   return getAllTags(TAGGED_TYPES).map((tag) => ({ tag }))

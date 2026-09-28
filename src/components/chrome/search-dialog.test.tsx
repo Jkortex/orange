@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useRouter } from 'next/navigation'
 import { SearchDialog } from '@/components/chrome/search-dialog'
+import { OPEN_SEARCH_EVENT } from '@/lib/search-events'
 import { loadPagefind, type PagefindApi } from '@/lib/pagefind'
 
 vi.mock('@/lib/pagefind', () => ({ loadPagefind: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: vi.fn() }))
 const mockLoad = vi.mocked(loadPagefind)
+const mockUseRouter = vi.mocked(useRouter)
+const mockPush = vi.fn()
 
 // Radix 弹窗外部点击监听处理
 async function flushRadixListeners() {
@@ -21,6 +26,8 @@ afterEach(() => {
 
 beforeEach(() => {
   mockLoad.mockReset()
+  mockPush.mockReset()
+  mockUseRouter.mockReturnValue({ push: mockPush } as unknown as ReturnType<typeof useRouter>)
 })
 
 const makeApi = (searchImpl: ReturnType<typeof vi.fn>): PagefindApi =>
@@ -42,6 +49,19 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     const dialog = screen.getByRole('dialog', { name: '站内搜索' })
     expect(dialog).toBeTruthy()
     expect(document.activeElement).toBe(screen.getByLabelText('搜索关键词'))
+  })
+
+  it('响应生活页的打开事件并切换到生活范围', () => {
+    render(<SearchDialog />)
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_SEARCH_EVENT, { detail: { scope: 'life' } }),
+      )
+    })
+
+    expect(screen.getByRole('dialog', { name: '站内搜索' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: '生活' }).getAttribute('aria-selected')).toBe('true')
   })
 
   it('展示直观的分类过滤胶囊（全部 / 文章 / 技能 / 生活 / 音乐）', () => {
@@ -135,7 +155,7 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
   it('自然匹配分类：输入“CSS”即可直达 CSS 分类专栏', async () => {
     mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
 
-    render(<SearchDialog />)
+    render(<SearchDialog categories={[{ name: 'css', count: 2 }]} />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     const input = screen.getByLabelText('搜索关键词')
     fireEvent.change(input, { target: { value: 'CSS' } })
@@ -143,6 +163,9 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     await waitFor(() => {
       expect(screen.getByText(/分类与专栏/)).toBeTruthy()
     })
+
+    fireEvent.click(screen.getByRole('link', { name: /CSS/ }))
+    expect(mockPush).toHaveBeenCalledWith('/category/css')
   })
 
   it('自然匹配本文章节大纲：输入章节标题直达对应锚点', async () => {
@@ -167,22 +190,16 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     document.body.removeChild(heading)
   })
 
-  it('Tab 键可以在分类过滤胶囊之间循环切换', () => {
+  it('Tab 键不被搜索框劫持，保留默认焦点顺序', () => {
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
     const input = screen.getByLabelText('搜索关键词')
-
-    // 默认是全部
     expect(screen.getByRole('tab', { name: '全部' }).getAttribute('aria-selected')).toBe('true')
 
-    // 按 Tab 切到文章
     fireEvent.keyDown(input, { key: 'Tab' })
-    expect(screen.getByRole('tab', { name: '文章' }).getAttribute('aria-selected')).toBe('true')
 
-    // 按 Tab 切到技能
-    fireEvent.keyDown(input, { key: 'Tab' })
-    expect(screen.getByRole('tab', { name: '技能' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tab', { name: '全部' }).getAttribute('aria-selected')).toBe('true')
   })
 
   it('方向键 ↑↓ 在跨分组结果间平滑循环高亮，回车触发执行', async () => {
@@ -219,6 +236,7 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     // 按 Enter 键执行打开并关闭对话框
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(mockPush).toHaveBeenCalledWith('/posts/css-demo')
   })
 
   it('点击关闭按钮或 Esc 或遮罩能正常关闭', async () => {

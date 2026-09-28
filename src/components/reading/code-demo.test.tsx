@@ -20,6 +20,7 @@ describe('CodeDemo 组件', () => {
     expect(screen.getByText('按钮效果')).toBeTruthy()
     const iframe = screen.getByTitle('按钮效果')
     expect(iframe).toBeTruthy()
+    expect(iframe.getAttribute('loading')).toBe('lazy')
     expect(iframe.getAttribute('srcdoc')).toContain('<button>Click</button>')
     expect(iframe.getAttribute('srcdoc')).toContain('button { color: blue; }')
     expect(screen.getByRole('button', { name: '查看代码' })).toBeTruthy()

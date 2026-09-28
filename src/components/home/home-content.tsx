@@ -19,7 +19,7 @@ export function HomeContent({
   return (
     <div>
       <div className="mb-3 flex items-baseline gap-2">
-        <h2 className="type-section">{title}</h2>
+        <h1 className="type-section">{title}</h1>
         <span className="type-meta font-mono tabular-nums text-muted-foreground">
           {entries.length} {countUnit}
         </span>

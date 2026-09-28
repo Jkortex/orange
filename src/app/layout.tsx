@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ThemeSelect } from '@/components/chrome/theme-select'
 import { ThemeToggle } from '@/components/chrome/theme-toggle'
 import { PlayerProvider } from '@/components/player/player-provider'
-import { PlayerBar } from '@/components/chrome/player-bar'
+import { PlayerBarLoader } from '@/components/chrome/player-bar-loader'
 import { BackToTop } from '@/components/chrome/back-to-top'
 import { SearchDialog } from '@/components/chrome/search-dialog'
 import { HotkeyHelpModal } from '@/components/chrome/hotkey-help-modal'
@@ -11,6 +11,7 @@ import { RouteScrollReset } from '@/components/chrome/route-scroll-reset'
 import { GeistMono } from 'geist/font/mono'
 import { HeaderNav } from '@/components/chrome/header-nav'
 import { BrandMark } from '@/components/chrome/brand-mark'
+import { getCategories } from '@/lib/content'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -23,6 +24,8 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem('theme-name'
 
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const categories = getCategories()
+
   return (
     <html
       lang="zh-CN"
@@ -36,11 +39,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link
           rel="stylesheet"
           href="https://unpkg.com/harmonyos-sans-sc-webfont-splitted@1.1.0/dist/index.css"
-        />
-        {/* 正文衬线：霞鹜文楷（unicode-range 分片，按需加载；--font-serif 首项） */}
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/lxgw-wenkai-webfont@1.7.0/style.css"
         />
       </head>
       <body className="flex min-h-dvh flex-col">
@@ -60,14 +58,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div className="flex items-center justify-end gap-x-1 sm:gap-x-2">
                 <HeaderNav />
                 <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/70 sm:inline-block" />
-                <SearchDialog />
+                <SearchDialog categories={categories} />
                 <ThemeSelect className="hidden sm:inline-flex" />
                 <ThemeToggle />
               </div>
             </nav>
           </header>
           {/* 宽度由各页面自持（文章页双栏 max-w-5xl，其余 max-w-2xl 居中），main 只管弹性与留白 */}
-          <main className="w-full flex-1 px-4 py-10 sm:px-6 sm:py-12 pb-20">{children}</main>
+          <main
+            data-pagefind-body
+            className="w-full flex-1 px-4 py-10 sm:px-6 sm:py-12 pb-20"
+          >
+            {children}
+          </main>
           <footer className="border-t border-border-subtle">
             <div className="type-meta flex w-full flex-col gap-3 px-4 py-8 text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="flex items-center gap-1.5">
@@ -85,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* 播放条悬浮覆盖页脚下缘时，此处留白保证 footer 内容始终可读 */}
             <div className="h-[env(safe-area-inset-bottom)]" aria-hidden="true" />
           </footer>
-          <PlayerBar />
+          <PlayerBarLoader />
           <BackToTop />
           <HotkeyHelpModal />
           <RouteScrollReset />

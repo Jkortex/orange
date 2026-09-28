@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { clearContentCache, getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getRelatedEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from '@/lib/content'
+import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getRelatedEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from '@/lib/content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
@@ -82,6 +82,31 @@ date: 2026-09-01
     fs.mkdirSync(path.join(contentDir, 'life'), { recursive: true })
 
     expect(getCollection('life', { contentDir })).toEqual([])
+  })
+
+  it('同日期条目按 slug 提供稳定排序，不依赖文件系统枚举顺序', () => {
+    writeFixture(
+      'posts/2026-09-01-zebra.md',
+      '---\ntitle: Zebra\ndate: 2026-09-01\n---\n正文',
+    )
+    writeFixture(
+      'posts/2026-09-01-alpha.md',
+      '---\ntitle: Alpha\ndate: 2026-09-01\n---\n正文',
+    )
+
+    expect(getCollection('posts', { contentDir }).map((entry) => entry.slug)).toEqual([
+      '2026-09-01-alpha',
+      '2026-09-01-zebra',
+    ])
+  })
+
+  it('文件集合拒绝不符合 YYYY-MM-DD-slug 约定的文件名', () => {
+    writeFixture(
+      'posts/not-a-dated-entry.md',
+      '---\ntitle: 错误文件名\ndate: 2026-09-01\n---\n正文',
+    )
+
+    expect(() => getCollection('posts', { contentDir })).toThrowError(/文件名|slug/)
   })
 })
 
@@ -301,6 +326,24 @@ tracks:
     expect(entries[1].collection).toBe('life')
   })
 
+  it('未注册的 photos 目录不会进入内容聚合或 manifest', () => {
+    writeFixture(
+      'posts/2026-09-01-post.md',
+      '---\ntitle: 文章\ndate: 2026-09-01\n---\n正文',
+    )
+    writeFixture(
+      'photos/2026-09-01-photo.md',
+      '---\ntitle: 照片\ndate: 2026-09-02\n---\n未启用的内容集合',
+    )
+
+    const entries = getRecentEntries(10, { contentDir })
+    const manifest = buildContentManifest({ contentDir })
+
+    expect(entries.map((entry) => entry.collection)).toEqual(['posts'])
+    expect(Object.keys(manifest.collections)).not.toContain('photos')
+    expect(manifest.allEntries.map((entry) => String(entry.collection))).not.toContain('photos')
+  })
+
   it('集合目录缺失（未启用类型）时跳过，不报错', () => {
     writeFixture(
       'posts/2026-09-01-only.md',
@@ -312,7 +355,7 @@ date: 2026-09-01
 正文
 `,
     )
-    // photos 目录未建立
+    // 其他未注册集合目录未建立
 
     const entries = getRecentEntries(10, { contentDir })
 
@@ -334,7 +377,7 @@ title: 缺日期
 正文
 `,
     )
-    // photos 目录未建立（未启用类型）仍应跳过，但 posts 校验失败必须暴露
+    // 其他未注册集合目录未建立（未启用类型）仍应跳过，但 posts 校验失败必须暴露
 
     expect(() => getRecentEntries(10, { contentDir })).toThrowError(/missing-date/)
   })
@@ -382,12 +425,17 @@ date: not-a-date
     expect(() => getEntry('posts', '../secret', { contentDir })).toThrowError()
   })
 
-  it('getEntry 文件不存在时报错', () => {
+  it('getEntry 文件不存在时使用可识别的 NotFound 错误', () => {
     fs.mkdirSync(path.join(contentDir, 'posts'), { recursive: true })
 
     expect(() => getEntry('posts', 'not-exist', { contentDir })).toThrowError(
       /not-exist/,
     )
+    try {
+      getEntry('posts', 'not-exist', { contentDir })
+    } catch (error) {
+      expect(error).toBeInstanceOf(ContentNotFoundError)
+    }
   })
 })
 
@@ -487,6 +535,16 @@ describe('标签聚合：指定集合（有详情路由的类型）去重聚合'
     expect(entries).toHaveLength(1)
     expect(entries[0].collection).toBe('skills')
   })
+  it('manifest 预聚合所有已登记标签页类型，包含仅出现在 life 的标签', () => {
+    writeFixture(
+      'life/2026-09-01-life.md',
+      '---\ntitle: 生活\ndate: 2026-09-01\ntags: [only-life]\n---\n正文',
+    )
+
+    const manifest = buildContentManifest({ contentDir })
+
+    expect(manifest.allTags['life,music,posts,skills']).toEqual(['only-life'])
+  })
 })
 
 describe('skills 包目录：SKILL.md + 附属文件，页面以目录形式展示', () => {
@@ -535,6 +593,17 @@ description: 红绿重构循环，测试先行。
       'templates/checklist.md',
     ])
     expect(pkg.files.find((f) => f.path === 'templates/checklist.md')?.content).toContain('提交模板')
+  })
+
+  it('重复读取同一 skill 包复用缓存，clearContentCache 后可重载', () => {
+    writeSkill('2026-09-14-tdd-basics')
+
+    const first = getSkillPackage('2026-09-14-tdd-basics', { contentDir })
+    const second = getSkillPackage('2026-09-14-tdd-basics', { contentDir })
+    expect(second).toBe(first)
+
+    clearContentCache()
+    expect(getSkillPackage('2026-09-14-tdd-basics', { contentDir })).not.toBe(first)
   })
 
   it('name 非 kebab-case 时构建即报错', () => {

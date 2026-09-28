@@ -8,6 +8,8 @@ import { formatDate } from '@/lib/format'
 
 type Params = { params: Promise<{ name: string }> }
 
+export const dynamicParams = false
+
 export function generateStaticParams() {
   return getCategories().map(({ name }) => ({ name }))
 }

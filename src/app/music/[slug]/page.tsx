@@ -7,6 +7,8 @@ import { AlbumTrackList } from '@/components/player/album-track-list'
 
 type Params = { params: Promise<{ slug: string }> }
 
+export const dynamicParams = false
+
 export function generateStaticParams() {
   return getCollection('music').map(({ slug }) => ({ slug }))
 }

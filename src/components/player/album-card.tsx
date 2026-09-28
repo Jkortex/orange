@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Music, Pause, Play } from 'lucide-react'
-import { useAlbumQueue, usePlayer, type PlayerTrack } from '@/components/player/player-provider'
+import { useAlbumQueue, usePlayerPlayback, type PlayerTrack } from '@/components/player/player-provider'
 import { Tip } from '@/components/primitives/tip'
 
 /*
@@ -23,7 +23,7 @@ export type AlbumCardProps = {
 }
 
 export function AlbumCard({ slug, title, artist, year, cover, tracks }: AlbumCardProps) {
-  const { playing, playAlbum, toggle } = usePlayer()
+  const { playing, playAlbum, toggle } = usePlayerPlayback()
   // 队列装配与「当前专辑」判断收敛到 useAlbumQueue（内容比较，跨页面可比）
   const { queueTracks, isAlbumMatch: current } = useAlbumQueue(tracks, cover, artist)
   const playingThis = current && playing

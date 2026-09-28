@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ArrowUp } from 'lucide-react'
-import { usePlayer } from '@/components/player/player-provider'
+import { usePlayerIndex } from '@/components/player/player-provider'
 import { IconButton } from '@/components/primitives/icon-button'
 
 /*
@@ -14,7 +14,7 @@ import { IconButton } from '@/components/primitives/icon-button'
  */
 
 export function BackToTop() {
-  const { index } = usePlayer()
+  const index = usePlayerIndex()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {

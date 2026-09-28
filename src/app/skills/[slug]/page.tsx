@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getSkillPackage, listSkillSlugs } from '@/lib/content'
+import { getSkillPackage, isContentNotFoundError, listSkillSlugs } from '@/lib/content'
 import { SkillPackageView } from '@/components/listing/skill-package-view'
 
 type Params = { params: Promise<{ slug: string }> }
+
+export const dynamicParams = false
 
 export function generateStaticParams() {
   return listSkillSlugs().map((slug) => ({ slug }))
@@ -14,8 +16,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   try {
     const { data } = getSkillPackage(slug)
     return { title: data.title, description: data.description }
-  } catch {
-    return { title: '内容不存在' }
+  } catch (error) {
+    if (isContentNotFoundError(error)) return { title: '内容不存在' }
+    throw error
   }
 }
 
@@ -25,8 +28,9 @@ export default async function SkillPage({ params }: Params) {
   let pkg
   try {
     pkg = getSkillPackage(slug)
-  } catch {
-    notFound()
+  } catch (error) {
+    if (isContentNotFoundError(error)) notFound()
+    throw error
   }
 
   return (

@@ -11,7 +11,6 @@ describe('TypeBadge 正常渲染', () => {
   it.each([
     ['posts', '文章'],
     ['life', '生活'],
-    ['photos', '照片'],
     ['music', '音乐'],
   ])('类型 %s 渲染徽标「%s」', (type, label) => {
     render(<TypeBadge type={type as 'posts'} />)

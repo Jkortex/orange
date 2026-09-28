@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MapPin } from 'lucide-react'
-import { getAdjacentEntries, getEntry, getRelatedEntries, type CollectionEntry, type CollectionType } from '@/lib/content'
+import { getAdjacentEntries, getEntry, getRelatedEntries, isContentNotFoundError, type CollectionEntry, type CollectionType } from '@/lib/content'
 import { estimateReadingTime, formatDate } from '@/lib/format'
 import { MarkdownRenderer } from '@/lib/markdown'
 import { extractToc, shouldShowToc } from '@/lib/toc'
@@ -12,6 +12,7 @@ import { ReadingProgress } from '@/components/reading/reading-progress'
 import { AdjacentNav } from '@/components/reading/adjacent-nav'
 import { RelatedEntries } from '@/components/reading/related-entries'
 import { RecentTracker } from '@/components/chrome/recent-tracker'
+import { ProseFontLink } from '@/components/reading/prose-font-link'
 import { DetailHeader } from '@/components/listing/detail-header'
 
 import { LifeGallery } from '@/components/listing/life-gallery'
@@ -25,8 +26,9 @@ import { LifeGallery } from '@/components/listing/life-gallery'
 export function readEntry<T extends CollectionType>(type: T, slug: string): CollectionEntry<T> {
   try {
     return getEntry(type, slug)
-  } catch {
-    notFound()
+  } catch (error) {
+    if (isContentNotFoundError(error)) notFound()
+    throw error
   }
 }
 
@@ -35,8 +37,9 @@ export function entryMetadata(type: CollectionType, slug: string): Metadata {
   try {
     const { data } = getEntry(type, slug)
     return { title: data.title, description: data.description }
-  } catch {
-    return { title: '内容不存在' }
+  } catch (error) {
+    if (isContentNotFoundError(error)) return { title: '内容不存在' }
+    throw error
   }
 }
 
@@ -72,6 +75,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
 
   return (
     <div className="w-full animate-in fade-in-50 duration-300">
+      <ProseFontLink />
       {/* 顶部滚动进度指示条 */}
       <ReadingProgress />
 

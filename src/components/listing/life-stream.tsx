@@ -1,8 +1,5 @@
-'use client'
-
-import * as React from 'react'
-import { Search } from 'lucide-react'
 import { LifeCard } from '@/components/listing/life-card'
+import { OpenSearchButton } from '@/components/chrome/open-search-button'
 import { EmptyState } from '@/components/primitives/empty-state'
 import type { CollectionEntry } from '@/lib/content'
 
@@ -11,14 +8,6 @@ export interface LifeStreamProps {
 }
 
 export function LifeStream({ entries }: LifeStreamProps) {
-  const handleOpenSearch = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('orange:open-search', { detail: { scope: 'life' } }),
-      )
-    }
-  }
-
   if (entries.length === 0) {
     return <EmptyState message="暂无生活记录" />
   }
@@ -29,18 +18,7 @@ export function LifeStream({ entries }: LifeStreamProps) {
       <div className="type-caption flex items-center justify-between px-1 pb-1 text-muted-foreground">
         <span>共 {entries.length} 条生活记录 · 按时间倒序</span>
 
-        <button
-          type="button"
-          onClick={handleOpenSearch}
-          className="chip chip-interactive gap-1.5 active:scale-95"
-          aria-label="搜索生活记录"
-        >
-          <Search className="size-3" />
-          <span>检索动态</span>
-          <kbd className="kbd hidden sm:inline-block">
-            ⌘K
-          </kbd>
-        </button>
+        <OpenSearchButton />
       </div>
 
       {/* 纯粹沉浸的生活流列表 */}

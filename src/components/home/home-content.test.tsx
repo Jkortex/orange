@@ -42,7 +42,7 @@ describe('HomeContent 渲染', () => {
     ]
 
     render(<HomeContent entries={mockEntries} />)
-    expect(screen.getByText('最近更新')).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: '最近更新' })).toBeTruthy()
     expect(screen.getByText('2 篇')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Post 1' })).toBeTruthy()
     expect(screen.getByText('Album 1')).toBeTruthy()

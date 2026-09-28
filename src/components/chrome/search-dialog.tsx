@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, X, Loader2 } from 'lucide-react'
+import { OPEN_SEARCH_EVENT, type OpenSearchEventDetail } from '@/lib/search-events'
 import { loadPagefind, type PagefindResultItem } from '@/lib/pagefind'
 import { IconButton } from '@/components/primitives/icon-button'
 import {
@@ -12,12 +14,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tip } from '@/components/primitives/tip'
-import { useOptionalPlayer } from '@/components/player/player-provider'
+import { useOptionalPlayerPlayback } from '@/components/player/player-provider'
 import {
   type SearchScope,
   type SearchGroup,
   type UnifiedSearchItem,
-  SCOPE_CHIPS,
   SearchFilterChips,
   SearchEmptyState,
   SearchResultsList,
@@ -25,6 +26,7 @@ import {
   filterActions,
   getCategoryItems,
   filterCategories,
+  type SearchCategory,
   scanCurrentHeadings,
   getOutlineItems,
   filterOutlines,
@@ -33,7 +35,8 @@ import {
 const tooltipPosition = 'left-1/2 top-full mt-1.5 -translate-x-1/2'
 const RECENT_KEY = 'orange_recent_visits'
 
-export function SearchDialog() {
+export function SearchDialog({ categories = [] }: { categories?: SearchCategory[] }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [activeScope, setActiveScope] = useState<SearchScope>('all')
@@ -47,7 +50,20 @@ export function SearchDialog() {
   const inputRef = useRef<HTMLInputElement>(null)
   const seqRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const player = useOptionalPlayer()
+  const player = useOptionalPlayerPlayback()
+
+  const navigate = useCallback(
+    (url: string) => {
+      setOpen(false)
+      // Pagefind 在站点配置错误时可能返回绝对 URL；外部地址仍交给浏览器处理。
+      if (/^https?:\/\//i.test(url)) {
+        window.location.assign(url)
+        return
+      }
+      router.push(url)
+    },
+    [router],
+  )
 
   // 1. 快捷键 Ctrl/Cmd+K 唤起
   useEffect(() => {
@@ -64,6 +80,26 @@ export function SearchDialog() {
     }
   }, [])
 
+  // 页面内的「检索」入口通过一个窄事件接口唤起全局搜索，避免把整页内容做成客户端组件。
+  useEffect(() => {
+    function onOpenSearch(event: Event) {
+      const detail = (event as CustomEvent<OpenSearchEventDetail>).detail
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = null
+      seqRef.current += 1
+      setLoading(false)
+      setQuery('')
+      setPagefindItems(null)
+      setSelectedIndex(-1)
+      setError(null)
+      setActiveScope(detail?.scope ?? 'all')
+      setOpen(true)
+    }
+
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpenSearch)
+    return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpenSearch)
+  }, [])
+
   // 2. 打开弹窗时初始化：扫描大纲、读取最近访问
   useEffect(() => {
     if (open) {
@@ -77,17 +113,22 @@ export function SearchDialog() {
       }
     } else {
       if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = null
+      setPagefindItems(null)
+      setSelectedIndex(-1)
+      setError(null)
+      setQuery('')
     }
   }, [open])
 
   // 3. 构建静态候选动作与分类
   const systemActions = useMemo(
-    () => getSystemActions({ onClose: () => setOpen(false), player }),
-    [player],
+    () => getSystemActions({ onClose: () => setOpen(false), navigate, player }),
+    [navigate, player],
   )
   const categoryItems = useMemo(
-    () => getCategoryItems(() => setOpen(false)),
-    [],
+    () => getCategoryItems(categories, () => setOpen(false), navigate),
+    [categories, navigate],
   )
   const outlineItems = useMemo(
     () => getOutlineItems(headings, () => setOpen(false)),
@@ -144,8 +185,7 @@ export function SearchDialog() {
             url: it.url,
             badge,
             onSelect: () => {
-              setOpen(false)
-              window.location.href = it.url
+              navigate(it.url)
             },
           }
         })
@@ -235,19 +275,7 @@ export function SearchDialog() {
 
   // 7. 键盘导航处理
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    // 按 Tab 键在作用域胶囊之间轮换
-    if (e.key === 'Tab') {
-      e.preventDefault()
-      const scopeIds: SearchScope[] = SCOPE_CHIPS.map((c) => c.id)
-      const currentIndex = scopeIds.indexOf(activeScope)
-      const nextIndex = e.shiftKey
-        ? (currentIndex - 1 + scopeIds.length) % scopeIds.length
-        : (currentIndex + 1) % scopeIds.length
-      setActiveScope(scopeIds[nextIndex])
-      setSelectedIndex(-1)
-      return
-    }
-
+    // 保留浏览器默认 Tab 顺序，让关闭、筛选和结果都可被键盘访问。
     if (flatItems.length === 0) return
 
     if (e.key === 'ArrowDown') {
@@ -281,7 +309,6 @@ export function SearchDialog() {
       <DialogTrigger asChild>
         <button
           type="button"
-          tabIndex={-1}
           aria-label="搜索"
           aria-keyshortcuts="Control+K Meta+K"
           className={iconBtnClass}
@@ -354,8 +381,7 @@ export function SearchDialog() {
               recentVisits={recentVisits}
               onClearRecent={handleClearRecent}
               onSelectRecent={(item) => {
-                setOpen(false)
-                window.location.href = item.url
+                navigate(item.url)
               }}
               suggestedActions={systemActions}
               onSelectAction={(action) => action.onSelect()}
@@ -378,7 +404,7 @@ export function SearchDialog() {
           <div className="flex items-center gap-3">
             <span>↑↓ 导航</span>
             <span>↵ 打开</span>
-            <span>Tab 切换分类</span>
+            <span>Tab 移动焦点</span>
           </div>
           <span>ESC 关闭</span>
         </div>

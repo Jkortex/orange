@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { SkillPackageExplorer, type RenderedSkillFile } from '@/components/listing/skill-package-explorer'
 import type { SkillPackage } from '@/lib/content'
@@ -62,5 +63,12 @@ describe('SkillPackageExplorer 交互测试', () => {
 
     const downloadBtn = screen.getByRole('button', { name: /下载技能包/ })
     expect(downloadBtn).toBeTruthy()
+  })
+
+  it('JSZip 仅在点击下载时动态加载', () => {
+    const source = readFileSync('src/components/listing/skill-package-explorer.tsx', 'utf8')
+
+    expect(source).not.toMatch(/^import JSZip/m)
+    expect(source).toContain("import('jszip')")
   })
 })

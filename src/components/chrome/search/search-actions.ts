@@ -1,7 +1,10 @@
+import { animateThemeChange } from '@/lib/theme-transition'
+import { toggleThemeMode } from '@/lib/theme-mode'
 import type { UnifiedSearchItem } from './types'
 
 export interface ActionContext {
   onClose: () => void
+  navigate?: (url: string) => void
   player?: {
     queue: unknown[]
     playing: boolean
@@ -16,6 +19,11 @@ export interface ActionContext {
  */
 export function getSystemActions(ctx: ActionContext): UnifiedSearchItem[] {
   const { onClose, player } = ctx
+  const navigate =
+    ctx.navigate ??
+    ((url: string) => {
+      window.location.href = url
+    })
 
   const actions: UnifiedSearchItem[] = [
     {
@@ -27,14 +35,9 @@ export function getSystemActions(ctx: ActionContext): UnifiedSearchItem[] {
       keywords: ['主题', 'theme', 'dark', 'light', '黑夜', '白天', '模式'],
       onSelect: () => {
         onClose()
-        const isDark = document.documentElement.classList.contains('dark')
-        if (isDark) {
-          document.documentElement.classList.remove('dark')
-          localStorage.setItem('theme-mode', 'light')
-        } else {
-          document.documentElement.classList.add('dark')
-          localStorage.setItem('theme-mode', 'dark')
-        }
+        animateThemeChange(() => {
+          toggleThemeMode()
+        })
       },
     },
     {
@@ -46,7 +49,7 @@ export function getSystemActions(ctx: ActionContext): UnifiedSearchItem[] {
       keywords: ['首页', 'home', '主页', 'index'],
       onSelect: () => {
         onClose()
-        window.location.href = '/'
+        navigate('/')
       },
     },
     {
@@ -58,7 +61,7 @@ export function getSystemActions(ctx: ActionContext): UnifiedSearchItem[] {
       keywords: ['文章', 'posts', '博客', 'blog', '技术'],
       onSelect: () => {
         onClose()
-        window.location.href = '/posts'
+        navigate('/posts')
       },
     },
     {
@@ -70,7 +73,7 @@ export function getSystemActions(ctx: ActionContext): UnifiedSearchItem[] {
       keywords: ['技能', 'skills', '专业', '清单', 'skill'],
       onSelect: () => {
         onClose()
-        window.location.href = '/skills'
+        navigate('/skills')
       },
     },
     {
@@ -82,7 +85,7 @@ export function getSystemActions(ctx: ActionContext): UnifiedSearchItem[] {
       keywords: ['生活', 'life', '随笔', '日常', '摄影'],
       onSelect: () => {
         onClose()
-        window.location.href = '/life'
+        navigate('/life')
       },
     },
     {
@@ -94,7 +97,7 @@ export function getSystemActions(ctx: ActionContext): UnifiedSearchItem[] {
       keywords: ['音乐', 'music', '播放器', '歌单', '专辑', '歌曲'],
       onSelect: () => {
         onClose()
-        window.location.href = '/music'
+        navigate('/music')
       },
     },
     {

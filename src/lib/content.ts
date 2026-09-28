@@ -28,11 +28,8 @@ export const postSchema = baseSchema
 export const lifeSchema = baseSchema.extend({
   location: z.string().optional(),
   weather: z.string().optional(),
+  /** 生活记录内嵌的图片引用；不是独立的 photos 内容集合 */
   photos: z.array(z.string()).default([]),
-})
-export const photoSchema = baseSchema.extend({
-  location: z.string().optional(),
-  cover: z.string().optional(),
 })
 export const musicSchema = baseSchema.extend({
   artist: z.string().min(1),
@@ -54,12 +51,14 @@ export const skillSchema = baseSchema.extend({
 export const collectionSchemas = {
   posts: postSchema,
   life: lifeSchema,
-  photos: photoSchema,
   music: musicSchema,
   skills: skillSchema,
 } as const
 
 export type CollectionType = keyof typeof collectionSchemas
+
+/** 拥有标签落地页的内容类型；路由页、sitemap 与 manifest 共用此注册表。 */
+export const TAGGED_TYPES: CollectionType[] = ['posts', 'music', 'skills', 'life']
 
 export type CollectionEntry<T extends CollectionType> = {
   /** 所属集合，跨集合页（标签/归档）据此生成路由 */
@@ -88,6 +87,17 @@ export type GetOptions = {
   skipManifest?: boolean
 }
 
+export class ContentNotFoundError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ContentNotFoundError'
+  }
+}
+
+export function isContentNotFoundError(error: unknown): error is ContentNotFoundError {
+  return error instanceof ContentNotFoundError
+}
+
 export type ContentManifest = {
   version: number
   generatedAt: string
@@ -108,6 +118,7 @@ export type ContentManifest = {
 }
 
 const MANIFEST_PATH = path.join(process.cwd(), '.generated', 'content-manifest.json')
+const MANIFEST_VERSION = 2
 let loadedManifest: ContentManifest | null = null
 
 function loadManifestFromDisk(): ContentManifest | null {
@@ -121,9 +132,15 @@ function loadManifestFromDisk(): ContentManifest | null {
       }
       return value
     }) as ContentManifest
+    if (loadedManifest.version !== MANIFEST_VERSION) {
+      throw new Error(
+        `内容清单版本不兼容：${MANIFEST_PATH}（期望 ${MANIFEST_VERSION}，实际 ${loadedManifest.version}）`,
+      )
+    }
     return loadedManifest
-  } catch {
-    return null
+  } catch (error) {
+    // 清单存在却无法读取时必须 fail-fast；只有不存在才允许回退到源码目录。
+    throw new Error(`内容清单读取失败：${MANIFEST_PATH}，请重新运行 prebuild`, { cause: error })
   }
 }
 
@@ -133,11 +150,34 @@ function resolveContentDir(type: string, options?: GetOptions) {
   return path.join(options?.contentDir ?? DEFAULT_CONTENT_DIR, type)
 }
 
+const ENTRY_FILENAME_PATTERN = /^\d{4}-\d{2}-\d{2}-[\w-]+\.md$/
+
 /** slug 只允许字母/数字/连字符/下划线，防止路径穿越（来源是 URL 参数） */
 function assertSafeSlug(slug: string) {
   if (!/^[\w-]+$/.test(slug)) {
-    throw new Error(`非法 slug：${slug}`)
+    throw new ContentNotFoundError(`非法 slug：${slug}`)
   }
+}
+
+function assertEntryFilename(filePath: string) {
+  const filename = path.basename(filePath)
+  if (!ENTRY_FILENAME_PATTERN.test(filename)) {
+    throw new Error(`内容文件名必须符合 YYYY-MM-DD-slug.md：${filePath}`)
+  }
+}
+
+/** 不依赖运行环境的字典序，保证 manifest 和静态输出可重复。 */
+function compareText(a: string, b: string) {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+function compareEntries<T extends CollectionType>(
+  a: CollectionEntry<T>,
+  b: CollectionEntry<T>,
+) {
+  const dateDiff = b.data.date.getTime() - a.data.date.getTime()
+  if (dateDiff !== 0) return dateDiff
+  return compareText(a.slug, b.slug) || compareText(a.collection, b.collection)
 }
 
 function parseEntry<T extends CollectionType>(
@@ -145,7 +185,15 @@ function parseEntry<T extends CollectionType>(
   filePath: string,
   raw: string,
 ): CollectionEntry<T> {
-  const { data, content } = matter(raw)
+  assertEntryFilename(filePath)
+  let parsed: ReturnType<typeof matter>
+  try {
+    parsed = matter(raw)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`frontmatter 解析失败 ${filePath}: ${message}`, { cause: error })
+  }
+  const { data, content } = parsed
   const schema = collectionSchemas[type]
   const result = schema.safeParse(data)
   if (!result.success) {
@@ -163,10 +211,12 @@ function parseEntry<T extends CollectionType>(
 }
 
 const collectionCache = new Map<string, CollectionEntry<any>[]>()
+const skillPackageCache = new Map<string, SkillPackage>()
 
 /** 清除内容缓存（用于测试动态重载） */
 export function clearContentCache(): void {
   collectionCache.clear()
+  skillPackageCache.clear()
   loadedManifest = null
 }
 
@@ -198,7 +248,7 @@ export function getCollection<T extends CollectionType>(
     .map((file) =>
       parseEntry<T>(type, path.join(dir, file), fs.readFileSync(path.join(dir, file), 'utf8')),
     )
-    .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+    .sort(compareEntries)
   collectionCache.set(cacheKey, entries)
   return entries
 }
@@ -218,13 +268,13 @@ export function getEntry<T extends CollectionType>(
       )
       if (entry) return entry
       const filePath = path.join(resolveContentDir(type, options), `${slug}.md`)
-      throw new Error(`内容不存在：${filePath}`)
+      throw new ContentNotFoundError(`内容不存在：${filePath}`)
     }
   }
 
   const filePath = path.join(resolveContentDir(type, options), `${slug}.md`)
   if (!fs.existsSync(filePath)) {
-    throw new Error(`内容不存在：${filePath}`)
+    throw new ContentNotFoundError(`内容不存在：${filePath}`)
   }
   return parseEntry<T>(type, filePath, fs.readFileSync(filePath, 'utf8'))
 }
@@ -277,9 +327,7 @@ export function getAllEntries(options?: GetOptions): CollectionEntry<CollectionT
     // skills 是包目录形态，不走单文件集合（见 getSkillEntries）；其余跳过未启用目录
     .filter((type) => type !== 'skills' && fs.existsSync(resolveContentDir(type, options)))
     .flatMap((type) => getCollection(type as Exclude<CollectionType, 'skills'>, options))
-  return [...fileEntries, ...getSkillEntries(options)].sort(
-    (a, b) => b.data.date.getTime() - a.data.date.getTime(),
-  )
+  return [...fileEntries, ...getSkillEntries(options)].sort(compareEntries)
 }
 
 /** 全类型聚合后截取最近 limit 条 */
@@ -316,7 +364,7 @@ export function getCategories(options?: GetOptions): CategorySummary[] {
   }
   return [...counts.entries()]
     .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => compareText(a.name, b.name))
 }
 
 /** 指定分类的全类型条目（日期倒序） */
@@ -350,7 +398,7 @@ export function getAllTags(types: CollectionType[], options?: GetOptions): strin
   for (const entry of getTaggedEntries(types, options)) {
     for (const tag of entry.data.tags) tags.add(tag)
   }
-  return [...tags].sort((a, b) => a.localeCompare(b))
+  return [...tags].sort(compareText)
 }
 
 /** 指定标签的条目（日期倒序，跨指定集合） */
@@ -361,7 +409,7 @@ export function getEntriesByTag(
 ): CollectionEntry<CollectionType>[] {
   return getTaggedEntries(types, options)
     .filter((entry) => entry.data.tags.includes(tag))
-    .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+    .sort(compareEntries)
 }
 
 /** 标签聚合的数据源：单文件集合 + skills 包条目（包形态不走 getCollection） */
@@ -418,14 +466,18 @@ export function getSkillPackage(slug: string, options?: GetOptions): SkillPackag
       if (pkg) return pkg
       const pkgDir = path.join(resolveContentDir('skills', options), slug)
       const skillFile = path.join(pkgDir, 'SKILL.md')
-      throw new Error(`skill 包缺入口：${skillFile}`)
+      throw new ContentNotFoundError(`skill 包缺入口：${skillFile}`)
     }
   }
 
   const pkgDir = path.join(resolveContentDir('skills', options), slug)
+  const cacheKey = `${pkgDir}`
+  const cached = skillPackageCache.get(cacheKey)
+  if (cached) return cached
+
   const skillFile = path.join(pkgDir, 'SKILL.md')
   if (!fs.existsSync(skillFile)) {
-    throw new Error(`skill 包缺入口：${skillFile}`)
+    throw new ContentNotFoundError(`skill 包缺入口：${skillFile}`)
   }
   const { data, content } = matter(fs.readFileSync(skillFile, 'utf8'))
   const result = skillSchema.safeParse(data)
@@ -435,7 +487,14 @@ export function getSkillPackage(slug: string, options?: GetOptions): SkillPackag
       .join('; ')
     throw new Error(`frontmatter 校验失败 ${skillFile}\n${issues}`)
   }
-  return { slug, data: result.data, body: content.trim(), files: listPackageFiles(pkgDir) }
+  const pkg: SkillPackage = {
+    slug,
+    data: result.data,
+    body: content.trim(),
+    files: listPackageFiles(pkgDir),
+  }
+  skillPackageCache.set(cacheKey, pkg)
+  return pkg
 }
 
 function listPackageFiles(pkgDir: string): SkillFile[] {
@@ -458,7 +517,7 @@ function listPackageFiles(pkgDir: string): SkillFile[] {
     }
   }
   walk(pkgDir, '')
-  return out.sort((a, b) => a.path.localeCompare(b.path))
+  return out.sort((a, b) => compareText(a.path, b.path))
 }
 
 /** skill 包转为可聚合条目（body 取 SKILL.md 正文，供首页/分类/tags 入流） */
@@ -480,7 +539,7 @@ export function getSkillEntries(options?: GetOptions): CollectionEntry<'skills'>
         body: pkg.body,
       } as CollectionEntry<'skills'>
     })
-    .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+    .sort(compareEntries)
 }
 
 export type RelatedEntry = {
@@ -536,7 +595,9 @@ export function getRelatedEntries(
     .filter((e) => e.score > 0)
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score
-      return b.date.getTime() - a.date.getTime()
+      const dateDiff = b.date.getTime() - a.date.getTime()
+      if (dateDiff !== 0) return dateDiff
+      return compareText(a.slug, b.slug) || compareText(a.collection, b.collection)
     })
 
   return scored.slice(0, limit)
@@ -549,7 +610,6 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
   const collections = {
     posts: [],
     life: [],
-    photos: [],
     music: [],
     skills: [],
   } as ContentManifest['collections']
@@ -559,9 +619,6 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
     : []
   collections.life = fs.existsSync(resolveContentDir('life', opts))
     ? getCollection('life', opts)
-    : []
-  collections.photos = fs.existsSync(resolveContentDir('photos', opts))
-    ? getCollection('photos', opts)
     : []
   collections.music = fs.existsSync(resolveContentDir('music', opts))
     ? getCollection('music', opts)
@@ -590,7 +647,7 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
   }
   const categories: CategorySummary[] = [...counts.entries()]
     .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => compareText(a.name, b.name))
 
   const adjacent: Record<string, AdjacentResult> = {}
   for (const type of Object.keys(collectionSchemas) as CollectionType[]) {
@@ -622,7 +679,7 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
 
   const allTags: Record<string, string[]> = {}
   const targetCombos: CollectionType[][] = [
-    ['posts', 'life', 'photos', 'music', 'skills'],
+    TAGGED_TYPES,
     ['posts', 'music', 'skills'],
     ['posts'],
   ]
@@ -632,7 +689,7 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
   }
 
   return {
-    version: 1,
+    version: MANIFEST_VERSION,
     generatedAt: new Date().toISOString(),
     collections,
     skills: {

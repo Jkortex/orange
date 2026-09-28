@@ -112,6 +112,21 @@ describe('.list-row 契约', () => {
     const explorer = readFileSync(`${SRC}/components/listing/explorer.tsx`, 'utf8')
     expect(DIVIDE.test(explorer)).toBe(false)
   })
+
+  it('为 Pagefind 标记正文边界，避免索引全局 chrome', () => {
+    const layout = readFileSync(`${SRC}/app/layout.tsx`, 'utf8')
+    expect(layout).toMatch(/<main[^>]*data-pagefind-body/)
+  })
+
+  it('正文衬线字体只由详情视图引入，不阻塞首页与列表首屏', () => {
+    const layout = readFileSync(`${SRC}/app/layout.tsx`, 'utf8')
+    const entryView = readFileSync(`${SRC}/components/listing/entry-view.tsx`, 'utf8')
+    const skillView = readFileSync(`${SRC}/components/listing/skill-package-view.tsx`, 'utf8')
+
+    expect(layout).not.toContain('lxgw-wenkai-webfont')
+    expect(entryView).toContain('ProseFontLink')
+    expect(skillView).toContain('ProseFontLink')
+  })
 })
 
 /*

@@ -3,44 +3,52 @@ import {
   getAllEntries,
   getCategories,
   getAllTags,
+  TAGGED_TYPES,
 } from '@/lib/content'
+import { getSiteUrl, joinSiteUrl } from '@/lib/site-url'
 
 export const dynamic = 'force-static'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://orange.example.com'
-
 export default function sitemap(): MetadataRoute.Sitemap {
+  const siteUrl = getSiteUrl()
+  const generatedAt = new Date()
   const routes: MetadataRoute.Sitemap = [
     {
-      url: `${SITE_URL}`,
-      lastModified: new Date(),
+      url: siteUrl,
+      lastModified: generatedAt,
       changeFrequency: 'daily',
       priority: 1.0,
     },
     {
-      url: `${SITE_URL}/posts`,
-      lastModified: new Date(),
+      url: joinSiteUrl(siteUrl, '/posts'),
+      lastModified: generatedAt,
       changeFrequency: 'daily',
       priority: 0.9,
     },
     {
-      url: `${SITE_URL}/music`,
-      lastModified: new Date(),
+      url: joinSiteUrl(siteUrl, '/life'),
+      lastModified: generatedAt,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: `${SITE_URL}/skills`,
-      lastModified: new Date(),
+      url: joinSiteUrl(siteUrl, '/music'),
+      lastModified: generatedAt,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: joinSiteUrl(siteUrl, '/skills'),
+      lastModified: generatedAt,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
   ]
 
-  // 内容条目（posts / music / skills）
+  // 内容条目（所有拥有详情路由的集合）
   for (const entry of getAllEntries()) {
     routes.push({
-      url: `${SITE_URL}/${entry.collection}/${entry.slug}`,
+      url: joinSiteUrl(siteUrl, `/${entry.collection}/${entry.slug}`),
       lastModified: entry.data.date,
       changeFrequency: 'monthly',
       priority: entry.collection === 'posts' ? 0.8 : 0.7,
@@ -50,18 +58,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // 分类
   for (const { name } of getCategories()) {
     routes.push({
-      url: `${SITE_URL}/category/${name}`,
-      lastModified: new Date(),
+      url: joinSiteUrl(siteUrl, `/category/${name}`),
+      lastModified: generatedAt,
       changeFrequency: 'weekly',
       priority: 0.5,
     })
   }
 
   // 标签
-  for (const tag of getAllTags(['posts', 'music', 'skills'])) {
+  for (const tag of getAllTags(TAGGED_TYPES)) {
     routes.push({
-      url: `${SITE_URL}/tags/${tag}`,
-      lastModified: new Date(),
+      url: joinSiteUrl(siteUrl, `/tags/${tag}`),
+      lastModified: generatedAt,
       changeFrequency: 'weekly',
       priority: 0.5,
     })

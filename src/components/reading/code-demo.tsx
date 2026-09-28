@@ -215,6 +215,7 @@ export function CodeDemo({
           ref={iframeRef}
           title={title || 'Demo Preview'}
           sandbox="allow-scripts allow-modals"
+          loading="lazy"
           srcDoc={buildSrcDoc(html, css, js, theme, isDark)}
           onLoad={handleIframeLoad}
           style={{ height: `${iframeHeight}px` }}

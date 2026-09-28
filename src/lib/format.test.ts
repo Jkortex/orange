@@ -10,6 +10,11 @@ describe('formatDate', () => {
   it('formatDateISO 直接消费服务端内嵌的 ISO 字符串', () => {
     expect(formatDateISO('2026-09-01T00:00:00.000Z')).toBe('2026-09-01')
   })
+
+  it('按 UTC 日历字段格式化，避免构建机与浏览器时区不同导致日期偏移', () => {
+    expect(formatDateISO('2026-09-01T00:00:00.000Z')).toBe('2026-09-01')
+    expect(formatDateISO('2026-09-01T23:30:00.000-05:00')).toBe('2026-09-02')
+  })
 })
 
 describe('formatTime 播放时长', () => {

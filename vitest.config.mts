@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
@@ -6,7 +7,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': new URL('./src', import.meta.url).pathname.replace(/^\//, ''),
+      // fileURLToPath 保留绝对路径；直接使用 URL.pathname 在 Linux 上会去掉开头 /，
+      // 变成 Vite 无法解析的相对路径。
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   test: {

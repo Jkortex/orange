@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { IconButton } from '@/components/primitives/icon-button'
 import { animateThemeChange } from '@/lib/theme-transition'
+import {
+  THEME_MODE_EVENT,
+  setThemeMode,
+  type ThemeModeEventDetail,
+} from '@/lib/theme-mode'
 
 // 深浅色切换：html.dark 类 + localStorage 持久化，纯客户端实现（AGENTS.md UI 主题规范）
 // 图标化按钮：aria-label 兜底语义，hover/focus 显示文字提示（AGENTS.md 图标化标准）
@@ -12,6 +17,16 @@ export function ThemeToggle() {
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains('dark'))
+
+    function syncMode(event: Event) {
+      const detail = (event as CustomEvent<ThemeModeEventDetail>).detail
+      if (detail?.mode === 'dark' || detail?.mode === 'light') {
+        setDark(detail.mode === 'dark')
+      }
+    }
+
+    window.addEventListener(THEME_MODE_EVENT, syncMode)
+    return () => window.removeEventListener(THEME_MODE_EVENT, syncMode)
   }, [])
 
   function toggle(e?: React.MouseEvent<HTMLButtonElement>) {
@@ -24,13 +39,7 @@ export function ThemeToggle() {
     // VT startViewTransition(update) 在 update() 返回后同步捕获快照，
     // 无需 flushSync 强制同步提交，React 批量更新减少主线程阻塞
     animateThemeChange(() => {
-      setDark(next)
-      document.documentElement.classList.toggle('dark', next)
-      try {
-        localStorage.setItem('theme-mode', next ? 'dark' : 'light')
-      } catch {
-        // localStorage 不可用（如隐私模式）时静默降级，仅本次会话生效
-      }
+      setThemeMode(next ? 'dark' : 'light')
     }, origin)
   }
 

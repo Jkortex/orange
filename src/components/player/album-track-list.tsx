@@ -1,7 +1,7 @@
 'use client'
 
 import { Pause, Play, Volume2 } from 'lucide-react'
-import { useAlbumQueue, usePlayer, type PlayerTrack } from '@/components/player/player-provider'
+import { useAlbumQueue, usePlayerPlayback, type PlayerTrack } from '@/components/player/player-provider'
 import { IconButton } from '@/components/primitives/icon-button'
 
 /*
@@ -17,7 +17,7 @@ export type AlbumTrackListProps = {
 }
 
 export function AlbumTrackList({ tracks, cover, artist }: AlbumTrackListProps) {
-  const { index, playing, playAlbum, toggle } = usePlayer()
+  const { index, playing, playAlbum, toggle } = usePlayerPlayback()
   // 队列装配与「当前专辑」判断收敛到 useAlbumQueue（引用稳定，跨页面可比）
   const { queueTracks, isAlbumMatch } = useAlbumQueue(tracks, cover, artist)
   if (tracks.length === 0) return null

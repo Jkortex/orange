@@ -1,31 +1,13 @@
 import { getAllEntries } from '@/lib/content'
-import { isMusic } from '@/lib/content-guards'
-import { HomeHeader, HomeContent, type HomeSignal } from '@/components/home'
+import { HomeHeader, HomeContent } from '@/components/home'
 
 export default function HomePage() {
-  // 单一事实源：全类型聚合（日期倒序）既喂时间线，也用于派生 hero 动态信号
-  const all = getAllEntries()
-  const entries = all.slice(0, 10)
-
-  const latest = all.find((entry) => !isMusic(entry)) ?? null
-  const latestMusic = all.find(isMusic) ?? null
-
-  const signals = [
-    latest && {
-      label: '最近',
-      href: `/${latest.collection}/${latest.slug}`,
-      text: latest.data.title,
-    },
-    latestMusic && {
-      label: '在听',
-      href: `/music/${latestMusic.slug}`,
-      text: `${latestMusic.data.title} · ${latestMusic.data.artist}`,
-    },
-  ].filter((signal): signal is HomeSignal => signal !== null)
+  // 首页只保留混合时间线；品牌与站点定位由顶栏和简介承担，避免重复信号。
+  const entries = getAllEntries().slice(0, 10)
 
   return (
     <section className="mx-auto w-full max-w-2xl animate-in fade-in-50 duration-300">
-      <HomeHeader signals={signals} />
+      <HomeHeader />
       <HomeContent entries={entries} />
     </section>
   )

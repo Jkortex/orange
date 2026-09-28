@@ -13,7 +13,15 @@ if (!fs.existsSync(targetDir)) {
 }
 
 const manifest = buildContentManifest({ skipManifest: true })
-fs.writeFileSync(targetFile, JSON.stringify(manifest, null, 2), 'utf8')
+const tempFile = `${targetFile}.${process.pid}.tmp`
+
+try {
+  // 先写同目录临时文件，再原子替换，避免中断留下半截 JSON。
+  fs.writeFileSync(tempFile, JSON.stringify(manifest), 'utf8')
+  fs.renameSync(tempFile, targetFile)
+} finally {
+  if (fs.existsSync(tempFile)) fs.rmSync(tempFile, { force: true })
+}
 
 const duration = (performance.now() - startTime).toFixed(2)
 console.log(`[prebuild] 成功生成清单: ${targetFile} (耗时 ${duration}ms)`)

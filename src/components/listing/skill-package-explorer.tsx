@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import JSZip from 'jszip'
 import { FileCode, FileText, File, Copy, Check, Download, Loader2 } from 'lucide-react'
 import type { SkillPackage } from '@/lib/content'
 import type { TocHeading } from '@/lib/toc'
@@ -54,6 +53,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
     if (downloading) return
     try {
       setDownloading(true)
+      const { default: JSZip } = await import('jszip')
       const zip = new JSZip()
       const rootFolder = zip.folder(pkg.data.name) ?? zip
       for (const file of pkg.files) {

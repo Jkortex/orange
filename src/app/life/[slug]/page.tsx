@@ -4,6 +4,8 @@ import { entryMetadata, readEntry, EntryView } from '@/components/listing/entry-
 
 type Params = { params: Promise<{ slug: string }> }
 
+export const dynamicParams = false
+
 export function generateStaticParams() {
   return getCollection('life').map(({ slug }) => ({ slug }))
 }

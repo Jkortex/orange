@@ -43,9 +43,21 @@ type PlayerContextValue = {
   clear: () => void
 }
 
+type PlayerStateValue = Pick<PlayerContextValue, 'queue' | 'index' | 'playing'>
+type PlayerTimeValue = Pick<PlayerContextValue, 'currentTime' | 'duration' | 'volume' | 'muted'>
+type PlayerActionsValue = Pick<
+  PlayerContextValue,
+  'playAlbum' | 'toggle' | 'next' | 'prev' | 'seekTo' | 'setVolume' | 'toggleMute' | 'clear'
+>
+type PlayerPlaybackValue = PlayerStateValue & PlayerActionsValue
+
 const VOLUME_KEY = 'player-volume'
 
-const PlayerContext = createContext<PlayerContextValue | null>(null)
+// 状态、进度与动作拆成三个 Context：timeupdate 只更新进度 Context，
+// 不再让搜索、返回顶部等只关心队列/播放态的组件跟着重渲染。
+const PlayerStateContext = createContext<PlayerStateValue | null>(null)
+const PlayerTimeContext = createContext<PlayerTimeValue | null>(null)
+const PlayerActionsContext = createContext<PlayerActionsValue | null>(null)
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [queue, setQueue] = useState<PlayerTrack[]>([])
@@ -221,41 +233,99 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const stateValue = useMemo(
+    () => ({ queue, index, playing }),
+    [queue, index, playing],
+  )
+  const timeValue = useMemo(
+    () => ({ currentTime, duration, volume, muted }),
+    [currentTime, duration, volume, muted],
+  )
+  const actionsValue = useMemo(
+    () => ({
+      playAlbum,
+      toggle,
+      next,
+      prev,
+      seekTo,
+      setVolume,
+      toggleMute,
+      clear,
+    }),
+    [playAlbum, toggle, next, prev, seekTo, setVolume, toggleMute, clear],
+  )
+
   return (
-    <PlayerContext.Provider
-      value={{
-        queue,
-        index,
-        playing,
-        currentTime,
-        duration,
-        volume,
-        muted,
-        playAlbum,
-        toggle,
-        next,
-        prev,
-        seekTo,
-        setVolume,
-        toggleMute,
-        clear,
-      }}
-    >
-      {children}
-    </PlayerContext.Provider>
+    <PlayerStateContext.Provider value={stateValue}>
+      <PlayerTimeContext.Provider value={timeValue}>
+        <PlayerActionsContext.Provider value={actionsValue}>
+          {children}
+        </PlayerActionsContext.Provider>
+      </PlayerTimeContext.Provider>
+    </PlayerStateContext.Provider>
   )
 }
 
 export function usePlayer(): PlayerContextValue {
-  const context = useContext(PlayerContext)
-  if (!context) {
+  const state = useContext(PlayerStateContext)
+  const time = useContext(PlayerTimeContext)
+  const actions = useContext(PlayerActionsContext)
+  const value = useMemo(
+    () => (state && time && actions ? { ...state, ...time, ...actions } : null),
+    [state, time, actions],
+  )
+  if (!value) {
     throw new Error('usePlayer 必须在 PlayerProvider 内使用')
   }
-  return context
+  return value
+}
+
+export function usePlayerState(): PlayerStateValue {
+  const state = useContext(PlayerStateContext)
+  if (!state) {
+    throw new Error('usePlayerState 必须在 PlayerProvider 内使用')
+  }
+  return state
+}
+
+export function usePlayerIndex(): number | null {
+  return usePlayerState().index
+}
+
+export function useOptionalPlayerIndex(): number | null {
+  return useContext(PlayerStateContext)?.index ?? null
+}
+
+export function usePlayerPlayback(): PlayerPlaybackValue {
+  const state = useContext(PlayerStateContext)
+  const actions = useContext(PlayerActionsContext)
+  const value = useMemo(
+    () => (state && actions ? { ...state, ...actions } : null),
+    [state, actions],
+  )
+  if (!value) {
+    throw new Error('usePlayerPlayback 必须在 PlayerProvider 内使用')
+  }
+  return value
 }
 
 export function useOptionalPlayer(): PlayerContextValue | null {
-  return useContext(PlayerContext)
+  const state = useContext(PlayerStateContext)
+  const time = useContext(PlayerTimeContext)
+  const actions = useContext(PlayerActionsContext)
+  return useMemo(
+    () => (state && time && actions ? { ...state, ...time, ...actions } : null),
+    [state, time, actions],
+  )
+}
+
+export function useOptionalPlayerPlayback(): PlayerPlaybackValue | null {
+  const state = useContext(PlayerStateContext)
+  const actions = useContext(PlayerActionsContext)
+  return useMemo(
+    () => (state && actions ? { ...state, ...actions } : null),
+    [state, actions],
+  )
 }
 
 /**
@@ -272,7 +342,7 @@ export function isQueueMatch(queue: PlayerTrack[], tracks: PlayerTrack[]): boole
  * - 必须在条件返回之前调用（Hooks 顺序不得依赖 props）
  */
 export function useAlbumQueue(tracks: PlayerTrack[], cover?: string, artist?: string) {
-  const { queue } = usePlayer()
+  const { queue } = usePlayerState()
   const queueTracks = useMemo(
     () => tracks.map((track) => ({ ...track, cover, artist })),
     [tracks, cover, artist],
