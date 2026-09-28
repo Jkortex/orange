@@ -13,7 +13,7 @@ export function HomeHeader({
   return (
     <div className="mb-8">
       {badge && (
-        <p className="chip chip-quiet mb-3">
+        <p className="type-caption mb-2 text-muted-foreground">
           {badge}
         </p>
       )}

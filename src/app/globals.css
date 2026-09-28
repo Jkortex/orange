@@ -303,6 +303,17 @@
     color: var(--primary);
   }
 
+  /* 普通内容标签：比类型徽标更轻，避免列表页被大量胶囊切碎 */
+  .chip-subtle {
+    border-color: transparent;
+    background-color: transparent;
+  }
+  .chip-subtle:hover {
+    border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+    background-color: var(--muted);
+    color: var(--primary);
+  }
+
   /* 键盘键位：等宽小字号、方角微圆，与 .chip 同色系 */
   .kbd {
     display: inline-flex;

@@ -157,6 +157,13 @@ describe('配方收敛守卫', () => {
     expect(ruleBody('.chip-quiet')).toContain('background-color: transparent')
   })
 
+  it('.chip-subtle 是普通标签的低重量变体，保留可交互反馈', () => {
+    const body = ruleBody('.chip-subtle')
+    expect(body).toContain('border-color: transparent')
+    expect(body).toContain('background-color: transparent')
+    expect(ruleBody('.chip-subtle:hover')).toContain('background-color: var(--muted)')
+  })
+
   it('.chip-interactive 悬停转品牌色', () => {
     expect(ruleBody('.chip-interactive:hover')).toContain('color: var(--primary)')
   })

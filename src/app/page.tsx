@@ -7,7 +7,7 @@ export default function HomePage() {
 
   return (
     <section className="mx-auto w-full max-w-2xl animate-in fade-in-50 duration-300">
-      <HomeHeader />
+      <HomeHeader badge="个人博客 · 代码 / 生活 / 音乐" />
       <HomeContent entries={entries} />
     </section>
   )

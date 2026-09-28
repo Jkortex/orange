@@ -15,6 +15,15 @@ describe('HomeHeader 首页简介', () => {
     expect(screen.queryByRole('heading', { name: 'Orange' })).toBeNull()
   })
 
+  it('支持轻量 eyebrow 锚点', () => {
+    render(<HomeHeader badge="个人博客 · 代码 / 生活 / 音乐" />)
+
+    const badge = screen.getByText('个人博客 · 代码 / 生活 / 音乐')
+    expect(badge).toBeTruthy()
+    expect(badge.className).toContain('type-caption')
+    expect(badge.className).not.toContain('chip')
+  })
+
   it('支持自定义简介', () => {
     render(<HomeHeader description="Custom Description" />)
 

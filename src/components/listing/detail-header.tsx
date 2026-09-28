@@ -51,7 +51,7 @@ export function DetailHeader({
                     <Link
                       key={tag}
                       href={`/tags/${tag}`}
-                      className="chip chip-interactive"
+                      className="chip chip-subtle chip-interactive"
                     >
                       #{tag}
                     </Link>
