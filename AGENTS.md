@@ -20,7 +20,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 
 - One md = one entry, **filename is the slug** (`YYYY-MM-DD-<slug>.md`). **Exception: skills** = directory with required `SKILL.md` (`content/skills/<slug>/`), siblings shown as-is
 - **Zod schemas in `src/lib/content.ts` are frontmatter's single source of truth**: invalid/missing fields fail the build naming the file; no schema-less field access in pages
-- **Manifest cache**: `predev`/`prebuild` write `.generated/content-manifest.json` (gitignored); content APIs prefer it with a module cache — **editing `content/` while dev runs has no effect; restart `pnpm dev`**
+- **Manifest cache**: `predev`/`prebuild` write `.generated/content-manifest.json` (gitignored); content APIs prefer it with a module cache — **editing `content/` while dev runs has no effect; restart `pnpm dev`**; changing the manifest shape requires bumping `MANIFEST_VERSION` (stale manifests fail fast with a "rerun prebuild" message)
 - Enabled collection with bad content must never be swallowed (missing dir = not-yet-enabled type, that's different)
 - **Categories are content-declared, zero code changes**: English slug `[\w-]+`, schema-enforced, aggregated at build into `/category/<name>`; category (navigation) vs tags (search) are separate concerns
 - New routed types must be registered in `TAGGED_TYPES` (`src/app/tags/[tag]/page.tsx`) or their tags have no landing page

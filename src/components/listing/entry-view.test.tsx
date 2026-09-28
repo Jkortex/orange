@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { createElement as h } from 'react'
 import { renderServerComponent } from '@/components/test-utils/render-server'
@@ -63,6 +64,32 @@ describe('EntryView 异常渲染', () => {
 
     expect(html).toContain('href="/posts"')
     expect(html).not.toContain('文章目录')
+  })
+})
+
+/*
+ * 相关推荐已下线（判断：信息量低、干扰阅读，还要额外维护一份推荐预聚合）。
+ * 这里留一条守卫，避免以后又被顺手加回来。
+ */
+describe('EntryView 不再渲染相关推荐', () => {
+  it('即使有共同标签，详情页也不再出现相关推荐区块', async () => {
+    const entry: CollectionEntry<'posts'> = {
+      collection: 'posts',
+      slug: '2026-09-01-demo',
+      // 真实内容里存在的标签：确保旧的推荐逻辑会算出结果，守卫才有意义
+      data: { title: '演示文章', date: new Date('2026-09-01'), tags: ['CSS'] },
+      body: '## 一\n\n## 二\n\n## 三\n\n正文',
+    }
+
+    const html = await renderToHtml(entry)
+
+    expect(html).not.toContain('相关推荐')
+  })
+
+  it('相邻翻页不受影响（不随相关推荐一起删掉）', () => {
+    const source = readFileSync('src/components/listing/entry-view.tsx', 'utf8')
+
+    expect(source).toContain('<AdjacentNav')
   })
 })
 

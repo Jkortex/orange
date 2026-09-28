@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MapPin } from 'lucide-react'
-import { getAdjacentEntries, getEntry, getRelatedEntries, isContentNotFoundError, type CollectionEntry, type CollectionType } from '@/lib/content'
+import { getAdjacentEntries, getEntry, isContentNotFoundError, type CollectionEntry, type CollectionType } from '@/lib/content'
 import { estimateReadingTime, formatDate } from '@/lib/format'
 import { MarkdownRenderer } from '@/lib/markdown'
 import { extractToc, shouldShowToc } from '@/lib/toc'
@@ -10,7 +10,6 @@ import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
 import { A11yScrollable } from '@/components/primitives/a11y-scrollable'
 import { ReadingProgress } from '@/components/reading/reading-progress'
 import { AdjacentNav } from '@/components/reading/adjacent-nav'
-import { RelatedEntries } from '@/components/reading/related-entries'
 import { RecentTracker } from '@/components/chrome/recent-tracker'
 import { DetailHeader } from '@/components/listing/detail-header'
 import { PagefindFilters } from '@/components/listing/pagefind-filters'
@@ -62,16 +61,6 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
   const contentWidth = isLife ? 'max-w-2xl' : 'max-w-3xl'
 
   const hasToc = headings.length > 0
-  // 相关文章推荐
-  const related = getRelatedEntries(
-    {
-      type: entry.collection,
-      slug: entry.slug,
-      tags: entry.data.tags,
-      category: entry.data.category,
-    },
-    3,
-  )
 
   return (
     <div className="w-full animate-in fade-in-50 duration-300">
@@ -145,7 +134,6 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
               )}
               <A11yScrollable />
 
-              <RelatedEntries entries={related} />
               <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
             </article>
 
@@ -168,7 +156,6 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
           )}
           <A11yScrollable />
 
-          <RelatedEntries entries={related} />
           <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
         </article>
       )}

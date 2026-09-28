@@ -114,11 +114,10 @@ export type ContentManifest = {
   entriesByCategory: Record<string, CollectionEntry<CollectionType>[]>
   allTags: Record<string, string[]>
   adjacent: Record<string, AdjacentResult>
-  related: Record<string, RelatedEntry[]>
 }
 
 const MANIFEST_PATH = path.join(process.cwd(), '.generated', 'content-manifest.json')
-const MANIFEST_VERSION = 2
+const MANIFEST_VERSION = 3
 let loadedManifest: ContentManifest | null = null
 
 function loadManifestFromDisk(): ContentManifest | null {
@@ -542,67 +541,6 @@ export function getSkillEntries(options?: GetOptions): CollectionEntry<'skills'>
     .sort(compareEntries)
 }
 
-export type RelatedEntry = {
-  collection: CollectionType
-  slug: string
-  title: string
-  category?: string
-  date: Date
-  tags: string[]
-  score: number
-}
-
-/** 相关条目推荐：根据共同标签数计算相关分值，并支持同分类补充 */
-export function getRelatedEntries(
-  current: { type: CollectionType; slug: string; tags?: string[]; category?: string },
-  limit = 3,
-  options?: GetOptions,
-): RelatedEntry[] {
-  if (!options?.contentDir && !options?.skipManifest) {
-    const manifest = loadManifestFromDisk()
-    if (manifest) {
-      const key = `${current.type}/${current.slug}`
-      const cached = manifest.related[key]
-      if (cached) {
-        return cached.slice(0, limit)
-      }
-    }
-  }
-
-  const currentTags = new Set(current.tags ?? [])
-  const candidates = getAllEntries(options).filter(
-    (e) => !(e.collection === current.type && e.slug === current.slug),
-  )
-
-  const scored: RelatedEntry[] = candidates
-    .map((e) => {
-      const eTags = e.data.tags ?? []
-      const sharedCount = eTags.filter((t) => currentTags.has(t)).length
-      let score = sharedCount
-      if (score === 0 && current.category && e.data.category === current.category) {
-        score = 0.5
-      }
-      return {
-        collection: e.collection,
-        slug: e.slug,
-        title: e.data.title,
-        category: e.data.category,
-        date: e.data.date,
-        tags: eTags,
-        score,
-      }
-    })
-    .filter((e) => e.score > 0)
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score
-      const dateDiff = b.date.getTime() - a.date.getTime()
-      if (dateDiff !== 0) return dateDiff
-      return compareText(a.slug, b.slug) || compareText(a.collection, b.collection)
-    })
-
-  return scored.slice(0, limit)
-}
-
 /** 构建全量内容清单（供 prebuild 生成静态 manifest.json） */
 export function buildContentManifest(options?: GetOptions): ContentManifest {
   const opts: GetOptions = { ...options, skipManifest: true }
@@ -663,20 +601,6 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
     }
   }
 
-  const related: Record<string, RelatedEntry[]> = {}
-  for (const entry of allEntries) {
-    related[`${entry.collection}/${entry.slug}`] = getRelatedEntries(
-      {
-        type: entry.collection,
-        slug: entry.slug,
-        tags: entry.data.tags,
-        category: entry.data.category,
-      },
-      10,
-      opts,
-    )
-  }
-
   const allTags: Record<string, string[]> = {}
   const targetCombos: CollectionType[][] = [
     TAGGED_TYPES,
@@ -702,6 +626,5 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
     entriesByCategory,
     allTags,
     adjacent,
-    related,
   }
 }
