@@ -27,7 +27,7 @@ export function HomeEntryItem({ entry }: HomeEntryItemProps) {
               />
             )}
             <span className="min-w-0">
-              <span className="type-item block truncate transition-colors group-hover:text-primary">
+              <span className="type-item line-clamp-2 block transition-colors group-hover:text-primary">
                 {entry.data.title}
               </span>
               <span className="type-meta mt-0.5 block truncate text-muted-foreground">
@@ -40,7 +40,7 @@ export function HomeEntryItem({ entry }: HomeEntryItemProps) {
           <>
             <Link
               href={`/${entry.collection}/${entry.slug}`}
-              className="type-item block truncate transition-colors group-hover:text-primary"
+              className="type-item line-clamp-2 block transition-colors group-hover:text-primary"
             >
               {entry.data.title}
             </Link>

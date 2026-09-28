@@ -37,7 +37,7 @@ export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
         <>
           <Link
             href={`/skills/${skill.slug}`}
-            className="type-item transition-colors group-hover:text-primary"
+            className="type-item line-clamp-2 transition-colors group-hover:text-primary"
           >
             {skill.title}
           </Link>
@@ -45,10 +45,13 @@ export function SkillsExplorer({ skills }: { skills: SkillItem[] }) {
             <code className="type-caption rounded bg-muted px-1 py-px font-mono">{skill.name}</code>
             {skill.version !== undefined && ` · v${skill.version}`}
             {skill.author !== undefined && ` · ${skill.author}`}
-            {' · '}
-            <time dateTime={skill.date} className="tabular-nums">
-              {formatDateISO(skill.date)}
-            </time>
+            {/* 日期只在 sm 及以上：移动端窄行里它和代号/版本抢同一行 */}
+            <span className="hidden sm:inline">
+              {' · '}
+              <time dateTime={skill.date} className="tabular-nums">
+                {formatDateISO(skill.date)}
+              </time>
+            </span>
           </p>
           {skill.description && (
             <p className="type-meta mt-1 line-clamp-2 text-muted-foreground">

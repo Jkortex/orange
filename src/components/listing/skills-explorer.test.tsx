@@ -54,3 +54,22 @@ describe('SkillsExplorer 正常渲染', () => {
     expect(screen.queryByRole('link', { name: 'Git 工作流' })).toBeNull()
   })
 })
+
+/* 移动端行布局：日期只在 sm 及以上出现，标题最多两行（与文章列表同一套规则） */
+describe('SkillsExplorer 移动端行布局', () => {
+  it('日期在移动端隐藏，sm 起恢复', () => {
+    render(<SkillsExplorer skills={skills} />)
+
+    // 日期与它前面的「·」一起收在 hidden 包裹层里，避免移动端留下悬空分隔点
+    const wrapper = screen.getByText('2026-09-14').closest('span')
+    expect(wrapper?.className).toContain('hidden')
+    expect(wrapper?.className).toContain('sm:inline')
+  })
+
+  it('标题最多两行', () => {
+    render(<SkillsExplorer skills={skills} />)
+
+    const link = screen.getByRole('link', { name: 'TDD 基础' })
+    expect(link.className).toContain('line-clamp-2')
+  })
+})

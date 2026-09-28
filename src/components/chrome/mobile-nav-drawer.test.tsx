@@ -69,16 +69,9 @@ describe('MobileNavDrawer 顶栏菜单', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('抽屉内可直接唤起搜索（复用既有 open-search 事件）', async () => {
-    const onOpen = vi.fn()
-    window.addEventListener('orange:open-search', onOpen)
-
+  it('抽屉里不再放第二个搜索入口（顶栏已有唯一搜索按钮）', async () => {
     await openDrawer()
-    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
 
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(onOpen).toHaveBeenCalledTimes(1)
-
-    window.removeEventListener('orange:open-search', onOpen)
+    expect(screen.queryByRole('button', { name: '搜索' })).toBeNull()
   })
 })

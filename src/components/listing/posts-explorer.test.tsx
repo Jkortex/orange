@@ -77,6 +77,29 @@ describe('PostsExplorer 正常渲染', () => {
   })
 })
 
+/*
+ * 移动端行布局（用户反馈：标题被日期挤成一行）：
+ * 日期只在 sm 及以上出现（移动端它独占一整列，标题只剩很窄的空间），
+ * 标题改为最多两行截断，而不是单行省略。
+ */
+describe('PostsExplorer 移动端行布局', () => {
+  it('日期列在移动端隐藏，sm 起恢复', () => {
+    render(<PostsExplorer posts={posts} />)
+
+    const time = screen.getByText('2026-09-01')
+    expect(time.className).toContain('hidden')
+    expect(time.className).toContain('sm:block')
+  })
+
+  it('标题最多两行（line-clamp-2），不再单行 truncate', () => {
+    render(<PostsExplorer posts={posts} />)
+
+    const link = screen.getByRole('link', { name: 'CSS Grid 指南' })
+    expect(link.className).toContain('line-clamp-2')
+    expect(link.className).not.toContain('truncate')
+  })
+})
+
 describe('PostsExplorer 异常渲染', () => {
   it('空列表：显示空态提示，侧栏仅「最近」', () => {
     render(<PostsExplorer posts={[]} />)

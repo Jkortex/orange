@@ -19,6 +19,10 @@ export type PostItem = {
 
 const PAGE_SIZE = 15
 
+/*
+ * 行结构：移动端只有标题（日期独占一列会把标题挤成一条窄带，sm 起才出现），
+ * 标题最多两行截断而不是单行省略。
+ */
 const POST_ROW_CLASS = 'list-row group flex items-center gap-3'
 
 export function PostsExplorer({ posts }: { posts: PostItem[] }) {
@@ -36,13 +40,13 @@ export function PostsExplorer({ posts }: { posts: PostItem[] }) {
         <>
           <time
             dateTime={post.date}
-            className="type-meta w-20 shrink-0 font-mono tabular-nums text-muted-foreground"
+            className="hidden w-20 shrink-0 font-mono tabular-nums text-muted-foreground sm:block"
           >
             {formatDateISO(post.date)}
           </time>
           <Link
             href={`/posts/${post.slug}`}
-            className="type-item min-w-0 flex-1 truncate transition-colors group-hover:text-primary"
+            className="type-item line-clamp-2 min-w-0 flex-1 transition-colors group-hover:text-primary"
           >
             {post.title}
           </Link>

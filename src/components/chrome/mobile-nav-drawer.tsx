@@ -2,10 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Menu, Music, Newspaper, NotebookPen, Search, Wrench, type LucideIcon } from 'lucide-react'
+import { Home, Menu, Music, Newspaper, NotebookPen, Wrench, type LucideIcon } from 'lucide-react'
 import { defaultNavItems, type NavItem } from '@/components/chrome/header-nav'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { OPEN_SEARCH_EVENT } from '@/lib/search-events'
 
 /*
  * 移动端栏目菜单（经典汉堡 + 侧滑抽屉）：
@@ -13,6 +12,7 @@ import { OPEN_SEARCH_EVENT } from '@/lib/search-events'
  * - sm 起由顶栏行内导航接管，抽屉触发器隐藏。
  * - 图标沿用各集合首页的图标（posts=Newspaper / life=NotebookPen / music=Music / skills=Wrench），
  *   菜单里图标只是辅助，栏目名始终是可见文本。
+ * - 搜索全站只保留顶栏那一个入口，抽屉里不重复放。
  * - 焦点陷阱、Esc、遮罩点击、滚动锁全部由 Sheet（Radix Dialog）负责，本组件只管内容与关闭时机。
  */
 
@@ -83,23 +83,6 @@ export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[]
             })}
           </ul>
         </nav>
-
-        {/* 抽屉内的搜索入口：复用既有 open-search 事件，SheetClose 先收起抽屉再由搜索接管焦点 */}
-        <div className="border-t border-border-subtle px-3 py-3">
-          <SheetClose asChild>
-            <button
-              type="button"
-              aria-label="搜索"
-              aria-keyshortcuts="Control+K Meta+K"
-              onClick={() => window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))}
-              className="type-meta flex w-full items-center gap-3 rounded-xl px-3 py-3 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
-            >
-              <Search className="size-4 shrink-0" aria-hidden />
-              搜索
-              <span className="kbd ml-auto">Ctrl K</span>
-            </button>
-          </SheetClose>
-        </div>
       </SheetContent>
     </Sheet>
   )
