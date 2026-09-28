@@ -71,3 +71,35 @@ describe('HeaderNav 顶部导航组件', () => {
     expect(life.className).toContain('text-primary')
   })
 })
+
+/*
+ * 移动端顶栏契约（用户反馈：文字挤在一行）：
+ * 导航独占一行、整宽出血、内部横滑；sm 起恢复成一行行内排布。
+ * 关键是「不换行、不省略、不图标化」，横向滚动只发生在 nav 自己内部。
+ */
+describe('HeaderNav 移动端横滑布局', () => {
+  it('导航条自身是滚动容器，且整宽出血到视口边缘', () => {
+    render(<HeaderNav />)
+
+    const nav = screen.getByRole('link', { name: '首页' }).parentElement
+    expect(nav?.className).toContain('overflow-x-auto')
+    expect(nav?.className, '出血靠负边距 + 等量内边距').toContain('-mx-4')
+    expect(nav?.className).toContain('px-4')
+    expect(nav?.className, 'sm 起恢复行内排布').toContain('sm:overflow-visible')
+    expect(nav?.className).toContain('sm:mx-0')
+  })
+
+  it('导航项不参与压缩（压缩会把文字挤变形，交给容器横滑）', () => {
+    render(<HeaderNav />)
+
+    for (const name of ['首页', '文章', '生活', '音乐', '技能']) {
+      expect(screen.getByRole('link', { name }).className).toContain('shrink-0')
+    }
+  })
+
+  it('移动端触摸目标高度足够（py-2 + 文字行高 ≥ 36px）', () => {
+    render(<HeaderNav />)
+
+    expect(screen.getByRole('link', { name: '文章' }).className).toContain('py-2')
+  })
+})

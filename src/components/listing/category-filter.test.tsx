@@ -96,3 +96,56 @@ describe('CategorySidebar 正常渲染', () => {
     expect(count?.className, '桌面端计数须右对齐').toContain('md:ml-auto')
   })
 })
+
+/*
+ * 移动端分类条契约（用户反馈：不是整宽横滑，而是把整页撑出横向滚动）：
+ * 滚动容器必须是「整宽出血的 ul」本身；aside 只负责出血背景与吸顶，且 min-w-0 不被内容撑宽。
+ * 药丸 shrink-0，否则 flex 会先压胶囊再谈滚动。
+ */
+describe('CategorySidebar 移动端横滑布局', () => {
+  function renderSidebar() {
+    return render(
+      <CategorySidebar
+        categories={[
+          { name: 'css', count: 2 },
+          { name: 'meta', count: 1 },
+        ]}
+        active={null}
+        onSelect={() => {}}
+        navLabel="文章分类"
+      />,
+    )
+  }
+
+  it('滚动发生在 ul 上：宽度等于视口、内部横滑，而不是溢出到整页', () => {
+    const { container } = renderSidebar()
+    const list = container.querySelector('ul')
+
+    expect(list?.className).toContain('overflow-x-auto')
+    // 出血由 aside 承担，ul 只补内边距让胶囊与正文左缘对齐（再叠一层负边距会多溢出 16px）
+    expect(list?.className).toContain('px-4')
+    expect(list?.className).not.toMatch(/(^|\s)-mx-4(\s|$)/)
+    expect(list?.className).toContain('overscroll-x-contain')
+  })
+
+  it('aside 出血但不带内边距（内边距只由滚动容器提供，避免两层留白）', () => {
+    const { container } = renderSidebar()
+    const aside = container.querySelector('aside')
+
+    expect(aside?.className).toContain('-mx-4')
+    expect(aside?.className, 'aside 不该再叠一层 px-4').not.toMatch(/(^|\s)px-4(\s|$)/)
+    expect(aside?.className, '网格项默认 min-width:auto，会被内容撑宽').toContain('min-w-0')
+  })
+  it('吸顶位置跟随 --header-height，不写死 top-14', () => {
+    const { container } = renderSidebar()
+    const aside = container.querySelector('aside')
+
+    expect(aside?.className).toContain('top-[var(--header-height)]')
+    expect(aside?.className).not.toMatch(/top-14/)
+  })
+
+  it('药丸不参与压缩', () => {
+    renderSidebar()
+    expect(screen.getByRole('button', { name: '最近' }).className).toContain('shrink-0')
+  })
+})

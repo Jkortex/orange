@@ -45,18 +45,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 全局播放状态 Provider：专辑卡/曲目列表经 usePlayer 入队，页面切换播放不中断（AGENTS.md 界面布局规范第 3 条）。
             播放条为 fixed 悬浮层（不占文档流、footer 不让位），无队列时零常驻留白 */}
         <PlayerProvider>
-          {/* 顶栏全宽两端对齐：品牌居左、导航与工具居右，不随内容区收窄；
-              窄屏右侧组换行、各项仍可达 */}
+          {/* 顶栏全宽两端对齐（AGENTS.md 界面布局规范第 1 条，sticky z-40）：
+              移动端两行——第一行品牌与工具，第二行整宽横滑的栏目导航（文字不再挤在一行）；
+              sm 起合并为一行。高度取自 --header-height，分类条与锚点避让都跟着它走 */}
           <header className="sticky top-0 z-40 border-b border-border-subtle bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-            <nav className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
-              <Link href="/" className="type-item flex shrink-0 items-center gap-2 font-semibold transition-colors hover:text-primary">
+            <nav className="flex min-h-[var(--header-height)] w-full flex-wrap items-center gap-x-2 px-4 pt-2.5 pb-1 sm:flex-nowrap sm:px-6 sm:py-3.5">
+              <Link href="/" className="type-item order-1 flex shrink-0 items-center gap-2 font-semibold transition-colors hover:text-primary">
                 <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
                   <BrandMark className="size-4 text-primary" />
                 </span>
                 Orange
               </Link>
-              <div className="flex items-center justify-end gap-x-1 sm:gap-x-2">
+
+              {/* 移动端独占一行的栏目导航；sm 起回到行内（顺序：品牌 → 导航 → 工具） */}
+              <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto">
                 <HeaderNav />
+              </div>
+
+              <div className="order-2 flex items-center gap-x-1 sm:order-3 sm:gap-x-2">
                 <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/70 sm:inline-block" />
                 <SearchDialog categories={categories} />
                 <ThemeSelect className="hidden sm:inline-flex" />

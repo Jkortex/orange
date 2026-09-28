@@ -135,7 +135,7 @@ export function SkillPackageExplorer({
       <div className="grid w-full gap-6 md:grid-cols-[13rem_minmax(0,1fr)] lg:grid-cols-[13rem_minmax(0,1fr)_13rem] md:gap-8">
         {/* 左侧文件导航 (桌面端)：每个文件是独立静态页 */}
         <aside className="hidden md:block">
-          <div className="sticky top-20 md:sticky md:top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
+          <div className="sticky top-[calc(var(--header-height)+1.5rem)] max-h-[calc(100vh-var(--header-height)-3rem)] overflow-y-auto pr-1">
             <nav
               aria-label="技能导航"
               className="surface-card space-y-4 p-3"
@@ -260,7 +260,7 @@ export function SkillPackageExplorer({
 
         {/* 右侧当前文件目录 (仅大屏 lg: 显示) */}
         <aside className="hidden lg:block">
-          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
+          <div className="sticky top-[calc(var(--header-height)+1.5rem)] max-h-[calc(100vh-var(--header-height)-3rem)] overflow-y-auto pr-1">
             {headings.length > 0 ? (
               <Toc headings={headings} />
             ) : (

@@ -63,8 +63,9 @@ describe('SkillPackageView 目录展示', () => {
     const html = await renderToHtml(makePackage())
 
     expect(html).toContain('<aside')
-    expect(html).toContain('md:sticky')
     expect(html).toContain('hidden md:block')
+    // 吸顶偏移跟随顶栏高度变量（写死 top-20 会随顶栏两行布局漂移）
+    expect(html).toContain('sticky top-[calc(var(--header-height)+1.5rem)]')
   })
 
   it('只渲染当前文件的正文，其他文件不出现在 HTML 里', async () => {

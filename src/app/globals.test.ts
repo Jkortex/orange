@@ -133,6 +133,50 @@ describe('.list-row 契约', () => {
 })
 
 /*
+ * 移动端 chrome 契约（真实反馈：顶栏文字挤在一行、分类条把整页撑出横向滚动）：
+ * 1. 顶栏高度只有一个来源 --header-height（移动端两行导航，sm 起一行）；
+ *    sticky 偏移与锚点避让都必须跟着它走，写死 top-14 / top-20 会随布局漂移。
+ * 2. 横向滚动只允许发生在「整宽出血 + overflow-x-auto」的容器内部；
+ *    body 用 overflow-x: clip 兜底（clip 不建立滚动容器，不影响 sticky）。
+ */
+describe('移动端 chrome 契约', () => {
+  const layout = readFileSync(`${SRC}/app/layout.tsx`, 'utf8')
+  const baseLayer = css.slice(css.indexOf('@layer base'), css.indexOf('@layer components'))
+
+  it('--header-height 在 base 层定义，并在 sm 断点收窄为单行高度', () => {
+    expect(baseLayer).toMatch(/--header-height:\s*[\d.]+rem/)
+    const smBlock = baseLayer.match(/@media \(min-width: 40rem\)[\s\S]*?\n  \}/)?.[0] ?? ''
+    expect(smBlock, 'sm 起导航合并为一行，高度必须重新声明').toMatch(/--header-height:\s*[\d.]+rem/)
+    const mobile = Number.parseFloat(baseLayer.match(/--header-height:\s*([\d.]+)rem/)?.[1] ?? '0')
+    const desktop = Number.parseFloat(smBlock.match(/--header-height:\s*([\d.]+)rem/)?.[1] ?? '0')
+    expect(desktop, '桌面端顶栏应比移动端矮').toBeLessThan(mobile)
+  })
+
+  it('顶栏高度取自变量：两行布局 + min-h 对齐（写死高度会让 sticky 偏移错位）', () => {
+    expect(layout).toMatch(/min-h-\[var\(--header-height\)\]/)
+    expect(layout).toMatch(/flex-wrap/)
+  })
+
+  it('锚点跳转避让高度跟随顶栏变量', () => {
+    expect(baseLayer).toMatch(/scroll-margin-top:\s*calc\(var\(--header-height\)/)
+  })
+
+  it('整页不会出现横向滚动：body 用 clip 兜底（不用 hidden，避免破坏 sticky）', () => {
+    expect(baseLayer).toMatch(/overflow-x:\s*clip/)
+    // 只看声明，注释里提到 hidden 不算
+    const declarations = baseLayer.replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(declarations).not.toMatch(/overflow-x:\s*hidden/)
+  })
+
+  it('组件里不再出现写死的 sticky 偏移（top-0 的顶栏本身除外）', () => {
+    const offenders = sourceFiles.filter((file) =>
+      /sticky[^\n]*\btop-(?!0\b)\d/.test(readFileSync(file, 'utf8')),
+    )
+    expect(offenders, `sticky 偏移必须用 var(--header-height)：${offenders.join(', ')}`).toEqual([])
+  })
+})
+
+/*
  * 配方收敛守卫（AGENTS.md 表面系统）：
  * 小标签 / 键位 / 媒体框 / 浮动卡片各自收敛为唯一配方，
  * 组件不再手写「圆角 × 底色 × 描边」的散装组合（此前 chip 有 6 套、媒体框有 5 套写法）。

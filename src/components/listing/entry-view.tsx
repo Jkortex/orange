@@ -151,7 +151,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
 
             {/* 右侧 TOC 列：顶端与正文第一行完美平齐！高度被 grid stretch 自动拉伸，sticky 滚动常驻 */}
             <aside className="hidden xl:block">
-              <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
+              <div className="sticky top-[calc(var(--header-height)+1.5rem)] max-h-[calc(100vh-var(--header-height)-3rem)] overflow-y-auto pr-1">
                 <Toc headings={headings} />
               </div>
             </aside>

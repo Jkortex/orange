@@ -22,11 +22,11 @@ export function aggregateCategories<T extends { category?: string }>(items: T[])
 }
 
 /** 分类项样式（active 高亮 / 默认弱化）。
- *  移动端是横滑小胶囊，选中态整行填充；
+ *  移动端是横滑小胶囊（shrink-0，宽度交给滚动容器，不参与压缩）；
  *  桌面端拉满侧栏宽度后改为行形状圆角，选中态靠可见边框表达（不填充，两侧仅边框有无之分）。 */
 export function filterPillClass(active: boolean) {
   return [
-    'type-meta flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors duration-150 md:w-full md:rounded-lg',
+    'type-meta flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors duration-150 md:w-full md:rounded-lg',
     active
       ? 'border-primary/50 bg-primary/10 font-medium text-primary md:bg-transparent'
       : 'border-transparent text-muted-foreground hover:border-border-subtle hover:bg-muted hover:text-foreground',
@@ -43,10 +43,16 @@ export type CategorySidebarProps = {
 }
 
 export function CategorySidebar({ categories, active, onSelect, navLabel }: CategorySidebarProps) {
+  /*
+   * 移动端：aside 整宽出血（-mx-4）只负责吸顶底色，横向滚动由 ul 自己承担
+   * （px-4 让首个胶囊与正文左缘对齐，宽度 = 视口宽，滚动只发生在容器内部）；
+   * aside 带 min-w-0：网格项默认 min-width:auto，否则长分类名会反过来把列撑宽。
+   * 吸顶位置读 --header-height，顶栏高度随断点变化时不必回来改这里。
+   */
   return (
-    <aside className="sticky top-14 z-20 -mx-4 border-b border-border-subtle bg-background/85 px-4 py-2.5 backdrop-blur-md md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-2">
+    <aside className="sticky top-[var(--header-height)] z-30 -mx-4 min-w-0 border-b border-border-subtle bg-background/85 backdrop-blur-md md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-[calc(var(--header-height)+1rem)] md:max-h-[calc(100vh-var(--header-height)-2rem)] md:overflow-y-auto md:pr-2">
       <nav aria-label={navLabel}>
-        <ul className="flex gap-1.5 overflow-x-auto pb-0.5 md:flex-col md:items-stretch md:gap-1 md:overflow-visible md:pb-0 scrollbar-none">
+        <ul className="flex gap-1.5 overflow-x-auto px-4 pb-2.5 overscroll-x-contain scrollbar-none md:mx-0 md:flex-col md:items-stretch md:gap-1 md:overflow-visible md:px-0 md:pb-0">
           <li>
             <button
               type="button"

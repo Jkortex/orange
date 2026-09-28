@@ -91,6 +91,17 @@
     }
   }
 
+  /* 顶栏高度的唯一来源：移动端两行（品牌+工具 / 整宽横滑的栏目导航），sm 起合并为一行。
+     分类条吸顶、侧栏吸顶与锚点避让全部读这个变量——顶栏一改，别处不会跟着漂 */
+  :root {
+    --header-height: 5.75rem;
+  }
+  @media (min-width: 40rem) {
+    :root {
+      --header-height: 4rem;
+    }
+  }
+
   html {
     /* color-scheme 由 JS 在 VT 动画中动态设置，不在 CSS 中硬编码，
        避免切换时浏览器原生控件先于快照重绘导致闪烁 */
@@ -120,6 +131,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* 横向滚动只允许发生在组件自己的滚动容器里（顶栏导航、分类条、宽表格…）。
+       clip 不建立滚动容器，所以不会像 overflow-x: hidden 那样让祖先 sticky 失效；
+       任何组件意外撑宽时也只是被裁掉，不会整页横移 */
+    overflow-x: clip;
   }
 
   /* 覆写 Radix / react-remove-scroll 的暴力挤压，配合 scrollbar-gutter: stable 彻底消除弹窗打开时的页面横跳与布局偏移 */
@@ -133,9 +148,9 @@
     text-wrap: balance;
   }
 
-  /* 锚点跳转避让 sticky 顶栏 */
+  /* 锚点跳转避让 sticky 顶栏（高度随断点变化，读变量而不是写死） */
   [id] {
-    scroll-margin-top: 5rem;
+    scroll-margin-top: calc(var(--header-height) + 1.5rem);
   }
 
   /* 图片默认质感：圆角 + 边框 + 懒载淡入由各组件控制，此处只定基调 */
