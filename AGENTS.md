@@ -40,6 +40,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 ## Layout rules (mandatory)
 
 1. **Global skeleton is constant**: header (sticky, z-40) / main (flex-1, width owned by each page) / footer + player bar (fixed bottom, z-50) + search (toolbar button + Ctrl/Cmd+K). Pages only swap main content
+   - **Header is a single row at every breakpoint**: 移动端 `品牌 + 汉堡菜单 + 搜索 + 主题`，5 个栏目收进 `MobileNavDrawer`（侧滑抽屉，逐行文字 + 集合图标）；`sm` 起汉堡隐藏、改为行内文字导航 `HeaderNav`。不要为了塞下 5 个栏目把顶栏撑成两行或加横向滚动条。`--header-height` 是顶栏高度的唯一来源，分类条/侧栏吸顶与 `[id]` 锚点避让都读它
 2. **Page-owned widths**: default `max-w-2xl`, prose `max-w-prose`; posts/skills index dual-column `max-w-5xl`; skills detail is a 3-pane explorer at `max-w-7xl`. Chrome (header/footer) is full-bleed at `px-4 sm:px-6` — it never inherits a page's width
    - **每个技能包文件一个静态页**：入口 `SKILL.md` = `/skills/<slug>`，其余文件 = `/skills/<slug>/<path 去扩展名>`（`src/app/skills/[slug]/[...file]/page.tsx`，映射规则与撞车检查在 `src/lib/skill-routes.ts`）。这样页面只编译一个文件，产物里每个文件的内容都进 Pagefind 索引，跨文件也不会撞 heading id；去扩展名是为了静态导出得到 `x.html` 而不是 `x.md.html`
 3. **Player bar is global chrome**: `PlayerProvider` in layout owns queue + singleton Audio — **components must never create their own `Audio`**; playback survives navigation; renders nothing when queue empty

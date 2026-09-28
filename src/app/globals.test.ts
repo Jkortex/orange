@@ -143,18 +143,17 @@ describe('移动端 chrome 契约', () => {
   const layout = readFileSync(`${SRC}/app/layout.tsx`, 'utf8')
   const baseLayer = css.slice(css.indexOf('@layer base'), css.indexOf('@layer components'))
 
-  it('--header-height 在 base 层定义，并在 sm 断点收窄为单行高度', () => {
+  it('--header-height 在 base 层定义，并在 sm 断点重新声明（顶栏单行，两断点各自留白不同）', () => {
     expect(baseLayer).toMatch(/--header-height:\s*[\d.]+rem/)
     const smBlock = baseLayer.match(/@media \(min-width: 40rem\)[\s\S]*?\n  \}/)?.[0] ?? ''
-    expect(smBlock, 'sm 起导航合并为一行，高度必须重新声明').toMatch(/--header-height:\s*[\d.]+rem/)
-    const mobile = Number.parseFloat(baseLayer.match(/--header-height:\s*([\d.]+)rem/)?.[1] ?? '0')
-    const desktop = Number.parseFloat(smBlock.match(/--header-height:\s*([\d.]+)rem/)?.[1] ?? '0')
-    expect(desktop, '桌面端顶栏应比移动端矮').toBeLessThan(mobile)
+    expect(smBlock, 'sm 起内边距更大，必须重新声明高度').toMatch(/--header-height:\s*[\d.]+rem/)
   })
 
-  it('顶栏高度取自变量：两行布局 + min-h 对齐（写死高度会让 sticky 偏移错位）', () => {
+  it('顶栏保持单行：移动端靠抽屉收纳栏目，而不是把顶栏撑成多行', () => {
     expect(layout).toMatch(/min-h-\[var\(--header-height\)\]/)
-    expect(layout).toMatch(/flex-wrap/)
+    expect(layout, '顶栏不再需要 flex-wrap 两行布局').not.toMatch(/flex-wrap/)
+    expect(layout).toContain('<MobileNavDrawer')
+    expect(layout).toMatch(/hidden sm:block/)
   })
 
   it('锚点跳转避让高度跟随顶栏变量', () => {

@@ -73,23 +73,19 @@ describe('HeaderNav 顶部导航组件', () => {
 })
 
 /*
- * 移动端顶栏契约（用户反馈：文字挤在一行）：
- * 导航独占一行、整宽出血、内部横滑；sm 起恢复成一行行内排布。
- * 关键是「不换行、不省略、不图标化」，横向滚动只发生在 nav 自己内部。
+ * 顶栏行内导航只服务于 sm 及以上；移动端由 MobileNavDrawer（汉堡菜单 + 侧滑抽屉）承担。
+ * 这里守住「行内、不横滑、不压缩」：一旦开始出血或内部横滑，说明移动端又被塞回顶栏了。
  */
-describe('HeaderNav 移动端横滑布局', () => {
-  it('导航条自身是滚动容器，且整宽出血到视口边缘', () => {
+describe('HeaderNav 行内布局契约', () => {
+  it('是普通行内导航：没有出血、没有内部横向滚动', () => {
     render(<HeaderNav />)
 
     const nav = screen.getByRole('link', { name: '首页' }).parentElement
-    expect(nav?.className).toContain('overflow-x-auto')
-    expect(nav?.className, '出血靠负边距 + 等量内边距').toContain('-mx-4')
-    expect(nav?.className).toContain('px-4')
-    expect(nav?.className, 'sm 起恢复行内排布').toContain('sm:overflow-visible')
-    expect(nav?.className).toContain('sm:mx-0')
+    expect(nav?.className).not.toContain('overflow-x-auto')
+    expect(nav?.className).not.toContain('-mx-4')
   })
 
-  it('导航项不参与压缩（压缩会把文字挤变形，交给容器横滑）', () => {
+  it('导航项不参与压缩（压缩会把文字挤变形）', () => {
     render(<HeaderNav />)
 
     for (const name of ['首页', '文章', '生活', '音乐', '技能']) {
@@ -97,9 +93,15 @@ describe('HeaderNav 移动端横滑布局', () => {
     }
   })
 
-  it('移动端触摸目标高度足够（py-2 + 文字行高 ≥ 36px）', () => {
+  it('触摸目标高度足够（py-2 + 文字行高 ≥ 36px）', () => {
     render(<HeaderNav />)
 
     expect(screen.getByRole('link', { name: '文章' }).className).toContain('py-2')
+  })
+
+  it('有可及名（读屏里叫「栏目导航」）', () => {
+    render(<HeaderNav />)
+
+    expect(screen.getByRole('navigation', { name: '栏目导航' })).toBeTruthy()
   })
 })
