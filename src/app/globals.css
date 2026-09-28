@@ -5,11 +5,9 @@
 
 /* 语义 token → Tailwind 工具类映射（bg-background / text-foreground / border-border ...） */
 @theme inline {
-  /* UI 无衬线：HarmonyOS Sans SC（webfont 已在 layout head 引入）为第一优先，
-     不再使用 Geist Sans（Vercel 默认字体，观感偏「框架默认」）；正文另有 --font-serif */
+  /* UI 与正文统一使用 HarmonyOS Sans；代码/等宽信息单独使用 mono 字体。 */
   --font-sans: "HarmonyOS Sans SC", "HarmonyOS Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  --font-serif: "LXGW WenKai", "霞鹜文楷", "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -377,8 +375,8 @@ html.dark code[data-theme] span[style*='--shiki'] {
 /* 正文排版精细化增强：呼吸感节奏、高质感行内代码与引用块 */
 .prose {
   max-width: none;
-  /* 正文用衬线（霞鹜文楷）：与无衬线 UI 拉开层次，强化长文阅读的编辑感 */
-  font-family: var(--font-serif);
+  /* 正文与 UI 统一使用 HarmonyOS Sans，保持全站字形和节奏一致 */
+  font-family: var(--font-sans);
   text-wrap: pretty;
   word-break: break-word;
   --tw-prose-body: var(--foreground);

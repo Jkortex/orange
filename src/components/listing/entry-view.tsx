@@ -12,7 +12,6 @@ import { ReadingProgress } from '@/components/reading/reading-progress'
 import { AdjacentNav } from '@/components/reading/adjacent-nav'
 import { RelatedEntries } from '@/components/reading/related-entries'
 import { RecentTracker } from '@/components/chrome/recent-tracker'
-import { ProseFontLink } from '@/components/reading/prose-font-link'
 import { DetailHeader } from '@/components/listing/detail-header'
 
 import { LifeGallery } from '@/components/listing/life-gallery'
@@ -75,7 +74,6 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
 
   return (
     <div className="w-full animate-in fade-in-50 duration-300">
-      <ProseFontLink />
       {/* 顶部滚动进度指示条 */}
       <ReadingProgress />
 

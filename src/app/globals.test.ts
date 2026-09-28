@@ -118,14 +118,17 @@ describe('.list-row 契约', () => {
     expect(layout).toMatch(/<main[^>]*data-pagefind-body/)
   })
 
-  it('正文衬线字体只由详情视图引入，不阻塞首页与列表首屏', () => {
+  it('全站正文统一使用 HarmonyOS Sans，不再引入衬线字体', () => {
     const layout = readFileSync(`${SRC}/app/layout.tsx`, 'utf8')
     const entryView = readFileSync(`${SRC}/components/listing/entry-view.tsx`, 'utf8')
     const skillView = readFileSync(`${SRC}/components/listing/skill-package-view.tsx`, 'utf8')
 
     expect(layout).not.toContain('lxgw-wenkai-webfont')
-    expect(entryView).toContain('ProseFontLink')
-    expect(skillView).toContain('ProseFontLink')
+    expect(entryView).not.toContain('ProseFontLink')
+    expect(skillView).not.toContain('ProseFontLink')
+    expect(css).toContain('font-family: var(--font-sans);')
+    expect(css).not.toContain('--font-serif')
+    expect(css).not.toContain('LXGW WenKai')
   })
 })
 

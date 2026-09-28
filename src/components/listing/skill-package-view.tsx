@@ -1,7 +1,6 @@
 import type { SkillPackage } from '@/lib/content'
 import { MarkdownRenderer } from '@/lib/markdown'
 import { extractToc, type TocHeading } from '@/lib/toc'
-import { ProseFontLink } from '@/components/reading/prose-font-link'
 import {
   SkillPackageExplorer,
   type RenderedSkillFile,
@@ -34,10 +33,5 @@ export async function SkillPackageView({ pkg }: { pkg: SkillPackage }) {
     }),
   )
 
-  return (
-    <>
-      <ProseFontLink />
-      <SkillPackageExplorer pkg={pkg} renderedFiles={renderedFiles} />
-    </>
-  )
+  return <SkillPackageExplorer pkg={pkg} renderedFiles={renderedFiles} />
 }
