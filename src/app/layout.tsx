@@ -73,10 +73,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </nav>
           </header>
-          {/* 宽度由各页面自持（文章页双栏 max-w-5xl，其余 max-w-2xl 居中），main 只管弹性与留白 */}
+          {/* 宽度由各页面自持（文章页双栏 max-w-5xl，其余 max-w-2xl 居中），main 只管弹性与留白。
+              底部不再为固定播放条预留（那是 PlayerBarLoader 的占位块的事），
+              否则列表与页尾之间会凭空多出一大段空白 */}
           <main
             data-pagefind-body
-            className="w-full flex-1 px-4 py-10 sm:px-6 sm:py-12 pb-20"
+            className="w-full flex-1 px-4 py-10 sm:px-6 sm:py-12"
           >
             {children}
           </main>
@@ -94,7 +96,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="tabular-nums">© {new Date().getFullYear()}</span>
               </nav>
             </div>
-            {/* 播放条悬浮覆盖页脚下缘时，此处留白保证 footer 内容始终可读 */}
+            {/* 播放条覆盖页尾时，PlayerBarLoader 的占位块已把 footer 顶出覆盖范围；
+                这里只留 iOS 底部手势条的安全区 */}
             <div className="h-[env(safe-area-inset-bottom)]" aria-hidden="true" />
           </footer>
           <PlayerBarLoader />

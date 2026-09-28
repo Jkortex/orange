@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
-import { aggregateCategories, CategorySidebar, filterPillClass } from '@/components/listing/category-filter'
+import { aggregateCategories, CategoryFilter, filterPillClass } from '@/components/listing/category-filter'
+import { stubBrowserApis, unstubBrowserApis } from '@/components/test-utils/stub-browser-apis'
+
+beforeEach(() => {
+  // Popover 的 floating-ui autoUpdate 需要 ResizeObserver
+  stubBrowserApis()
+})
 
 afterEach(() => {
   cleanup()
+  unstubBrowserApis()
 })
 
 describe('aggregateCategories', () => {
@@ -59,11 +66,11 @@ describe('filterPillClass', () => {
   })
 })
 
-describe('CategorySidebar 正常渲染', () => {
+describe('CategoryFilter 正常渲染', () => {
   function Harness() {
     const [active, setActive] = useState<string | null>(null)
     return (
-      <CategorySidebar
+      <CategoryFilter
         categories={[
           { name: 'css', count: 2 },
           { name: 'meta', count: 1 },
@@ -98,54 +105,72 @@ describe('CategorySidebar 正常渲染', () => {
 })
 
 /*
- * 移动端分类条契约（用户反馈：不是整宽横滑，而是把整页撑出横向滚动）：
- * 滚动容器必须是「整宽出血的 ul」本身；aside 只负责出血背景与吸顶，且 min-w-0 不被内容撑宽。
- * 药丸 shrink-0，否则 flex 会先压胶囊再谈滚动。
+ * 移动端分类控件（用户反馈：横滑药丸条读不出「还有更多」）：
+ * 收起时只是一行 36px 的下拉按钮（显示当前分类），点开后在下方浮层里
+ * 用可换行的药丸网格把所有分类一次摊开——没有横向滚动，也不把页面撑长。
+ * 桌面端（md 起）仍是原来的纵向吸顶侧栏。
  */
-describe('CategorySidebar 移动端横滑布局', () => {
-  function renderSidebar() {
+describe('CategoryFilter 移动端下拉筛选', () => {
+  function renderSidebar(active: string | null = null) {
     return render(
-      <CategorySidebar
+      <CategoryFilter
         categories={[
           { name: 'css', count: 2 },
           { name: 'meta', count: 1 },
         ]}
-        active={null}
+        active={active}
         onSelect={() => {}}
         navLabel="文章分类"
       />,
     )
   }
 
-  it('滚动发生在 ul 上：宽度等于视口、内部横滑，而不是溢出到整页', () => {
-    const { container } = renderSidebar()
-    const list = container.querySelector('ul')
+  it('收起状态只有一行下拉按钮，显示当前分类', () => {
+    renderSidebar('css')
 
-    expect(list?.className).toContain('overflow-x-auto')
-    // 出血由 aside 承担，ul 只补内边距让胶囊与正文左缘对齐（再叠一层负边距会多溢出 16px）
-    expect(list?.className).toContain('px-4')
-    expect(list?.className).not.toMatch(/(^|\s)-mx-4(\s|$)/)
-    expect(list?.className).toContain('overscroll-x-contain')
+    const trigger = screen.getByRole('button', { name: '分类筛选：css' })
+    expect(trigger).toBeTruthy()
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(trigger.className).toContain('h-9')
   })
 
-  it('aside 出血但不带内边距（内边距只由滚动容器提供，避免两层留白）', () => {
-    const { container } = renderSidebar()
-    const aside = container.querySelector('aside')
-
-    expect(aside?.className).toContain('-mx-4')
-    expect(aside?.className, 'aside 不该再叠一层 px-4').not.toMatch(/(^|\s)px-4(\s|$)/)
-    expect(aside?.className, '网格项默认 min-width:auto，会被内容撑宽').toContain('min-w-0')
-  })
-  it('吸顶位置跟随 --header-height，不写死 top-14', () => {
-    const { container } = renderSidebar()
-    const aside = container.querySelector('aside')
-
-    expect(aside?.className).toContain('top-[var(--header-height)]')
-    expect(aside?.className).not.toMatch(/top-14/)
-  })
-
-  it('药丸不参与压缩', () => {
+  it('点开后浮层里是可换行的药丸网格，横向不再滚动', async () => {
     renderSidebar()
-    expect(screen.getByRole('button', { name: '最近' }).className).toContain('shrink-0')
+
+    fireEvent.click(screen.getByRole('button', { name: '分类筛选：最近' }))
+
+    const panel = await screen.findByRole('dialog')
+    const grid = panel.querySelector('[data-category-grid]')
+    expect(grid?.className).toContain('flex-wrap')
+    expect(grid?.className).not.toContain('overflow-x-auto')
+
+    for (const name of ['最近', 'css 2', 'meta 1']) {
+      expect(within(panel).getByRole('button', { name })).toBeTruthy()
+    }
+  })
+
+  it('浮层里的分类药丸带条数，并标出当前选中项', async () => {
+    renderSidebar('css')
+
+    fireEvent.click(screen.getByRole('button', { name: '分类筛选：css' }))
+
+    const panel = await screen.findByRole('dialog')
+    expect(within(panel).getByRole('button', { name: 'css 2' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(panel).getByRole('button', { name: '最近' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('移动端不再有横滑药丸条；桌面侧栏整块隐藏到 md 起', () => {
+    const { container } = renderSidebar()
+
+    const aside = container.querySelector('aside')?.className ?? ''
+    expect(aside).toContain('hidden')
+    expect(aside).toContain('md:block')
+    expect(container.querySelector('ul')?.className ?? '').not.toContain('overflow-x-auto')
+  })
+
+  it('吸顶位置跟随 --header-height（不再是横滑条的 top-14）', () => {
+    const { container } = renderSidebar()
+
+    expect(container.innerHTML).toContain('top-[var(--header-height)]')
   })
 })

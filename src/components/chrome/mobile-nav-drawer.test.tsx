@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MobileNavDrawer } from '@/components/chrome/mobile-nav-drawer'
 
 let currentPath = '/'
@@ -73,5 +73,16 @@ describe('MobileNavDrawer 顶栏菜单', () => {
     await openDrawer()
 
     expect(screen.queryByRole('button', { name: '搜索' })).toBeNull()
+  })
+
+  it('打开后焦点落在第一个栏目，而不是关闭按钮', async () => {
+    render(<MobileNavDrawer />)
+    fireEvent.click(screen.getByRole('button', { name: '菜单' }))
+    await screen.findByRole('dialog')
+
+    // 关闭按钮在 DOM 末尾，浮层默认聚焦它；用户预期是「打开就能按第一个栏目」
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('link', { name: '首页' }))
+    })
   })
 })

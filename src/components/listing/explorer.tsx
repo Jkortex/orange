@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { aggregateCategories, CategorySidebar } from '@/components/listing/category-filter'
+import { aggregateCategories, CategoryFilter } from '@/components/listing/category-filter'
 import { EmptyState } from '@/components/primitives/empty-state'
 
 /*
@@ -77,7 +77,7 @@ export function Explorer<T extends { category?: string }>({
 
   return (
     <div className="grid w-full gap-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-10">
-      <CategorySidebar
+      <CategoryFilter
         categories={categories}
         active={active}
         onSelect={handleSelect}

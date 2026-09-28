@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Menu, Music, Newspaper, NotebookPen, Wrench, type LucideIcon } from 'lucide-react'
@@ -26,6 +27,8 @@ const SECTION_ICONS: Record<string, LucideIcon> = {
 
 export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[] }) {
   const pathname = usePathname()
+  // 抽屉里第一个栏目链接：打开时把焦点放这里（浮层默认会落到 DOM 末尾的关闭按钮）
+  const firstItemRef = useRef<HTMLAnchorElement>(null)
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
@@ -44,7 +47,14 @@ export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[]
         </button>
       </SheetTrigger>
 
-      <SheetContent side="left">
+      <SheetContent
+        side="left"
+        onOpenAutoFocus={(event) => {
+          // 显式接管自动聚焦：落到第一个栏目，而不是 DOM 末尾的关闭按钮
+          event.preventDefault()
+          firstItemRef.current?.focus()
+        }}
+      >
         <SheetHeader className="border-b border-border-subtle px-5 py-4">
           {/* 标题对读屏负责（sr-only），视觉上给品牌标识：抽屉的语义是「栏目导航」 */}
           <SheetTitle className="sr-only">栏目导航</SheetTitle>
@@ -58,7 +68,7 @@ export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[]
 
         <nav aria-label="移动端栏目导航" className="flex-1 overflow-y-auto px-3 py-3">
           <ul className="space-y-1">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const active = isActive(item.href)
               const Icon = SECTION_ICONS[item.href]
               return (
@@ -66,6 +76,7 @@ export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[]
                   {/* SheetClose：跳转前先收起抽屉，否则弹层会留在新页面上 */}
                   <SheetClose asChild>
                     <Link
+                      ref={index === 0 ? firstItemRef : undefined}
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
                       className={`type-item flex w-full items-center gap-3 rounded-xl px-3 py-3 transition-colors duration-150 ${
