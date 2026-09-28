@@ -65,7 +65,7 @@ export function LifeCard({ entry }: LifeCardProps) {
       )}
 
       {/* 图片交互独立为客户端岛，静态卡片正文无需整体 hydration */}
-      {photos.length > 0 && <PhotoGallery photos={photos} alt={entry.data.title} />}
+      {photos.length > 0 && <PhotoGallery photos={photos} alt={entry.data.title} variant="card" />}
 
       {/* 标签列表 */}
       {entry.data.tags.length > 0 && (

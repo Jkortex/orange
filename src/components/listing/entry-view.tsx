@@ -15,7 +15,7 @@ import { RecentTracker } from '@/components/chrome/recent-tracker'
 import { DetailHeader } from '@/components/listing/detail-header'
 import { PagefindFilters } from '@/components/listing/pagefind-filters'
 
-import { LifeGallery } from '@/components/listing/life-gallery'
+import { PhotoGallery } from '@/components/listing/photo-gallery'
 
 /*
  * 集合详情页共用视图（posts/life 结构一致，提炼复用）：
@@ -141,7 +141,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
             <article className="min-w-0 w-full max-w-3xl mx-auto">
               <MarkdownRenderer>{entry.body}</MarkdownRenderer>
               {photos && photos.length > 0 && (
-                <LifeGallery photos={photos} title={entry.data.title} />
+                <PhotoGallery photos={photos} alt={entry.data.title} />
               )}
               <A11yScrollable />
 
@@ -164,7 +164,7 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
         <article className={`mx-auto w-full ${contentWidth}`}>
           <MarkdownRenderer>{entry.body}</MarkdownRenderer>
           {photos && photos.length > 0 && (
-            <LifeGallery photos={photos} title={entry.data.title} />
+            <PhotoGallery photos={photos} alt={entry.data.title} />
           )}
           <A11yScrollable />
 
