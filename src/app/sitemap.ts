@@ -3,8 +3,11 @@ import {
   getAllEntries,
   getCategories,
   getAllTags,
+  getSkillPackage,
+  listSkillSlugs,
   TAGGED_TYPES,
 } from '@/lib/content'
+import { listSkillAttachments, skillFileHref } from '@/lib/skill-routes'
 import { getSiteUrl, joinSiteUrl } from '@/lib/site-url'
 
 export const dynamic = 'force-static'
@@ -73,6 +76,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.5,
     })
+  }
+
+  // 技能包内的文件页（包页本身已由 getAllEntries 收录）
+  for (const slug of listSkillSlugs()) {
+    const pkg = getSkillPackage(slug)
+    for (const file of listSkillAttachments(pkg)) {
+      routes.push({
+        url: joinSiteUrl(siteUrl, skillFileHref(slug, file.path)),
+        lastModified: pkg.data.date,
+        changeFrequency: 'monthly',
+        priority: 0.4,
+      })
+    }
   }
 
   return routes

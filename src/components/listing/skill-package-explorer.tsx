@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { FileCode, FileText, File, Copy, Check, Download, Loader2 } from 'lucide-react'
 import type { SkillPackage } from '@/lib/content'
 import type { TocHeading } from '@/lib/toc'
@@ -12,6 +13,7 @@ import { RecentTracker } from '@/components/chrome/recent-tracker'
 import { DetailHeader } from '@/components/listing/detail-header'
 import { useCopyText } from '@/components/primitives/use-copy-text'
 import { scrollToHeading } from '@/lib/scroll'
+import { skillFileHref } from '@/lib/skill-routes'
 
 export type RenderedSkillFile = {
   path: string
@@ -22,7 +24,11 @@ export type RenderedSkillFile = {
 
 export type SkillPackageExplorerProps = {
   pkg: SkillPackage
-  renderedFiles: RenderedSkillFile[]
+  /** 本页渲染的文件（服务端只编译这一个） */
+  renderedFile: RenderedSkillFile
+  activePath: string
+  /** 当前页地址（最近访问记录用） */
+  pageHref: string
 }
 
 function getFileIcon(path: string) {
@@ -33,20 +39,22 @@ function getFileIcon(path: string) {
   return <File className="size-4 shrink-0 text-muted-foreground" aria-hidden />
 }
 
-export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplorerProps) {
-  const [activePath, setActivePath] = useState<string>('SKILL.md')
+export function SkillPackageExplorer({
+  pkg,
+  renderedFile,
+  activePath,
+  pageHref,
+}: SkillPackageExplorerProps) {
   const { copied, copyText } = useCopyText(2000)
   const [downloading, setDownloading] = useState(false)
 
-  const currentFile = renderedFiles.find((f) => f.path === activePath) ?? renderedFiles[0]
-  const attachments = pkg.files.filter((file) => file.path !== 'SKILL.md')
-  const hasFiles = attachments.length > 0
-  const headings = currentFile?.headings ?? []
+  const currentFile = renderedFile
+  const hasFiles = pkg.files.length > 1
+  const headings = currentFile.headings
 
   async function copyCurrentContent() {
-    const text = currentFile?.path === 'SKILL.md' ? pkg.body : currentFile?.content
-    if (!text) return
-    await copyText(text)
+    if (!currentFile.content) return
+    await copyText(currentFile.content)
   }
 
   async function handleDownloadZip() {
@@ -81,8 +89,8 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
     <article id="skill-top" className="w-full animate-in fade-in-50 duration-300">
       <ReadingProgress />
 
-      {/* 记录当前技能包到最近访问 */}
-      <RecentTracker url={`/skills/${pkg.slug}`} title={pkg.data.title} />
+      {/* 记录当前文件到最近访问 */}
+      <RecentTracker url={pageHref} title={pkg.data.title} />
 
       {/* 顶部 Header 区块：动态返回链接与技能信息、下载按钮 */}
       <DetailHeader
@@ -125,7 +133,7 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
 
       {/* 核心工作区：三栏栅格从正文首行平齐起跑，左侧文件树 + 中间正文 + 右侧 TOC */}
       <div className="grid w-full gap-6 md:grid-cols-[13rem_minmax(0,1fr)] lg:grid-cols-[13rem_minmax(0,1fr)_13rem] md:gap-8">
-        {/* 左侧文件导航 (桌面端) */}
+        {/* 左侧文件导航 (桌面端)：每个文件是独立静态页 */}
         <aside className="hidden md:block">
           <div className="sticky top-20 md:sticky md:top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
             <nav
@@ -138,22 +146,25 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
                       文件
                     </p>
                   <ol className="space-y-1">
-                    {renderedFiles.map((file) => (
-                      <li key={file.path}>
-                        <button
-                          type="button"
-                          onClick={() => setActivePath(file.path)}
-                          className={`type-meta flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left font-mono transition-colors ${
-                            activePath === file.path
-                              ? 'bg-primary/10 font-medium text-primary'
-                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                          }`}
-                        >
-                          {getFileIcon(file.path)}
-                          <span className="truncate">{file.path}</span>
-                        </button>
-                      </li>
-                    ))}
+                    {pkg.files.map((file) => {
+                      const isActive = file.path === activePath
+                      return (
+                        <li key={file.path}>
+                          <Link
+                            href={skillFileHref(pkg.slug, file.path)}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={`type-meta flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left font-mono transition-colors ${
+                              isActive
+                                ? 'bg-primary/10 font-medium text-primary'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            }`}
+                          >
+                            {getFileIcon(file.path)}
+                            <span className="truncate">{file.path}</span>
+                          </Link>
+                        </li>
+                      )
+                    })}
                   </ol>
                 </div>
               )}
@@ -189,21 +200,24 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
         <div className="min-w-0">
           {/* 移动端横向滑动文件选项卡 (< md) */}
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2 md:hidden">
-            {renderedFiles.map((file) => (
-              <button
-                key={file.path}
-                type="button"
-                onClick={() => setActivePath(file.path)}
-                className={`type-meta flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono transition-colors ${
-                  activePath === file.path
-                    ? 'border-primary/50 bg-primary/10 font-medium text-primary'
-                    : 'border-border-subtle bg-surface text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {getFileIcon(file.path)}
-                {file.path}
-              </button>
-            ))}
+            {pkg.files.map((file) => {
+              const isActive = file.path === activePath
+              return (
+                <Link
+                  key={file.path}
+                  href={skillFileHref(pkg.slug, file.path)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`type-meta flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono transition-colors ${
+                    isActive
+                      ? 'border-primary/50 bg-primary/10 font-medium text-primary'
+                      : 'border-border-subtle bg-surface text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {getFileIcon(file.path)}
+                  {file.path}
+                </Link>
+              )
+            })}
           </div>
 
           <div className="surface-float mb-5 flex items-center justify-between px-3.5 py-2.5">
@@ -232,26 +246,16 @@ export function SkillPackageExplorer({ pkg, renderedFiles }: SkillPackageExplore
             )}
           </div>
 
-          {renderedFiles.map((file) => {
-            const isCurrent = file.path === activePath
-            return (
-              <section
-                key={file.path}
-                className={isCurrent ? 'block' : 'hidden'}
-                aria-hidden={!isCurrent}
-              >
-                {file.node ? (
-                  file.node
-                ) : file.content !== null ? (
-                  <pre className="surface-card overflow-x-auto p-4 text-sm font-mono">
-                    <code>{file.content}</code>
-                  </pre>
-                ) : (
-                  <p className="type-meta text-muted-foreground">二进制文件，仅列出路径：{file.path}</p>
-                )}
-              </section>
-            )
-          })}
+          {/* 本页只渲染当前文件：不会残留隐藏 DOM，也不会出现跨文件重复 heading id */}
+          {currentFile.node ? (
+            currentFile.node
+          ) : currentFile.content !== null ? (
+            <pre className="surface-card overflow-x-auto p-4 text-sm font-mono">
+              <code>{currentFile.content}</code>
+            </pre>
+          ) : (
+            <p className="type-meta text-muted-foreground">二进制文件，仅列出路径：{currentFile.path}</p>
+          )}
         </div>
 
         {/* 右侧当前文件目录 (仅大屏 lg: 显示) */}

@@ -4,8 +4,8 @@ import { renderServerComponent } from '@/components/test-utils/render-server'
 import { SkillPackageView } from '@/components/listing/skill-package-view'
 import type { SkillPackage } from '@/lib/content'
 
-async function renderToHtml(pkg: SkillPackage) {
-  return renderServerComponent(h(SkillPackageView, { pkg }))
+async function renderToHtml(pkg: SkillPackage, activePath = 'SKILL.md') {
+  return renderServerComponent(h(SkillPackageView, { pkg, activePath }))
 }
 
 function makePackage(): SkillPackage {
@@ -67,12 +67,40 @@ describe('SkillPackageView 目录展示', () => {
     expect(html).toContain('hidden md:block')
   })
 
-  it('入口正文渲染 + 附属 md 文件分节渲染', async () => {
+  it('只渲染当前文件的正文，其他文件不出现在 HTML 里', async () => {
     const html = await renderToHtml(makePackage())
 
     expect(html).toContain('先写失败的测试')
+    // 附属文件各有独立静态页，这里不预渲染
+    expect(html).not.toContain('别测实现细节')
+    expect(html).not.toContain('跑测试')
+  })
+
+  it('文件列表是指向各文件静态页的链接，而不是切换状态的按钮', async () => {
+    const html = await renderToHtml(makePackage())
+
+    expect(html).toContain('href="/skills/2026-09-14-tdd-basics"')
+    expect(html).toContain('href="/skills/2026-09-14-tdd-basics/references/pitfalls"')
+    expect(html).toContain('href="/skills/2026-09-14-tdd-basics/templates/checklist"')
+    expect(html).toContain('aria-current="page"')
+  })
+})
+
+describe('SkillPackageView 单文件页', () => {
+  it('渲染指定文件并把目录切到该文件', async () => {
+    const html = await renderToHtml(makePackage(), 'references/pitfalls.md')
+
     expect(html).toContain('别测实现细节')
+    expect(html).toContain('#坑点')
+    expect(html).not.toContain('先写失败的测试')
+  })
+
+  it('附件页把该文件标记为当前文件', async () => {
+    const html = await renderToHtml(makePackage(), 'templates/checklist.md')
+
     expect(html).toContain('跑测试')
+    expect(html).toContain('href="/skills/2026-09-14-tdd-basics/templates/checklist"')
+    expect(html).toContain('aria-current="page"')
   })
 })
 
@@ -80,9 +108,10 @@ describe('SkillPackageView 异常渲染', () => {
   it('二进制文件仅列出路径并注明，不渲染内容', async () => {
     const pkg = makePackage()
     pkg.files.push({ path: 'assets/icon.png', content: null })
-    const html = await renderToHtml(pkg)
+    const html = await renderToHtml(pkg, 'assets/icon.png')
 
     expect(html).toContain('assets/icon.png')
+    expect(html).toContain('二进制文件')
   })
 
   it('无附属文件时侧边栏仅含 heading TOC，无文件列表', async () => {

@@ -47,18 +47,6 @@ const SCOPE_BADGES: Partial<Record<SearchScope, string>> = {
   music: TYPE_LABELS.music,
 }
 
-/* 旧索引（没有 data-pagefind-filter 元数据）时按详情页 URL 前缀兜底 */
-const URL_BADGES: ReadonlyArray<readonly [string, string]> = [
-  ['/posts/', TYPE_LABELS.posts],
-  ['/life/', TYPE_LABELS.life],
-  ['/music/', TYPE_LABELS.music],
-  ['/skills/', TYPE_LABELS.skills],
-]
-
-function badgeFromUrl(url: string): string | undefined {
-  return URL_BADGES.find(([prefix]) => url.startsWith(prefix))?.[1]
-}
-
 export function SearchDialog({ categories = [] }: { categories?: SearchCategory[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -217,9 +205,8 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
         setLoading(false)
 
         const mapped: UnifiedSearchItem[] = items.map((it) => {
-          // 类型优先取索引过滤元数据；旧索引退回 URL 前缀；栏目页判定不出类型就不给徽标
+          // 类型只看索引过滤元数据：判定不出（如栏目页）就不给徽标
           const type = it.filters?.type?.[0]
-          const badge = (type && TYPE_LABELS[type as CollectionType]) ?? badgeFromUrl(it.url)
 
           return {
             id: `pf-${it.url}`,
@@ -227,7 +214,7 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
             title: it.meta?.title ?? it.url,
             excerpt: it.excerpt ?? '',
             url: it.url,
-            badge,
+            badge: type ? TYPE_LABELS[type as CollectionType] : undefined,
             onSelect: () => {
               navigate(it.url)
             },

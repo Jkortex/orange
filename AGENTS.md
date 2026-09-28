@@ -24,7 +24,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 - Enabled collection with bad content must never be swallowed (missing dir = not-yet-enabled type, that's different)
 - **Categories are content-declared, zero code changes**: English slug `[\w-]+`, schema-enforced, aggregated at build into `/category/<name>`; category (navigation) vs tags (search) are separate concerns
 - New routed types must be registered in `TAGGED_TYPES` (`src/app/tags/[tag]/page.tsx`) or their tags have no landing page
-- **New content type SOP** (zero changes to pipeline/theme/components): `content/<type>/` → zod schema → `src/app/<type>/[slug]/page.tsx` → if routed: `TAGGED_TYPES` + `TypeBadge` label. posts/life detail pages reuse `readEntry`/`entryMetadata`/`EntryView`
+- **New content type SOP** (zero changes to pipeline/theme/components): `content/<type>/` → zod schema → `src/app/<type>/[slug]/page.tsx` → if routed: `TAGGED_TYPES` + `TypeBadge` label. posts/life detail pages reuse `readEntry`/`entryMetadata`/`EntryView`; new detail pages must also render `PagefindFilters` and register any extra routes in `sitemap.ts`
 - **No JSX/HTML in content files**: custom blocks via remark-directive (`:::note`, `:::demo`) + components mapping; mermaid renders to SVG at build
 - Binaries in `public/media/<type>/`, md holds references only; **one music md = one album**, `tracks` order = play queue, `file`/`cover` allow full `https://` URLs
 - Slugs must match `[\w-]+` (path-traversal guard), else 404
@@ -41,6 +41,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 
 1. **Global skeleton is constant**: header (sticky, z-40) / main (flex-1, width owned by each page) / footer + player bar (fixed bottom, z-50) + search (toolbar button + Ctrl/Cmd+K). Pages only swap main content
 2. **Page-owned widths**: default `max-w-2xl`, prose `max-w-prose`; posts/skills index dual-column `max-w-5xl`; skills detail is a 3-pane explorer at `max-w-7xl`. Chrome (header/footer) is full-bleed at `px-4 sm:px-6` — it never inherits a page's width
+   - **每个技能包文件一个静态页**：入口 `SKILL.md` = `/skills/<slug>`，其余文件 = `/skills/<slug>/<path 去扩展名>`（`src/app/skills/[slug]/[...file]/page.tsx`，映射规则与撞车检查在 `src/lib/skill-routes.ts`）。这样页面只编译一个文件，产物里每个文件的内容都进 Pagefind 索引，跨文件也不会撞 heading id；去扩展名是为了静态导出得到 `x.html` 而不是 `x.md.html`
 3. **Player bar is global chrome**: `PlayerProvider` in layout owns queue + singleton Audio — **components must never create their own `Audio`**; playback survives navigation; renders nothing when queue empty
 4. **Homepage = unified mixed timeline**: all types date-desc with type badges, no sectioned blocks; posts page = category list left (build-time, click = client-side filter on inlined data, no requests) + entries right
 5. **Search**: results from the build-time Pagefind index (only exists after `pnpm build`); UI drawn with semantic tokens; **the "no index in dev" fallback message is expected**, not a bug (`src/lib/pagefind.ts` → null). Scope chips push `filters: { type }` into the index, so **every detail page must render `<PagefindFilters type=… category=… />`** (one `data-pagefind-filter` per value — Pagefind only allows an inline `key:value` as the last item of a comma list); input is a `combobox`, results a `listbox` of `option` linked by `aria-activedescendant`
