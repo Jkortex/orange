@@ -20,11 +20,11 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 
 - One md = one entry, **filename is the slug** (`YYYY-MM-DD-<slug>.md`). **Exception: skills** = directory with required `SKILL.md` (`content/skills/<slug>/`), siblings shown as-is
 - **Zod schemas in `src/lib/content.ts` are frontmatter's single source of truth**: invalid/missing fields fail the build naming the file; no schema-less field access in pages
-- **Manifest cache**: `predev`/`prebuild` write `.generated/content-manifest.json` (gitignored); content APIs prefer it with a module cache — **editing `content/` while dev runs has no effect; restart `pnpm dev`**; changing the manifest shape requires bumping `MANIFEST_VERSION` (stale manifests fail fast with a "rerun prebuild" message)
+- **Manifest cache**: `predev`/`prebuild` write `.generated/content-manifest.json` (gitignored); content APIs prefer it with a module cache — **editing `content/` while dev runs has no effect; restart `pnpm dev`**; 改清单结构要把 `MANIFEST_VERSION` +1
 - Enabled collection with bad content must never be swallowed (missing dir = not-yet-enabled type, that's different)
 - **Categories are content-declared, zero code changes**: English slug `[\w-]+`, schema-enforced, aggregated at build into `/category/<name>`; category (navigation) vs tags (search) are separate concerns
 - New routed types must be registered in `TAGGED_TYPES` (`src/app/tags/[tag]/page.tsx`) or their tags have no landing page
-- **New content type SOP** (zero changes to pipeline/theme/components): `content/<type>/` → zod schema → `src/app/<type>/[slug]/page.tsx` → if routed: `TAGGED_TYPES` + `TypeBadge` label. posts/life detail pages reuse `readEntry`/`entryMetadata`/`EntryView`; new detail pages must also render `PagefindFilters` and register any extra routes in `sitemap.ts`
+- **New content type SOP** (zero changes to pipeline/theme/components): `content/<type>/` → zod schema → `src/app/<type>/[slug]/page.tsx` → if routed: `TAGGED_TYPES` + `TypeBadge` label. posts/life detail pages reuse `readEntry`/`entryMetadata`/`EntryView`; 新详情页还要渲染 `PagefindFilters`、把额外路由登记进 `sitemap.ts`
 - **No JSX/HTML in content files**: custom blocks via remark-directive (`:::note`, `:::demo`) + components mapping; mermaid renders to SVG at build
 - Binaries in `public/media/<type>/`, md holds references only; **one music md = one album**, `tracks` order = play queue, `file`/`cover` allow full `https://` URLs
 - Slugs must match `[\w-]+` (path-traversal guard), else 404
@@ -40,12 +40,12 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 ## Layout rules (mandatory)
 
 1. **Global skeleton is constant**: header (sticky, z-40) / main (flex-1, width owned by each page) / footer + player bar (fixed bottom, z-50) + search (toolbar button + Ctrl/Cmd+K). Pages only swap main content
-   - **Header is a single row at every breakpoint**: 移动端 `品牌 + 汉堡菜单 + 搜索 + 主题`，5 个栏目收进 `MobileNavDrawer`（侧滑抽屉，逐行文字 + 集合图标）；`sm` 起汉堡隐藏、改为行内文字导航 `HeaderNav`。不要为了塞下 5 个栏目把顶栏撑成两行或加横向滚动条。`--header-height` 是顶栏高度的唯一来源，分类条/侧栏吸顶与 `[id]` 锚点避让都读它
+   - 顶栏恒为单行：移动端 5 个栏目收进 `MobileNavDrawer`，`sm` 起换行内 `HeaderNav`；`--header-height` 是顶栏高度的唯一来源，sticky 偏移与锚点避让都读它
 2. **Page-owned widths**: default `max-w-2xl`, prose `max-w-prose`; posts/skills index dual-column `max-w-5xl`; skills detail is a 3-pane explorer at `max-w-7xl`. Chrome (header/footer) is full-bleed at `px-4 sm:px-6` — it never inherits a page's width
-   - **每个技能包文件一个静态页**：入口 `SKILL.md` = `/skills/<slug>`，其余文件 = `/skills/<slug>/<path 去扩展名>`（`src/app/skills/[slug]/[...file]/page.tsx`，映射规则与撞车检查在 `src/lib/skill-routes.ts`）。这样页面只编译一个文件，产物里每个文件的内容都进 Pagefind 索引，跨文件也不会撞 heading id；去扩展名是为了静态导出得到 `x.html` 而不是 `x.md.html`
-3. **Player bar is global chrome**: `PlayerProvider` in layout owns queue + singleton Audio — **components must never create their own `Audio`**; playback survives navigation; renders nothing when queue empty. Bar is `fixed` (out of flow) → `PlayerBarLoader` renders an in-flow spacer of the same height **only while the bar is mounted**, so main carries no permanent bottom padding
-4. **Homepage = unified mixed timeline**: all types date-desc with type badges, no sectioned blocks; posts page = category list left (build-time, click = client-side filter on inlined data, no requests) + entries right — **分类控件两端形态不同**：移动端是单行下拉（显示当前分类）+ Popover 浮层里可换行的药丸网格（`md:hidden`），桌面端是吸顶纵向侧栏（`hidden md:block`）；移动端不要再出现横向滚动的药丸带
-5. **Search**: results from the build-time Pagefind index (only exists after `pnpm build`); UI drawn with semantic tokens; **the "no index in dev" fallback message is expected**, not a bug (`src/lib/pagefind.ts` → null). Scope chips push `filters: { type }` into the index, so **every detail page must render `<PagefindFilters type=… category=… />`** (one `data-pagefind-filter` per value — Pagefind only allows an inline `key:value` as the last item of a comma list); input is a `combobox`, results a `listbox` of `option` linked by `aria-activedescendant`
+   - 技能包每个文件一个静态页：`SKILL.md` = `/skills/<slug>`，其余 = `/skills/<slug>/<path 去扩展名>`（映射与撞车检查见 `src/lib/skill-routes.ts`）
+3. **Player bar is global chrome**: `PlayerProvider` in layout owns queue + singleton Audio — **components must never create their own `Audio`**; playback survives navigation; renders nothing when queue empty. 播放条 `fixed` 不占流，其占位块由 `PlayerBarLoader` 负责，main 不留常驻底部内边距
+4. **Homepage = unified mixed timeline**: all types date-desc with type badges, no sectioned blocks; posts page = category list left (build-time, click = client-side filter on inlined data, no requests) + entries right
+5. **Search**: results from the build-time Pagefind index (only exists after `pnpm build`); UI drawn with semantic tokens; **the "no index in dev" fallback message is expected**, not a bug (`src/lib/pagefind.ts` → null). 范围过滤下推 `filters: { type }`，所以每个详情页都要渲染 `PagefindFilters`；输入框是 `combobox`，结果是 `listbox`
 
 ## React discipline
 
