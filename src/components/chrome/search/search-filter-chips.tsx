@@ -13,6 +13,10 @@ export const SCOPE_CHIPS: ScopeChip[] = [
   { id: 'music', label: '音乐' },
 ]
 
+/*
+ * 范围切换是「过滤开关」而非标签页：它不切换任何 tabpanel，
+ * 因此用 role=group + aria-pressed，而不是残缺的 tab/tablist 语义。
+ */
 export function SearchFilterChips({
   activeScope,
   onSelectScope,
@@ -22,7 +26,7 @@ export function SearchFilterChips({
 }) {
   return (
     <div
-      role="tablist"
+      role="group"
       aria-label="搜索范围过滤"
       className="panel-bar type-caption flex items-center gap-1.5 border-b border-border-subtle px-3.5 py-1.5 overflow-x-auto select-none"
     >
@@ -31,9 +35,8 @@ export function SearchFilterChips({
         return (
           <button
             key={chip.id}
-            role="tab"
             type="button"
-            aria-selected={isActive}
+            aria-pressed={isActive}
             onClick={() => onSelectScope(chip.id)}
             className={`rounded-full px-2.5 py-1 font-medium transition-colors duration-150 ${
               isActive

@@ -5,7 +5,7 @@ import type { CollectionType } from '@/lib/content'
  * 内容型文本永不图标化隐藏；未知类型防御性回退「内容」
  */
 
-const LABELS: Record<CollectionType, string> = {
+export const LABELS: Record<CollectionType, string> = {
   posts: '文章',
   life: '生活',
   music: '音乐',

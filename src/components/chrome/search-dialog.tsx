@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Search, X, Loader2 } from 'lucide-react'
 import { OPEN_SEARCH_EVENT, type OpenSearchEventDetail } from '@/lib/search-events'
 import { loadPagefind, type PagefindResultItem } from '@/lib/pagefind'
+import type { CollectionType } from '@/lib/content'
 import { IconButton } from '@/components/primitives/icon-button'
+import { LABELS as TYPE_LABELS } from '@/components/primitives/type-badge'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,8 @@ import {
   type SearchScope,
   type SearchGroup,
   type UnifiedSearchItem,
+  SEARCH_LISTBOX_ID,
+  searchOptionId,
   SearchFilterChips,
   SearchEmptyState,
   SearchResultsList,
@@ -34,6 +38,26 @@ import {
 
 const tooltipPosition = 'left-1/2 top-full mt-1.5 -translate-x-1/2'
 const RECENT_KEY = 'orange_recent_visits'
+
+/* 范围 → 类型徽标文案（复用 TypeBadge 的唯一映射，避免两处标签漂移） */
+const SCOPE_BADGES: Partial<Record<SearchScope, string>> = {
+  posts: TYPE_LABELS.posts,
+  skills: TYPE_LABELS.skills,
+  life: TYPE_LABELS.life,
+  music: TYPE_LABELS.music,
+}
+
+/* 旧索引（没有 data-pagefind-filter 元数据）时按详情页 URL 前缀兜底 */
+const URL_BADGES: ReadonlyArray<readonly [string, string]> = [
+  ['/posts/', TYPE_LABELS.posts],
+  ['/life/', TYPE_LABELS.life],
+  ['/music/', TYPE_LABELS.music],
+  ['/skills/', TYPE_LABELS.skills],
+]
+
+function badgeFromUrl(url: string): string | undefined {
+  return URL_BADGES.find(([prefix]) => url.startsWith(prefix))?.[1]
+}
 
 export function SearchDialog({ categories = [] }: { categories?: SearchCategory[] }) {
   const router = useRouter()
@@ -135,9 +159,26 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
     [headings],
   )
 
+  /*
+   * 切换范围：过滤条件下推给 Pagefind 索引（不是取回全部命中再前端筛），
+   * 已有查询词时按新范围重新检索。
+   */
+  function handleSelectScope(scope: SearchScope) {
+    setActiveScope(scope)
+    if (query.trim()) {
+      runSearch(query, scope)
+    } else {
+      setSelectedIndex(-1)
+    }
+  }
+
   // 4. 执行 Pagefind 全文检索（轻量防抖优化输入体验）
   function handleInput(value: string) {
     setQuery(value)
+    runSearch(value, activeScope)
+  }
+
+  function runSearch(value: string, scope: SearchScope) {
     setSelectedIndex(-1)
     const seq = ++seqRef.current
 
@@ -164,7 +205,11 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
           return
         }
 
-        const res = await pagefind.search(value)
+        // 过滤下推：all 不传第二参数，保持 Pagefind 默认行为
+        const res =
+          scope === 'all'
+            ? await pagefind.search(value)
+            : await pagefind.search(value, { filters: { type: [scope] } })
         if (seq !== seqRef.current) return
         const items: PagefindResultItem[] = await Promise.all(res.results.map((r) => r.data()))
         if (seq !== seqRef.current) return
@@ -172,10 +217,9 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
         setLoading(false)
 
         const mapped: UnifiedSearchItem[] = items.map((it) => {
-          let badge = '文章'
-          if (it.url.startsWith('/life/')) badge = '生活'
-          else if (it.url.startsWith('/music/')) badge = '音乐'
-          else if (it.url.startsWith('/skills/')) badge = '技能'
+          // 类型优先取索引过滤元数据；旧索引退回 URL 前缀；栏目页判定不出类型就不给徽标
+          const type = it.filters?.type?.[0]
+          const badge = (type && TYPE_LABELS[type as CollectionType]) ?? badgeFromUrl(it.url)
 
           return {
             id: `pf-${it.url}`,
@@ -207,18 +251,12 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
 
     const list: SearchGroup[] = []
 
-    // 分组 A：Pagefind 文章与内容
+    // 分组 A：Pagefind 文章与内容（索引已按范围过滤，这里按徽标再兜一层，兼容旧索引）
     if (pagefindItems && pagefindItems.length > 0) {
-      let filtered = pagefindItems
-      if (activeScope === 'posts') {
-        filtered = filtered.filter((i) => i.url?.startsWith('/posts/'))
-      } else if (activeScope === 'skills') {
-        filtered = filtered.filter((i) => i.url?.startsWith('/skills/'))
-      } else if (activeScope === 'life') {
-        filtered = filtered.filter((i) => i.url?.startsWith('/life/'))
-      } else if (activeScope === 'music') {
-        filtered = filtered.filter((i) => i.url?.startsWith('/music/'))
-      }
+      const scopeBadge = SCOPE_BADGES[activeScope]
+      const filtered = scopeBadge
+        ? pagefindItems.filter((i) => i.badge === scopeBadge)
+        : pagefindItems
 
       if (filtered.length > 0) {
         list.push({
@@ -345,6 +383,13 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
             onKeyDown={handleKeyDown}
             placeholder="搜索全站文章、生活、音乐与章节大纲..."
             aria-label="搜索关键词"
+            role="combobox"
+            aria-expanded={flatItems.length > 0}
+            aria-controls={SEARCH_LISTBOX_ID}
+            aria-autocomplete="list"
+            aria-activedescendant={
+              selectedIndex >= 0 ? searchOptionId(selectedIndex) : undefined
+            }
             className="h-8 w-full bg-transparent type-meta outline-none placeholder:text-muted-foreground"
           />
 
@@ -370,7 +415,7 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
         </div>
 
         {/* 分类过滤胶囊 */}
-        <SearchFilterChips activeScope={activeScope} onSelectScope={setActiveScope} />
+        <SearchFilterChips activeScope={activeScope} onSelectScope={handleSelectScope} />
 
         {/* 结果区域 */}
         <div className="max-h-[22rem] overflow-y-auto p-1 scrollbar-thin">

@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react'
-import type { SearchGroup, UnifiedSearchItem } from './types'
+import { SEARCH_LISTBOX_ID, searchOptionId, type SearchGroup, type UnifiedSearchItem } from './types'
 
+/*
+ * 结果列表向读屏软件暴露为 listbox（role=group 分组 + role=option 条目）：
+ * 焦点始终留在输入框，靠 aria-activedescendant 表达当前高亮项。
+ * 条目仍是真实链接/按钮，键盘用户也能用 Tab 直接落到可点击目标。
+ */
 export function SearchResultsList({
   groups,
   selectedIndex,
@@ -22,12 +27,17 @@ export function SearchResultsList({
   let currentIndex = 0
 
   return (
-    <div className="space-y-3.5 p-2">
+    <div
+      id={SEARCH_LISTBOX_ID}
+      role="listbox"
+      aria-label="搜索结果"
+      className="space-y-3.5 p-2"
+    >
       {groups.map((group) => {
         if (group.items.length === 0) return null
 
         return (
-          <div key={group.id} className="space-y-1">
+          <div key={group.id} role="group" aria-label={group.label} className="space-y-1">
             {/* 分组标题 */}
             <div className="type-caption px-2 font-semibold tracking-wider text-muted-foreground uppercase">
               {`${group.label} (${group.items.length})`}
@@ -41,7 +51,12 @@ export function SearchResultsList({
 
                 if (item.url) {
                   return (
-                    <li key={item.id}>
+                    <li
+                      key={item.id}
+                      id={searchOptionId(itemIndex)}
+                      role="option"
+                      aria-selected={isSelected}
+                    >
                       <a
                         ref={isSelected ? (el) => { selectedRef.current = el } : undefined}
                         href={item.url}
@@ -82,7 +97,12 @@ export function SearchResultsList({
                 }
 
                 return (
-                  <li key={item.id}>
+                  <li
+                    key={item.id}
+                    id={searchOptionId(itemIndex)}
+                    role="option"
+                    aria-selected={isSelected}
+                  >
                     <button
                       ref={isSelected ? (el) => { selectedRef.current = el } : undefined}
                       type="button"

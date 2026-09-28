@@ -8,10 +8,20 @@ export type PagefindResultItem = {
   url: string
   meta?: { title?: string }
   excerpt?: string
+  /** data-pagefind-filter 产出的过滤元数据（key → 该页命中的值） */
+  filters?: Record<string, string[]>
+}
+
+export type PagefindSearchOptions = {
+  /** 过滤下推：{ type: ['posts'] } 表示只取索引中标记了 type:posts 的页面 */
+  filters?: Record<string, string | string[]>
 }
 
 export type PagefindApi = {
-  search: (query: string) => Promise<{ results: { data: () => Promise<PagefindResultItem> }[] }>
+  search: (
+    query: string | null,
+    options?: PagefindSearchOptions,
+  ) => Promise<{ results: { data: () => Promise<PagefindResultItem> }[] }>
 }
 
 // 模块级缓存：null 也缓存（dev 环境避免每次输入都重复加载失败）

@@ -43,7 +43,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 2. **Page-owned widths**: default `max-w-2xl`, prose `max-w-prose`; posts/skills index dual-column `max-w-5xl`; skills detail is a 3-pane explorer at `max-w-7xl`. Chrome (header/footer) is full-bleed at `px-4 sm:px-6` — it never inherits a page's width
 3. **Player bar is global chrome**: `PlayerProvider` in layout owns queue + singleton Audio — **components must never create their own `Audio`**; playback survives navigation; renders nothing when queue empty
 4. **Homepage = unified mixed timeline**: all types date-desc with type badges, no sectioned blocks; posts page = category list left (build-time, click = client-side filter on inlined data, no requests) + entries right
-5. **Search**: results from the build-time Pagefind index (only exists after `pnpm build`); UI drawn with semantic tokens; **the "no index in dev" fallback message is expected**, not a bug (`src/lib/pagefind.ts` → null)
+5. **Search**: results from the build-time Pagefind index (only exists after `pnpm build`); UI drawn with semantic tokens; **the "no index in dev" fallback message is expected**, not a bug (`src/lib/pagefind.ts` → null). Scope chips push `filters: { type }` into the index, so **every detail page must render `<PagefindFilters type=… category=… />`** (one `data-pagefind-filter` per value — Pagefind only allows an inline `key:value` as the last item of a comma list); input is a `combobox`, results a `listbox` of `option` linked by `aria-activedescendant`
 
 ## React discipline
 

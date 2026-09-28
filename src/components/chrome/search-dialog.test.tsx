@@ -61,18 +61,27 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     })
 
     expect(screen.getByRole('dialog', { name: '站内搜索' })).toBeTruthy()
-    expect(screen.getByRole('tab', { name: '生活' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('button', { name: '生活' }).getAttribute('aria-pressed')).toBe('true')
   })
 
   it('展示直观的分类过滤胶囊（全部 / 文章 / 技能 / 生活 / 音乐）', () => {
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
-    expect(screen.getByRole('tab', { name: '全部' })).toBeTruthy()
-    expect(screen.getByRole('tab', { name: '文章' })).toBeTruthy()
-    expect(screen.getByRole('tab', { name: '技能' })).toBeTruthy()
-    expect(screen.getByRole('tab', { name: '生活' })).toBeTruthy()
-    expect(screen.getByRole('tab', { name: '音乐' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '全部' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '文章' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '技能' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '生活' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '音乐' })).toBeTruthy()
+  })
+
+  it('范围胶囊是过滤开关（aria-pressed）而非 tab，无 tabpanel 缺失', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const group = screen.getByRole('group', { name: '搜索范围过滤' })
+    expect(within(group).getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(group).getByRole('button', { name: '文章' }).getAttribute('aria-pressed')).toBe('false')
   })
 
   it('空状态：展示常用推荐动作与最近访问记录', () => {
@@ -138,6 +147,140 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(mark?.textContent).toBe('grid')
   })
 
+  it('全部范围不向索引下推 filter，只传关键词', async () => {
+    const search = vi.fn().mockResolvedValue({ results: [] })
+    mockLoad.mockResolvedValue(makeApi(search))
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'grid' } })
+
+    await waitFor(() => expect(search).toHaveBeenCalled())
+    expect(search.mock.calls[0]).toEqual(['grid'])
+  })
+
+  it('选择范围后把过滤条件下推给 Pagefind 索引（不再全量取回再前端筛）', async () => {
+    const search = vi.fn().mockResolvedValue({ results: [] })
+    mockLoad.mockResolvedValue(makeApi(search))
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.click(screen.getByRole('button', { name: '技能' }))
+    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'tdd' } })
+
+    await waitFor(() => {
+      expect(search).toHaveBeenCalledWith('tdd', { filters: { type: ['skills'] } })
+    })
+  })
+
+  it('输入后切换范围会带上新过滤条件重新检索', async () => {
+    const search = vi.fn().mockResolvedValue({ results: [] })
+    mockLoad.mockResolvedValue(makeApi(search))
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: 'tea' } })
+    await waitFor(() => expect(search).toHaveBeenCalledWith('tea'))
+
+    fireEvent.click(screen.getByRole('button', { name: '生活' }))
+
+    await waitFor(() => {
+      expect(search).toHaveBeenCalledWith('tea', { filters: { type: ['life'] } })
+    })
+  })
+
+  it('结果徽标优先用 Pagefind 过滤元数据判定类型，而非猜 URL 前缀', async () => {
+    mockLoad.mockResolvedValue(
+      makeApi(
+        vi.fn().mockResolvedValue({
+          results: [
+            {
+              data: async () => ({
+                url: '/posts/deploy-note',
+                meta: { title: '发布记录' },
+                filters: { type: ['life'] },
+              }),
+            },
+          ],
+        }),
+      ),
+    )
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: '发布' } })
+
+    const listbox = await screen.findByRole('listbox', { name: '搜索结果' })
+    expect(within(listbox).getByText('发布记录')).toBeTruthy()
+    expect(within(listbox).getByText('生活')).toBeTruthy()
+  })
+
+  it('栏目页没有类型元数据时不给徽标，不硬塞「文章」', async () => {
+    mockLoad.mockResolvedValue(
+      makeApi(
+        vi.fn().mockResolvedValue({
+          results: [
+            {
+              data: async () => ({
+                url: '/music',
+                meta: { title: '曲谱合集' },
+                filters: {},
+              }),
+            },
+          ],
+        }),
+      ),
+    )
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.change(screen.getByLabelText('搜索关键词'), { target: { value: '曲谱' } })
+
+    const listbox = await screen.findByRole('listbox', { name: '搜索结果' })
+    expect(within(listbox).getByText('曲谱合集')).toBeTruthy()
+    expect(within(listbox).queryByText('文章')).toBeNull()
+  })
+
+  it('输入框是 combobox：结果以 listbox/option 暴露，高亮项通过 aria-activedescendant 关联', async () => {
+    mockLoad.mockResolvedValue(
+      makeApi(
+        vi.fn().mockResolvedValue({
+          results: [
+            {
+              data: async () => ({
+                url: '/posts/2026-09-01-css-grid',
+                meta: { title: 'CSS Grid 指南' },
+                excerpt: '使用 <mark>grid</mark> 布局的要点',
+              }),
+            },
+          ],
+        }),
+      ),
+    )
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    const input = screen.getByLabelText('搜索关键词')
+
+    expect(input.getAttribute('role')).toBe('combobox')
+    expect(input.getAttribute('aria-autocomplete')).toBe('list')
+    expect(input.getAttribute('aria-expanded')).toBe('false')
+    expect(input.getAttribute('aria-activedescendant')).toBeNull()
+
+    fireEvent.change(input, { target: { value: 'grid' } })
+    const listbox = await screen.findByRole('listbox', { name: '搜索结果' })
+    const option = within(listbox).getAllByRole('option')[0]
+
+    await waitFor(() => expect(input.getAttribute('aria-expanded')).toBe('true'))
+    expect(input.getAttribute('aria-controls')).toBe(listbox.id)
+    expect(option.getAttribute('aria-selected')).toBe('false')
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+
+    expect(option.getAttribute('aria-selected')).toBe('true')
+    expect(input.getAttribute('aria-activedescendant')).toBe(option.id)
+  })
+
   it('自然匹配快捷动作：输入“主题”即可直达切换深浅模式', async () => {
     mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
 
@@ -195,11 +338,11 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
     const input = screen.getByLabelText('搜索关键词')
-    expect(screen.getByRole('tab', { name: '全部' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('true')
 
     fireEvent.keyDown(input, { key: 'Tab' })
 
-    expect(screen.getByRole('tab', { name: '全部' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('true')
   })
 
   it('方向键 ↑↓ 在跨分组结果间平滑循环高亮，回车触发执行', async () => {

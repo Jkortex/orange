@@ -13,6 +13,7 @@ import { AdjacentNav } from '@/components/reading/adjacent-nav'
 import { RelatedEntries } from '@/components/reading/related-entries'
 import { RecentTracker } from '@/components/chrome/recent-tracker'
 import { DetailHeader } from '@/components/listing/detail-header'
+import { PagefindFilters } from '@/components/listing/pagefind-filters'
 
 import { LifeGallery } from '@/components/listing/life-gallery'
 
@@ -79,6 +80,9 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
 
       {/* 记录当前页面到最近访问列表 */}
       <RecentTracker url={`/${entry.collection}/${entry.slug}`} title={entry.data.title} />
+
+      {/* 搜索过滤元数据：按类型/分类下推给 Pagefind 索引 */}
+      <PagefindFilters type={entry.collection} category={entry.data.category} />
 
       {/* 顶部元信息：动态返回链接 + 标题与元数据 */}
       <div className={`mx-auto w-full ${contentWidth} mb-8`}>

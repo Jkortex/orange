@@ -1,6 +1,7 @@
 import type { SkillPackage } from '@/lib/content'
 import { MarkdownRenderer } from '@/lib/markdown'
 import { extractToc, type TocHeading } from '@/lib/toc'
+import { PagefindFilters } from '@/components/listing/pagefind-filters'
 import {
   SkillPackageExplorer,
   type RenderedSkillFile,
@@ -33,5 +34,11 @@ export async function SkillPackageView({ pkg }: { pkg: SkillPackage }) {
     }),
   )
 
-  return <SkillPackageExplorer pkg={pkg} renderedFiles={renderedFiles} />
+  return (
+    <>
+      {/* 搜索过滤元数据：按类型/分类下推给 Pagefind 索引 */}
+      <PagefindFilters type="skills" category={pkg.data.category} />
+      <SkillPackageExplorer pkg={pkg} renderedFiles={renderedFiles} />
+    </>
+  )
 }
