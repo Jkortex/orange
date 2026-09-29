@@ -124,6 +124,15 @@
     cursor: pointer;
   }
 
+  /* 原生搜索框自带一颗取消按钮（Chromium/WebKit 在输入非空时渲染），
+     与组件自己的「清空输入」并排会出现两个一模一样的 ✕。原生那颗不可主题化，
+     统一关掉：清空只走组件按钮，图标与配色才受语义 token 控制。
+     显式写 -webkit- 前缀：本项目 postcss 只有 @tailwindcss/postcss，没有 autoprefixer */
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);

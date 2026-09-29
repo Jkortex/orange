@@ -251,6 +251,31 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(screen.getByText('⇧←→ 切换范围')).toBeTruthy()
   })
 
+  /*
+   * 输入行里只允许有一颗 ✕：搜索框中的 ✕ 按惯例就是「清空」，
+   * 曾经并排的「关闭搜索」被读成两个同义按钮（更早还有原生搜索框自带的第三颗）。
+   * 关闭只走 ESC 与点遮罩，故这里同时守住「关闭按钮不再回来」。
+   */
+  it('输入行只有一颗 ✕（清空），点击后清空关键词', () => {
+    mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    const input = screen.getByLabelText('搜索关键词') as HTMLInputElement
+
+    // 无输入时不渲染清空按钮，避免空行里多一颗无意义的 ✕
+    expect(screen.queryByRole('button', { name: '清空输入' })).toBeNull()
+
+    fireEvent.change(input, { target: { value: 'grid' } })
+    const clear = screen.getByRole('button', { name: '清空输入' })
+
+    expect(screen.queryByRole('button', { name: '关闭搜索' })).toBeNull()
+
+    fireEvent.click(clear)
+    expect(input.value).toBe('')
+    expect(screen.queryByRole('button', { name: '清空输入' })).toBeNull()
+  })
+
   it('输入关键词全文检索：渲染文章结果分组与命中高亮', async () => {
     mockLoad.mockResolvedValue(
       makeApi(
@@ -507,17 +532,12 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(mockPush).toHaveBeenCalledWith('/posts/css-demo')
   })
 
-  it('点击关闭按钮或 Esc 或遮罩能正常关闭', async () => {
+  it('Esc 或点遮罩能正常关闭', async () => {
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     expect(screen.getByRole('dialog')).toBeTruthy()
 
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
-
-    // 再次打开并按关闭按钮
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    fireEvent.click(screen.getByRole('button', { name: '关闭搜索' }))
     expect(screen.queryByRole('dialog')).toBeNull()
 
     // 再次打开并点遮罩

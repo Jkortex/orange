@@ -283,7 +283,9 @@ export function SearchDialog() {
         </button>
       </DialogTrigger>
       {/* 宽度：移动端沿用 DialogContent 基类的 max-w-[calc(100%-2rem)]（两侧各留 16px，不贴满视口），
-          sm 起才放宽到 max-w-xl。不可写死 max-w-xl——tailwind-merge 会顶掉基类留白，移动端就贴边了 */}
+          sm 起才放宽到 max-w-xl。不可写死 max-w-xl——tailwind-merge 会顶掉基类留白，移动端就贴边了。
+          关闭按钮整颗关掉：它落在输入行右端，与「清空」的 ✕ 并排必被读成两个同义按钮。
+          关闭只走 ESC 与点遮罩（底栏已写明 ESC），故这里没有可见的关闭控件 */}
       <DialogContent
         aria-label="站内搜索"
         showCloseButton={false}
@@ -342,24 +344,19 @@ export function SearchDialog() {
           />
 
           {query && (
-            <button
-              type="button"
+            /* 行内只留这一颗 ✕：搜索框里的 ✕ 按惯例就是「清空」，再放一颗「关闭」必然读成两个同义按钮。
+               关闭走 ESC 与点遮罩（弹窗惯例，底栏也写明了 ESC）。原生搜索框自带的那颗取消按钮
+               已在 globals.css 关掉，否则输入非空时会多出第三颗 ✕ */
+            <IconButton
+              label="清空输入"
               onClick={() => handleInput('')}
-              className="text-muted-foreground hover:text-foreground p-1 transition-colors"
-              aria-label="清空输入"
+              size="sm"
+              buttonClassName="bg-muted hover:bg-border"
+              tipClassName={tooltipPosition}
             >
-              <X className="size-3.5" />
-            </button>
+              <X className="size-3.5" aria-hidden />
+            </IconButton>
           )}
-
-          <IconButton
-            label="关闭搜索"
-            onClick={() => setOpen(false)}
-            size="sm"
-            tipClassName={tooltipPosition}
-          >
-            <X className="size-4" aria-hidden />
-          </IconButton>
         </div>
 
         {/* 分类过滤胶囊 */}
