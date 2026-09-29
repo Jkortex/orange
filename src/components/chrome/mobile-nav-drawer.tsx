@@ -3,8 +3,9 @@
 import { useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Menu, Music, Newspaper, NotebookPen, Wrench, type LucideIcon } from 'lucide-react'
+import { Home, Menu, Music, Newspaper, NotebookPen, Wrench, X, type LucideIcon } from 'lucide-react'
 import { defaultNavItems, type NavItem } from '@/components/chrome/header-nav'
+import { iconButtonClass } from '@/components/primitives/icon-button'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
 /*
@@ -49,8 +50,13 @@ export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[]
 
       <SheetContent
         side="left"
+        /*
+         * 关掉 SheetContent 自带的关闭钮（没有内边距、图标 24px），自绘一颗 36px 圆钮，
+         * 与站内其余浮层（目录抽屉 / 快捷键指南 / 图片预览）统一触摸目标。
+         */
+        showCloseButton={false}
         onOpenAutoFocus={(event) => {
-          // 显式接管自动聚焦：落到第一个栏目，而不是 DOM 末尾的关闭按钮
+          // 显式接管自动聚焦：落到第一个栏目，而不是关闭按钮
           event.preventDefault()
           firstItemRef.current?.focus()
         }}
@@ -65,6 +71,17 @@ export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[]
             Orange
           </p>
         </SheetHeader>
+
+        {/* 绝对定位挂在抽屉上（抽屉本身是 fixed，即定位祖先），与品牌行垂直居中对齐 */}
+        <SheetClose asChild>
+          <button
+            type="button"
+            aria-label="关闭菜单"
+            className={iconButtonClass('md', 'absolute top-3 right-3 z-10 shrink-0')}
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        </SheetClose>
 
         <nav aria-label="移动端栏目导航" className="flex-1 overflow-y-auto px-3 py-3">
           <ul className="space-y-1">

@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils'
  *   本文件不自行实现任何交互原语
  * - 与 dialog.tsx 保持同一套语义 token（bg-background / border-border-subtle / shadow-overlay）
  * - 唯一新增能力：side 决定滑入方向，移动端侧滑菜单（left）与全屏面板共用一个原语
+ * - showCloseButton 与 dialog.tsx 同名同义（默认 true）：自绘关闭按钮的调用方
+ *   （需要 ≥36px 触摸目标时）把它关掉，免得出现两颗 ✕
  */
 
 function Sheet({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -38,9 +40,11 @@ function SheetContent({
   className,
   children,
   side = 'left',
+  showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   side?: keyof typeof SIDES
+  showCloseButton?: boolean
 }) {
   return (
     <DialogPrimitive.Portal>
@@ -58,13 +62,15 @@ function SheetContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close
-          data-slot="sheet-close"
-          className="ring-offset-background focus:ring-ring absolute top-3.5 right-3 rounded-xs p-1 opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
-        >
-          <X className="size-4" />
-          <span className="sr-only">关闭</span>
-        </DialogPrimitive.Close>
+        {showCloseButton && (
+          <DialogPrimitive.Close
+            data-slot="sheet-close"
+            className="ring-offset-background focus:ring-ring absolute top-3.5 right-3 rounded-xs p-1 opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+          >
+            <X className="size-4" />
+            <span className="sr-only">关闭</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   )

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Search, X, Loader2 } from 'lucide-react'
 import { loadPagefind, type PagefindResultItem } from '@/lib/pagefind'
 import type { CollectionType } from '@/lib/content'
-import { IconButton } from '@/components/primitives/icon-button'
+import { IconButton, iconButtonClass } from '@/components/primitives/icon-button'
 import { LABELS as TYPE_LABELS } from '@/components/primitives/type-badge'
 import {
   Dialog,
@@ -263,8 +263,9 @@ export function SearchDialog() {
     }
   }
 
-  const iconBtnClass =
-    'group relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95'
+  // DialogTrigger asChild 要求子元素自己就是 <button>，用不了 IconButton 组件，
+  // 故自绘按钮 + 共享同一份外观配方（iconButtonClass），避免与 IconButton 走样
+  const iconBtnClass = iconButtonClass('md', 'group relative shrink-0')
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -8,6 +8,10 @@ import { Tip } from '@/components/primitives/tip'
  * - 视觉契约收敛于此：圆形、36px 触摸目标（AGENTS.md 图标化标准）、hover 提亮、按下微缩；
  *   调用方只传「变体差异」（如 back-to-top 的磨砂描边态），尺寸经 size 指定
  * - 提示方位仍由调用方传入（上方/下方/居中等各异）
+ *
+ * size="sm"（32px）是唯一低于 36px 的档，只准用在输入框内部的附属按钮上：
+ * 这类按钮贴着光标、紧邻输入区，32px 是行业惯例（Chrome / Safari 的原生清除钮同样偏小），
+ * 撑到 36px 反而会把输入行顶高。行内之外的图标按钮一律用默认的 md。
  */
 
 export type IconButtonSize = 'sm' | 'md' | 'lg'
@@ -21,7 +25,7 @@ export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   buttonClassName?: string
   /** 提示方位类（默认按钮上方右对齐） */
   tipClassName?: string
-  /** 触摸目标尺寸（md = 36px） */
+  /** 触摸目标尺寸（md = 36px；sm = 32px，只给输入框内的行内附属按钮） */
   size?: IconButtonSize
   /**
    * 宽度行为：默认与 size 同为正方形；'auto' 只锁高度、宽度随内容撑开（带文字的胶囊）。
@@ -74,4 +78,16 @@ export function IconButton({
       <Tip className={tipClassName ?? defaultTipClass}>{label}</Tip>
     </span>
   )
+}
+
+/**
+ * 纯按钮版的图标按钮外观：给「必须自己就是 <button>」的场景用。
+ *
+ * 为什么不能直接套 IconButton：Radix 的 asChild（DialogClose / SheetTrigger）用 Slot 把 props
+ * 合并到**直接子元素**上，IconButton 的根是 span，props 会挂错元素、按钮拿不到行为。
+ * 故这些地方自绘 <button>，但外观必须与 IconButton 同源 —— 否则改一处按压反馈，
+ * 另一处会静默留在旧样式上。extra 排在最后，调用方的变体类才能压过默认的 hover 态。
+ */
+export function iconButtonClass(size: IconButtonSize = 'md', extra?: string) {
+  return cn(BASE_CLASS, SIZE_CLASS[size], extra)
 }

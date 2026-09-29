@@ -270,6 +270,35 @@ describe('CategoryFilter 移动端浮动筛选', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
+  /*
+   * SheetContent 自带的关闭钮没有内边距、图标 24px，触屏上按不中，
+   * 故整颗换成自绘的 36px 圆钮（vendor 那颗已被 showCloseButton={false} 关掉）。
+   */
+  it('关闭钮是 36px 圆钮，且抽屉里只有这一颗', async () => {
+    renderFilter(null)
+
+    fireEvent.click(screen.getByRole('button', { name: '分类筛选：全部' }))
+    const sheet = await screen.findByRole('dialog')
+
+    const closes = screen.getAllByRole('button', { name: '关闭分类筛选' })
+    expect(closes).toHaveLength(1)
+    expect(closes[0].className).toContain('size-9')
+
+    // vendor 那颗带 sr-only「关闭」文案，不应存在
+    expect(sheet.querySelector('.sr-only')?.textContent).not.toBe('关闭')
+  })
+
+  it('点击关闭钮收起抽屉', async () => {
+    renderFilter(null)
+
+    fireEvent.click(screen.getByRole('button', { name: '分类筛选：全部' }))
+    await screen.findByRole('dialog')
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭分类筛选' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
   it('移动端不再有横滑药丸条；桌面侧栏整块隐藏到 md 起', () => {
     const { container } = renderFilter()
 

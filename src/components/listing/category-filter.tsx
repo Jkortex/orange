@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, X } from 'lucide-react'
 import {
   Sheet,
   SheetClose,
@@ -16,7 +16,7 @@ import {
   FLOATING_STACK_BUTTON,
   FLOATING_STACK_TIP,
 } from '@/lib/floating-stack'
-import { IconButton } from '@/components/primitives/icon-button'
+import { IconButton, iconButtonClass } from '@/components/primitives/icon-button'
 import type { CategoryItem } from '@/lib/categories'
 
 /*
@@ -106,6 +106,9 @@ export function CategoryFilter({ categories, active, onSelect, navLabel, total }
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
+          /* 关掉自带的关闭钮（无内边距、图标 24px），自绘一颗 36px 圆钮，
+             与站内其余浮层（栏目抽屉 / 目录抽屉 / 快捷键指南 / 图片预览）统一触摸目标 */
+          showCloseButton={false}
           className="max-h-[75vh] gap-0 rounded-t-2xl border-border-subtle pb-[env(safe-area-inset-bottom)]"
         >
           <SheetHeader className="border-b border-border-subtle px-5 py-4">
@@ -114,6 +117,17 @@ export function CategoryFilter({ categories, active, onSelect, navLabel, total }
               按分类筛选{navLabel}，选择后即时生效
             </SheetDescription>
           </SheetHeader>
+
+          {/* 绝对定位挂在抽屉上（抽屉本身是 fixed，即定位祖先），与标题行垂直居中对齐 */}
+          <SheetClose asChild>
+            <button
+              type="button"
+              aria-label="关闭分类筛选"
+              className={iconButtonClass('md', 'absolute top-3 right-3 z-10 shrink-0')}
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          </SheetClose>
 
           <nav aria-label={navLabel} className="overflow-y-auto px-4 py-4">
             <ul className="grid grid-cols-2 gap-2">

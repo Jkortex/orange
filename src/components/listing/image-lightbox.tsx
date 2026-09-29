@@ -3,10 +3,12 @@
 import * as React from 'react'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { iconButtonClass } from '@/components/primitives/icon-button'
 
 export interface ImageLightboxProps {
   photos: string[]
@@ -65,11 +67,29 @@ export function ImageLightbox({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-4xl p-2 sm:p-4 bg-background/95 border-border-subtle shadow-overlay flex flex-col items-center justify-center overflow-hidden"
-        showCloseButton={true}
+        /*
+         * 关掉 DialogContent 自带的关闭钮：它没有内边距、图标只有 16px，
+         * 在触屏上基本按不中（本站图标化标准要求 ≥36px）。自绘一颗 36px 圆钮替代，
+         * 底衬沿用本组件左右翻页键那套磨砂样式 —— 压在照片上时才看得见。
+         */
+        showCloseButton={false}
       >
         <DialogTitle className="sr-only">
           {alt}（第 {currentIndex + 1} 张，共 {total} 张）
         </DialogTitle>
+
+        <DialogClose asChild>
+          <button
+            type="button"
+            aria-label="关闭图片预览"
+            className={iconButtonClass(
+              'md',
+              'absolute top-3 right-3 z-10 shrink-0 bg-background/80 shadow-pop backdrop-blur-xs hover:bg-background',
+            )}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        </DialogClose>
 
         <div className="relative flex w-full max-h-[80vh] items-center justify-center overflow-hidden py-2 select-none">
           <img
@@ -107,20 +127,29 @@ export function ImageLightbox({
         </div>
 
         {total > 1 && (
-          <div className="flex items-center gap-1.5 pb-1">
+          <div className="flex items-center pb-1">
             {photos.map((_, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => setCurrentIndex(idx)}
-                className={`h-1.5 rounded-full transition-all duration-150 ${
-                  idx === currentIndex
-                    ? 'w-5 bg-primary'
-                    : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/60'
-                }`}
+                /*
+                 * 圆点本体只有 6px 高，直接当按钮在触屏上基本点不中。
+                 * 故按钮只管尺寸与命中（36px 高、左右各 4px 内边距撑开间距），
+                 * 视觉完全交给内层 span。
+                 */
+                className="group/dot flex h-9 items-center px-1"
                 aria-label={`切换到第 ${idx + 1} 张图片`}
                 aria-current={idx === currentIndex ? 'true' : undefined}
-              />
+              >
+                <span
+                  className={`block h-1.5 rounded-full transition-all duration-150 ${
+                    idx === currentIndex
+                      ? 'w-5 bg-primary'
+                      : 'w-1.5 bg-muted-foreground/30 group-hover/dot:bg-muted-foreground/60'
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}

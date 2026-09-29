@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
 import type { TocHeading } from '@/lib/toc'
 
@@ -8,6 +8,14 @@ afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
 })
+
+/* Radix 的 DismissableLayer 在 setTimeout(0) 里才挂上 pointerdown 监听
+   （避免被「打开浮层那一下点击」立刻关掉），测试要先把它放出来 */
+async function flushRadixListeners() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+}
 
 const mockHeadings: TocHeading[] = [
   { id: 'intro', text: '引言', depth: 2 },
@@ -79,5 +87,69 @@ describe('MobileTocDrawer 移动端目录抽屉组件', () => {
     expect(screen.queryByRole('link', { name: /系统设计/ })).toBeNull()
 
     document.body.removeChild(targetEl)
+  })
+})
+
+/*
+ * 抽屉此前是手写的 fixed 遮罩 + div[role=dialog]：只有点遮罩与点条目会关，
+ * Esc 不生效，也没有滚动锁；关掉后焦点回不到那颗悬浮按钮上。
+ * 改用 ui/sheet（Radix）后这些由它接管。
+ */
+describe('MobileTocDrawer 抽屉语义（Radix Sheet）', () => {
+  it('抽屉是带标题的模态浮层', () => {
+    render(<MobileTocDrawer headings={mockHeadings} />)
+    fireEvent.click(screen.getByRole('button', { name: '文章目录' }))
+
+    expect(screen.getByRole('dialog', { name: '文章目录' })).toBeDefined()
+  })
+
+  it('按 Esc 关闭抽屉', async () => {
+    render(<MobileTocDrawer headings={mockHeadings} />)
+    fireEvent.click(screen.getByRole('button', { name: '文章目录' }))
+    expect(screen.getByRole('dialog', { name: '文章目录' })).toBeDefined()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '文章目录' })).toBeNull())
+  })
+
+  it('点击遮罩关闭抽屉', async () => {
+    render(<MobileTocDrawer headings={mockHeadings} />)
+    fireEvent.click(screen.getByRole('button', { name: '文章目录' }))
+
+    const overlay = document.querySelector('[data-slot="sheet-overlay"]')
+    expect(overlay).not.toBeNull()
+
+    await flushRadixListeners()
+    fireEvent.pointerDown(overlay as Element, { pointerType: 'mouse' })
+    fireEvent.click(overlay as Element)
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '文章目录' })).toBeNull())
+  })
+
+  it('关闭后焦点还给触发按钮', async () => {
+    render(<MobileTocDrawer headings={mockHeadings} />)
+    const trigger = screen.getByRole('button', { name: '文章目录' })
+
+    fireEvent.click(trigger)
+    expect(screen.getByRole('dialog', { name: '文章目录' })).toBeDefined()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '文章目录' })).toBeNull())
+
+    // Radix 在 setTimeout(0) 里还原焦点
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+  })
+
+  it('全抽屉只有一颗 ✕，且是可命中的 36px 圆钮（vendor 那颗已关掉）', () => {
+    render(<MobileTocDrawer headings={mockHeadings} />)
+    fireEvent.click(screen.getByRole('button', { name: '文章目录' }))
+
+    const dialog = screen.getByRole('dialog', { name: '文章目录' })
+    // 抽屉里唯一的按钮就是关闭钮（目录条目都是 <a>）
+    const buttons = dialog.querySelectorAll('button')
+    expect(buttons).toHaveLength(1)
+    expect(buttons[0].getAttribute('aria-label')).toBe('关闭目录')
+    expect(buttons[0].className).toContain('size-9')
   })
 })

@@ -85,4 +85,31 @@ describe('MobileNavDrawer 顶栏菜单', () => {
       expect(document.activeElement).toBe(screen.getByRole('link', { name: '文章' }))
     })
   })
+
+  /*
+   * SheetContent 自带的关闭钮没有内边距、图标 24px，触屏上按不中，
+   * 故整颗换成自绘的 36px 圆钮（vendor 那颗已被 showCloseButton={false} 关掉）。
+   */
+  it('关闭钮是 36px 圆钮，且抽屉里只有这一颗', async () => {
+    render(<MobileNavDrawer />)
+    fireEvent.click(screen.getByRole('button', { name: '菜单' }))
+    const dialog = await screen.findByRole('dialog')
+
+    const closes = screen.getAllByRole('button', { name: '关闭菜单' })
+    expect(closes).toHaveLength(1)
+    expect(closes[0].className).toContain('size-9')
+
+    // vendor 那颗带 sr-only「关闭」文案，不应存在
+    expect(dialog.querySelector('.sr-only')?.textContent).not.toBe('关闭')
+  })
+
+  it('点击关闭钮收起抽屉', async () => {
+    render(<MobileNavDrawer />)
+    fireEvent.click(screen.getByRole('button', { name: '菜单' }))
+    await screen.findByRole('dialog')
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭菜单' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
 })
