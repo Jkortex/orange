@@ -6,7 +6,7 @@ import { useOptionalPlayerIndex } from '@/components/player/player-provider'
 /*
  * 右下角浮动控件栈的统一垂直编排（回到顶部 / 移动端目录 / 分类筛选）。
  *
- * 三者共用一条基准轴线（right-4 sm:right-6）与同一组档位。新增常驻浮动按钮时
+ * 三者共用一条基准轴线（right-4 sm:right-6 md:right-8）与同一组档位。新增常驻浮动按钮时
  * 一律用 useFloatingStackOffset()，不要各自硬编码 bottom-* —— 否则回到顶部出现时
  * 不知道要给谁让位，出现悬空或重叠。回到顶部自身是锚点，取基准格
  * floatingStackOffset(false, …) 而非 useFloatingStackOffset()。
@@ -19,6 +19,17 @@ import { useOptionalPlayerIndex } from '@/components/player/player-provider'
 
 /** 回到顶部出现的滚动阈值 */
 export const BACK_TO_TOP_THRESHOLD = 300
+
+/** 浮动控件栈锚点定位：右下角同一竖轴，z-40，bottom 档位带过渡（各组件按需追加 animate-in / inline-flex / md:hidden） */
+export const FLOATING_STACK_ANCHOR =
+  'group fixed right-4 sm:right-6 md:right-8 z-40 transition-[bottom,transform,opacity] duration-200 ease-out'
+
+/** 磨砂玻璃按钮外观（描边 + 半透明底 + hover 品牌色），三者共用 */
+export const FLOATING_STACK_BUTTON =
+  'border border-border-strong bg-surface/85 backdrop-blur-md hover:border-primary/50 hover:bg-surface hover:text-primary'
+
+/** 图标按钮提示气泡定位（按钮上方右对齐） */
+export const FLOATING_STACK_TIP = 'bottom-full right-0 mb-2'
 
 /**
  * 档位表。scrolled=false 的两档与 back-to-top 自身的 bottom-6 / bottom-20 严格相等——

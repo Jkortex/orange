@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getRecentEntries, getSkillEntries, getSkillPackage, listSkillSlugs } from '@/lib/content'
+import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getSkillEntries, getSkillPackage, listSkillSlugs } from '@/lib/content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
@@ -281,8 +281,8 @@ tracks:
   })
 })
 
-describe('getRecentEntries 全类型聚合', () => {
-  it('跨类型按日期倒序混合，截取 limit 条', () => {
+describe('getAllEntries 全类型聚合', () => {
+  it('跨类型按日期倒序混合', () => {
     writeFixture(
       'posts/2026-09-01-post.md',
       `---
@@ -318,12 +318,9 @@ tracks:
 `,
     )
 
-    const entries = getRecentEntries(2, { contentDir })
+    const entries = getAllEntries({ contentDir })
 
-    expect(entries).toHaveLength(2)
-    expect(entries[0].collection).toBe('music')
-    expect(entries[0].data.title).toBe('专辑')
-    expect(entries[1].collection).toBe('life')
+    expect(entries.map((entry) => entry.collection)).toEqual(['music', 'life', 'posts'])
   })
 
   it('未注册的 photos 目录不会进入内容聚合或 manifest', () => {
@@ -336,7 +333,7 @@ tracks:
       '---\ntitle: 照片\ndate: 2026-09-02\n---\n未启用的内容集合',
     )
 
-    const entries = getRecentEntries(10, { contentDir })
+    const entries = getAllEntries({ contentDir })
     const manifest = buildContentManifest({ contentDir })
 
     expect(entries.map((entry) => entry.collection)).toEqual(['posts'])
@@ -357,14 +354,14 @@ date: 2026-09-01
     )
     // 其他未注册集合目录未建立
 
-    const entries = getRecentEntries(10, { contentDir })
+    const entries = getAllEntries({ contentDir })
 
     expect(entries).toHaveLength(1)
     expect(entries[0].collection).toBe('posts')
   })
 
   it('全部集合为空时返回空数组', () => {
-    expect(getRecentEntries(10, { contentDir })).toEqual([])
+    expect(getAllEntries({ contentDir })).toEqual([])
   })
 
   it('已启用集合 frontmatter 校验失败时抛错，不静默吞掉', () => {
@@ -379,7 +376,7 @@ title: 缺日期
     )
     // 其他未注册集合目录未建立（未启用类型）仍应跳过，但 posts 校验失败必须暴露
 
-    expect(() => getRecentEntries(10, { contentDir })).toThrowError(/missing-date/)
+    expect(() => getAllEntries({ contentDir })).toThrowError(/missing-date/)
   })
 })
 

@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { aggregateCategories, CategoryFilter } from '@/components/listing/category-filter'
+import { CategoryFilter } from '@/components/listing/category-filter'
+import { countByCategory } from '@/lib/categories'
 import { EmptyState } from '@/components/primitives/empty-state'
 import { cn } from '@/lib/utils'
 
@@ -44,7 +45,7 @@ export function Explorer<T extends { category?: string }>({
   const [visibleCount, setVisibleCount] = useState(pageSize ?? items.length)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const categories = aggregateCategories(items)
+  const categories = countByCategory(items, (item) => item.category)
   // 分类 ≤1 时过滤器没有选择余地（技能页目前只有 workflow 一个分类），
   // 整条隐藏并让列表占满宽度，而不是给用户一个只能选「全部/那一个」的死控件
   const hasFilter = categories.length > 1

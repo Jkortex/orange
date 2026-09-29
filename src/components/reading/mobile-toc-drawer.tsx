@@ -4,7 +4,12 @@ import { useState } from 'react'
 import { List, X } from 'lucide-react'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
-import { useFloatingStackOffset } from '@/lib/floating-stack'
+import {
+  useFloatingStackOffset,
+  FLOATING_STACK_ANCHOR,
+  FLOATING_STACK_BUTTON,
+  FLOATING_STACK_TIP,
+} from '@/lib/floating-stack'
 import { IconButton } from '@/components/primitives/icon-button'
 
 /*
@@ -38,9 +43,9 @@ export function MobileTocDrawer({
       <IconButton
         label="文章目录"
         onClick={() => setIsOpen(true)}
-        wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-[bottom,transform,opacity] duration-200 ease-out animate-in fade-in-0 zoom-in-90 ${bottomClass}`}
-        buttonClassName="border border-border-strong bg-surface/85 backdrop-blur-md hover:border-primary/50 hover:bg-surface hover:text-primary"
-        tipClassName="bottom-full right-0 mb-2"
+        wrapperClassName={`${FLOATING_STACK_ANCHOR} inline-flex animate-in fade-in-0 zoom-in-90 ${bottomClass}`}
+        buttonClassName={FLOATING_STACK_BUTTON}
+        tipClassName={FLOATING_STACK_TIP}
       >
         <List className="size-4" aria-hidden="true" />
       </IconButton>

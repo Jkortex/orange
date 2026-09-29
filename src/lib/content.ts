@@ -4,6 +4,7 @@ import matter from 'gray-matter'
 import { z } from 'zod'
 // 相对导入：本文件也被 scripts/*.ts 以 node --experimental-strip-types 直接加载，那条路径不解析 @/ 别名
 import { compareText } from './format.ts'
+import { countByCategory, groupByCategory } from './categories.ts'
 
 /*
  * 内容层（AGENTS.md 内容与渲染纪律）：
@@ -68,18 +69,6 @@ export type CollectionEntry<T extends CollectionType> = {
   slug: string
   data: z.infer<(typeof collectionSchemas)[T]>
   body: string
-}
-
-export function isMusic(
-  entry: CollectionEntry<CollectionType>,
-): entry is CollectionEntry<'music'> {
-  return entry.collection === 'music'
-}
-
-export function isLife(
-  entry: CollectionEntry<CollectionType>,
-): entry is CollectionEntry<'life'> {
-  return entry.collection === 'life'
 }
 
 export type GetOptions = {
@@ -285,6 +274,24 @@ export type AdjacentResult = {
   next: AdjacentEntry | null
 }
 
+/** 集合按日期倒序，计算每个条目的相邻结果（next=更新，prev=更早）；keyOf 决定返回键 */
+function computeAdjacent<T extends CollectionType>(
+  list: CollectionEntry<T>[],
+  keyOf: (entry: CollectionEntry<T>) => string = (entry) => entry.slug,
+): Record<string, AdjacentResult> {
+  const adjacent: Record<string, AdjacentResult> = {}
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i]
+    const newer = i > 0 ? list[i - 1] : null
+    const older = i < list.length - 1 ? list[i + 1] : null
+    adjacent[keyOf(item)] = {
+      next: newer ? { slug: newer.slug, title: newer.data.title } : null,
+      prev: older ? { slug: older.slug, title: older.data.title } : null,
+    }
+  }
+  return adjacent
+}
+
 /** 获取指定条目在集合中的上一篇（更早）与下一篇（更新），集合按日期倒序 */
 export function getAdjacentEntries<T extends CollectionType>(
   type: T,
@@ -300,14 +307,7 @@ export function getAdjacentEntries<T extends CollectionType>(
   }
 
   const entries = getCollection(type, options)
-  const index = entries.findIndex((e) => e.slug === slug)
-  if (index === -1) return { prev: null, next: null }
-  const newer = index > 0 ? entries[index - 1] : null
-  const older = index < entries.length - 1 ? entries[index + 1] : null
-  return {
-    next: newer ? { slug: newer.slug, title: newer.data.title } : null,
-    prev: older ? { slug: older.slug, title: older.data.title } : null,
-  }
+  return computeAdjacent(entries)[slug] ?? { prev: null, next: null }
 }
 
 /** 全类型聚合，按日期倒序（归档共用） */
@@ -326,21 +326,6 @@ export function getAllEntries(options?: GetOptions): CollectionEntry<CollectionT
   return [...fileEntries, ...getSkillEntries(options)].sort(compareEntries)
 }
 
-/** 全类型聚合后截取最近 limit 条 */
-export function getRecentEntries(
-  limit: number,
-  options?: GetOptions,
-): CollectionEntry<CollectionType>[] {
-  if (!options?.contentDir && !options?.skipManifest) {
-    const manifest = loadManifestFromDisk()
-    if (manifest) {
-      return manifest.allEntries.slice(0, limit)
-    }
-  }
-
-  return getAllEntries(options).slice(0, limit)
-}
-
 export type CategorySummary = { name: string; count: number }
 
 /** 聚合全类型已用分类（构建时统计，无硬编码清单）；按名称排序保证输出稳定 */
@@ -352,15 +337,7 @@ export function getCategories(options?: GetOptions): CategorySummary[] {
     }
   }
 
-  const counts = new Map<string, number>()
-  for (const entry of getAllEntries(options)) {
-    const category = entry.data.category
-    if (!category) continue
-    counts.set(category, (counts.get(category) ?? 0) + 1)
-  }
-  return [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => compareText(a.name, b.name))
+  return countByCategory(getAllEntries(options), (entry) => entry.data.category)
 }
 
 /** 指定分类的全类型条目（日期倒序） */
@@ -569,33 +546,17 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
 
   const allEntries = getAllEntries(opts)
 
-  const counts = new Map<string, number>()
-  const entriesByCategory: Record<string, CollectionEntry<CollectionType>[]> = {}
-  for (const entry of allEntries) {
-    const category = entry.data.category
-    if (!category) continue
-    counts.set(category, (counts.get(category) ?? 0) + 1)
-    if (!entriesByCategory[category]) {
-      entriesByCategory[category] = []
-    }
-    entriesByCategory[category].push(entry)
-  }
-  const categories: CategorySummary[] = [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => compareText(a.name, b.name))
+  const { categories, entriesByCategory } = groupByCategory(
+    allEntries,
+    (entry) => entry.data.category,
+  )
 
   const adjacent: Record<string, AdjacentResult> = {}
   for (const type of Object.keys(collectionSchemas) as CollectionType[]) {
-    const list = collections[type] || []
-    for (let i = 0; i < list.length; i++) {
-      const item = list[i]
-      const newer = i > 0 ? list[i - 1] : null
-      const older = i < list.length - 1 ? list[i + 1] : null
-      adjacent[`${type}/${item.slug}`] = {
-        next: newer ? { slug: newer.slug, title: newer.data.title } : null,
-        prev: older ? { slug: older.slug, title: older.data.title } : null,
-      }
-    }
+    Object.assign(
+      adjacent,
+      computeAdjacent(collections[type] || [], (entry) => `${type}/${entry.slug}`),
+    )
   }
 
   const allTags: Record<string, string[]> = {}

@@ -1,7 +1,7 @@
 import { scrollToHeading } from '@/lib/scroll'
 import type { UnifiedSearchItem } from './types'
 
-export interface PageHeading {
+interface PageHeading {
   id: string
   title: string
   depth: number
@@ -50,7 +50,7 @@ export function filterOutlines(outlines: UnifiedSearchItem[], query: string): Un
   })
 }
 
-export function jumpToHeading(id: string) {
+function jumpToHeading(id: string) {
   if (!scrollToHeading(id, { block: 'center' })) return
   const target = document.getElementById(id)
   if (target) {

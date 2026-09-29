@@ -1,11 +1,11 @@
 import type { SearchScope } from './types'
 
-export interface ScopeChip {
+interface ScopeChip {
   id: SearchScope
   label: string
 }
 
-export const SCOPE_CHIPS: ScopeChip[] = [
+const SCOPE_CHIPS: ScopeChip[] = [
   { id: 'all', label: '全部' },
   { id: 'posts', label: '文章' },
   { id: 'skills', label: '技能' },

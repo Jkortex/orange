@@ -10,13 +10,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useFloatingStackOffset } from '@/lib/floating-stack'
+import {
+  useFloatingStackOffset,
+  FLOATING_STACK_ANCHOR,
+  FLOATING_STACK_BUTTON,
+  FLOATING_STACK_TIP,
+} from '@/lib/floating-stack'
 import { IconButton } from '@/components/primitives/icon-button'
-import { compareText } from '@/lib/format'
+import type { CategoryItem } from '@/lib/categories'
 
 /*
  * 分类过滤复用（posts-explorer / skills-explorer 共用，同属 listing 域）：
- * - aggregateCategories：由条目聚合分类与条数（码位排序，与服务端 getCategories 同序）
+ * - countByCategory（@/lib/categories）：由条目聚合分类与条数，与服务端 getCategories 共用同一实现
  * - filterPillClass：桌面端分类行 active/默认态
  * - CategoryFilter：移动端与桌面端两套控件
  *   · 移动端：右下角浮动筛选按钮 + 底部抽屉。
@@ -26,26 +31,12 @@ import { compareText } from '@/lib/format'
  *     品牌色胶囊并显示分类名，不点开也知道当前筛的是哪个。点开是底部抽屉，
  *     一次摊开全部分类，且是拇指可达区。
  *   · 桌面端（md 起）：吸顶纵向侧栏，计数右对齐成列。
- * - 浮动按钮与 BackToTop / MobileTocDrawer 共用同一条垂直基准轴线（right-4 sm:right-6）：
+ * - 浮动按钮与 BackToTop / MobileTocDrawer 共用同一条垂直基准轴线（right-4 sm:right-6 md:right-8）：
  *   叠在 BackToTop 出现位（bottom-6 / bottom-20）之上，播放条出现时整体再抬一层。
  *   档位切换带 bottom 过渡（同目录按钮）——刷新且已滚动时档位在水合后才纠正，
  *   有过渡才是平滑上浮而非 44px 瞬移。
  * 「全部」是默认虚拟分类，两端都在第一位。
  */
-
-export type CategoryItem = { name: string; count: number }
-
-/** 从条目集合聚合分类与条数（名称排序） */
-export function aggregateCategories<T extends { category?: string }>(items: T[]): CategoryItem[] {
-  const counts = new Map<string, number>()
-  for (const item of items) {
-    if (!item.category) continue
-    counts.set(item.category, (counts.get(item.category) ?? 0) + 1)
-  }
-  return [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => compareText(a.name, b.name))
-}
 
 /** 桌面端分类行样式（拉满侧栏宽度后改为行形状圆角，选中态靠可见边框表达，不填充） */
 export function filterPillClass(active: boolean) {
@@ -99,15 +90,14 @@ export function CategoryFilter({ categories, active, onSelect, navLabel, total }
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        wrapperClassName={`group fixed right-4 z-40 sm:right-6 md:right-8 md:hidden transition-[bottom,transform,opacity] duration-200 ease-out ${bottomClass}`}
+        wrapperClassName={`${FLOATING_STACK_ANCHOR} md:hidden ${bottomClass}`}
         buttonClassName={
-          'border border-border-strong bg-surface/85 backdrop-blur-md ' +
-          'hover:border-primary/50 hover:bg-surface hover:text-primary' +
+          FLOATING_STACK_BUTTON +
           (active
             ? ' w-auto gap-1.5 border-0 bg-primary pl-3 pr-2.5 font-medium text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
             : '')
         }
-        tipClassName="bottom-full right-0 mb-2"
+        tipClassName={FLOATING_STACK_TIP}
       >
         {active && <span className="max-w-[6rem] truncate text-sm">{active}</span>}
         <SlidersHorizontal className="size-4 shrink-0" aria-hidden />
