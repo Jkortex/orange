@@ -443,6 +443,27 @@ html.dark code[data-theme] span[style*='--shiki'] {
   border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
 }
+
+/*
+ * 内联 SVG（mermaid 构建产物）自适应宽度：
+ * 根 <svg> 的 width/height 是**呈现属性**，优先级低于任何作者 CSS，故本规则必胜，
+ * 不必去动构建期生成的 SVG 字符串。
+ *
+ * 为什么必须写在 @layer 之外：SVG 内部带一段 <style>，里面是裸的 `svg { --_*: ... }`
+ * 与 `text { font-family: ... }` —— 那是**未分层**的作者样式，按 Cascade 无条件优先于
+ * 任何 @layer 里的规则（与选择器权重无关）。要稳赢就得同样未分层 + 更高权重。
+ *
+ * height: auto 让高度按 viewBox 的内禀宽高比反算；display: block 消掉行内替换元素的基线空隙。
+ * 注意：容器不能是 flex/grid 子项 —— 那种情况下 min-width: auto 会取内容宽把图撑住不缩，
+ * max-width 也救不回来（这正是窄屏要横向滚动的根因），所以画布用块级。
+ */
+.mermaid-canvas > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
 .prose figure {
   margin: 2rem 0;
 }

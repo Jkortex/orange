@@ -11,9 +11,11 @@ import { remarkCodeDemo } from '@/lib/remark-code-demo'
 import { remarkDirectiveFallback } from '@/lib/remark-directive-fallback'
 import { rehypeKeepCssVars } from '@/lib/rehype-css-vars'
 import { rehypeHeadingIds } from '@/lib/rehype-heading-ids'
+import { cn } from '@/lib/utils'
 import { CodeBlock } from '@/components/reading/code-block'
 import { CodeDemo, type CodeDemoProps } from '@/components/reading/code-demo'
 import { MermaidDiagram, type MermaidDiagramProps } from '@/components/reading/mermaid-diagram'
+import { MediaZoom } from '@/components/reading/media-zoom'
 import { HeadingWithAnchor } from '@/components/reading/heading-anchor'
 
 /*
@@ -82,6 +84,40 @@ const components = {
     <div className="overflow-x-auto">
       <table {...rest} />
     </div>
+  ),
+  /*
+   * 正文图片套一层 MediaZoom 触发按钮，点击/回车放大查看。
+   *
+   * 几个细节：
+   * - `node` 必须解构掉：它是 react-markdown 注入的 hast 节点，透传会把整个 AST 塞进 DOM 属性
+   * - `w-full` 是刻意的：内容图（800 宽的架构示意图等）本就该占满正文栏；而这些 SVG 根标签
+   *   写的是 `width="100%"`，没有内禀宽度，只能靠外部给定宽度
+   * - `![](...)` 渲染为 `<p><button><img/></button></p>`，button 属于措辞内容，套在 p 里合法
+   */
+  img: ({
+    node: _node,
+    src,
+    alt,
+    loading,
+    decoding,
+    className,
+    ...rest
+  }: ComponentProps<'img'> & { node?: unknown }) => (
+    <MediaZoom
+      source={{ kind: 'image', src: String(src), alt: alt || '图片' }}
+      label={`查看大图：${alt || '图片'}`}
+      hint="点击查看大图"
+      className="my-6 block w-full"
+    >
+      <img
+        src={src}
+        alt={alt || ''}
+        loading={loading ?? 'lazy'}
+        decoding={decoding ?? 'async'}
+        className={cn('block h-auto w-full', className)}
+        {...rest}
+      />
+    </MediaZoom>
   ),
   'code-demo': ({ node: _node, ...rest }: CodeDemoProps & { node?: unknown }) => (
     <CodeDemo {...rest} />

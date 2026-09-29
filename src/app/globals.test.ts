@@ -237,6 +237,21 @@ describe('配方收敛守卫', () => {
 })
 
 /*
+ * 内联 SVG（mermaid 构建产物）自适应宽度契约：
+ * 根 <svg> 带写死的 width/height 呈现属性，窄屏要能收缩只能靠 CSS 压过去。
+ * 该规则必须留在 @layer 之外 —— SVG 内部 <style> 里的裸 `svg{}` 是未分层作者样式，
+ * 按 Cascade 无条件优先于任何 @layer 规则，分层写就会输。
+ */
+describe('正文媒体契约', () => {
+  it('.mermaid-canvas > svg 压过 SVG 自带的写死宽高（未分层，故不能用 ruleBody）', () => {
+    const body = css.match(/\.mermaid-canvas\s*>\s*svg\s*\{([^}]*)\}/)?.[1]
+    expect(body, '缺少 .mermaid-canvas > svg 规则').toBeDefined()
+    expect(body).toContain('max-width: 100%')
+    expect(body).toContain('height: auto')
+  })
+})
+
+/*
  * 动效时长分层（四档，各有分工，不是随手取的数）：
  *   100ms — 只给 theme-toggle 的图标换挡：View Transition 的圆形扩散在 26% 处盖住图标，
  *           动画必须在那之前收尾，故不能跟大部队用 150ms（这是唯一例外，别扩散）

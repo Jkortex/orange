@@ -3,10 +3,11 @@ import { cn } from '@/lib/utils'
 import { Tip } from '@/components/primitives/tip'
 
 /*
- * 图标按钮（player-bar / back-to-top / theme-toggle / search-dialog / album-track-list / mobile-toc-drawer 共用）：
+ * 图标按钮（player-bar / back-to-top / theme-toggle / search-dialog / album-track-list / media-zoom 共用）：
  * - DOM 骨架统一为 span.group > button[aria-label] + Tip，语义与悬停提示一致
- * - 视觉契约收敛于此：圆形、36px 触摸目标（AGENTS.md 图标化标准）、hover 提亮、按下微缩；
- *   调用方只传「变体差异」（如 back-to-top 的磨砂描边态），尺寸经 size 指定
+ * - 视觉契约收敛于此：圆形、36px 触摸目标（AGENTS.md 图标化标准）、hover 提亮、按下微缩、
+ *   禁用态（降透明度 + 不吃指针事件，顺带让 Tip 不再弹出）；调用方只传「变体差异」
+ *   （如 back-to-top 的磨砂描边态），尺寸经 size 指定
  * - 提示方位仍由调用方传入（上方/下方/居中等各异）
  *
  * size="sm"（32px）是唯一低于 36px 的档，只准用在输入框内部的附属按钮上：
@@ -52,7 +53,7 @@ const HEIGHT_CLASS: Record<IconButtonSize, string> = {
 }
 
 const BASE_CLASS =
-  'flex items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95'
+  'flex items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-40'
 
 export function IconButton({
   label,

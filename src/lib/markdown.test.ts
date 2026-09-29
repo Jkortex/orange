@@ -144,6 +144,43 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('微服务')
     expect(html).toContain('var(--primary)')
   })
+
+  /*
+   * 正文图片外包一层「放大查看」触发按钮：按钮的 aria-label 是唯一无障碍名（内层 alt 不会被读两遍），
+   * aria-haspopup="dialog" 让辅助技术预告会弹出对话框。
+   */
+  it('正文图片包在放大查看触发按钮里，带无障碍名与 dialog 预告', async () => {
+    const html = await renderToHtml('![云原生架构示意图](/media/architecture/system-architecture.svg)')
+
+    expect(html).toContain('aria-label="查看大图：云原生架构示意图"')
+    expect(html).toContain('aria-haspopup="dialog"')
+    expect(html).toContain('src="/media/architecture/system-architecture.svg"')
+    expect(html).toContain('alt="云原生架构示意图"')
+    // 触发按钮必须是真按钮，否则键盘无法打开
+    expect(html).toContain('<button type="button"')
+  })
+
+  it('正文图片默认懒加载与异步解码', async () => {
+    const html = await renderToHtml('![图](/a.png)')
+
+    expect(html).toContain('loading="lazy"')
+    expect(html).toContain('decoding="async"')
+  })
+
+  it('图片缺少 alt 时回落到通用文案，且 img 不残留 undefined', async () => {
+    const html = await renderToHtml('![](/a.png)')
+
+    expect(html).toContain('aria-label="查看大图：图片"')
+    expect(html).toContain('alt=""')
+    expect(html).not.toContain('undefined')
+  })
+
+  it('正文图片不下传 react-markdown 的 hast 节点（不出现 node 属性）', async () => {
+    const html = await renderToHtml('![图](/a.png)')
+
+    expect(html).not.toContain('node=')
+    expect(html).not.toContain('[object Object]')
+  })
 })
 
 describe('MarkdownRenderer 异常渲染', () => {

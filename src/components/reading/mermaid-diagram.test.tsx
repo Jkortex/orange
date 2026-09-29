@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, fireEvent } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, fireEvent, within } from '@testing-library/react'
 import { MermaidDiagram } from './mermaid-diagram'
+import { stubBrowserApis, unstubBrowserApis } from '@/components/test-utils/stub-browser-apis'
+
+beforeEach(() => {
+  // 放大查看用的是 Radix Dialog，需要 ResizeObserver
+  stubBrowserApis()
+})
 
 afterEach(() => {
   cleanup()
+  unstubBrowserApis()
 })
 
 describe('MermaidDiagram 正常渲染与交互', () => {
@@ -18,6 +25,52 @@ describe('MermaidDiagram 正常渲染与交互', () => {
     expect(screen.getByText('系统架构图')).toBeTruthy()
     expect(screen.getByText('Mermaid')).toBeTruthy()
     expect(screen.getByTestId('sample-svg')).toBeTruthy()
+  })
+
+  /*
+   * 画布类名是 CSS 契约：globals.css 的 .mermaid-canvas > svg 负责把带写死 width/height
+   * 的 SVG 拉回自适应宽度。类名一改，窄屏就会退回「必须横向滚动」。
+   * 同时必须是块级 —— flex 子项的 min-width:auto 会撑住不缩。
+   */
+  it('画布带 mermaid-canvas 契约类，且不再是 flex / 横向滚动容器', () => {
+    const { container } = render(<MermaidDiagram svg={sampleSvg} code={sampleCode} />)
+
+    const canvas = container.querySelector('.mermaid-canvas')
+    expect(canvas).not.toBeNull()
+    expect(canvas?.className).toContain('block')
+    expect(canvas?.className).not.toContain('flex')
+    expect(canvas?.className).not.toContain('overflow-x-auto')
+  })
+
+  /*
+   * 图表视图的画布外要包一层「放大查看」：窄屏自适应后细节仍难辨，放大是刚需。
+   * 触发按钮的 aria-label 是唯一无障碍名，aria-haspopup 预告会弹对话框。
+   */
+  it('图表视图把画布包进「放大查看」触发按钮，并带悬停角标', () => {
+    render(<MermaidDiagram svg={sampleSvg} code={sampleCode} title="系统架构图" />)
+
+    const trigger = screen.getByRole('button', { name: '放大查看：系统架构图' })
+    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
+    expect(screen.getByText('点击放大')).toBeTruthy()
+    // 画布必须仍在触发按钮内部，否则点图打不开浮层
+    expect(trigger.querySelector('.mermaid-canvas')).not.toBeNull()
+  })
+
+  it('点击画布打开浮层，浮层内是同一张图表', () => {
+    render(<MermaidDiagram svg={sampleSvg} code={sampleCode} title="系统架构图" />)
+
+    fireEvent.click(screen.getByRole('button', { name: '放大查看：系统架构图' }))
+
+    const dialog = screen.getByRole('dialog', { name: /系统架构图（放大查看）/ })
+    expect(within(dialog).getByTestId('sample-svg')).toBeTruthy()
+  })
+
+  it('源码视图不渲染放大触发按钮（避免「点击放大」的假承诺）', () => {
+    render(<MermaidDiagram svg={sampleSvg} code={sampleCode} title="系统架构图" />)
+
+    fireEvent.click(screen.getByRole('button', { name: '查看 Mermaid 源码' }))
+
+    expect(screen.queryByRole('button', { name: /^放大查看/ })).toBeNull()
   })
 
   it('不渲染 macOS 三色指示点（硬编码颜色已清除）', () => {

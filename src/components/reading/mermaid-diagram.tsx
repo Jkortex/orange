@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { Check, Copy, Code2, Eye } from 'lucide-react'
 import { useCopyText } from '@/components/primitives/use-copy-text'
+import { MermaidCanvas } from '@/components/reading/mermaid-canvas'
+import { MediaZoom } from '@/components/reading/media-zoom'
 
 export interface MermaidDiagramProps {
   svg?: string
@@ -79,10 +81,28 @@ export function MermaidDiagram({
           <code>{code}</code>
         </pre>
       ) : svg ? (
-        <div
-          className="flex justify-center items-center overflow-x-auto p-6 md:p-8"
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+        /*
+         * 画布外包一层放大查看触发按钮：图表窄屏自适应后细节仍难辨，放大是刚需。
+         * 只在图表视图套 —— 源码视图是一段 <pre>，不该出现「点击放大」的假承诺。
+         *
+         * 画布必须是**块级**、且不能带 overflow-x-auto：
+         * - 生成的 SVG 根标签带写死的 width/height，而 flex 子项的 min-width:auto 会取内容宽
+         *   把它撑住不缩，max-width:100% 也救不回来 —— 窄屏只能横向滚，这正是要修的病根
+         * - 自适应生效后本就不会溢出，留着 overflow-x-auto 反而可能在触发按钮里嵌进一个
+         *   被 a11y-scrollable 注入 tabindex 的可聚焦滚动区，语义更糟
+         * 居中交给 globals.css 的 .mermaid-canvas > svg { margin-inline: auto }
+         *
+         * 画布是 MermaidCanvas 而非裸 span：它还会在挂载后量一次 bbox、把上游偏心约 1.5%
+         * 的 viewBox 收紧回中心（见 lib/mermaid-viewbox.ts），否则正文与浮层里的图都偏右
+         */
+        <MediaZoom
+          source={{ kind: 'svg', svg, alt: title }}
+          label={`放大查看：${title}`}
+          hint="点击放大"
+          className="block w-full"
+        >
+          <MermaidCanvas svg={svg} className="mermaid-canvas block p-6 md:p-8" />
+        </MediaZoom>
       ) : null}
     </div>
   )
