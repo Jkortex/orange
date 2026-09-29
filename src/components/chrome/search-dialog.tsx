@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, X, Loader2 } from 'lucide-react'
-import { OPEN_SEARCH_EVENT, type OpenSearchEventDetail } from '@/lib/search-events'
 import { loadPagefind, type PagefindResultItem } from '@/lib/pagefind'
 import type { CollectionType } from '@/lib/content'
 import { IconButton } from '@/components/primitives/icon-button'
@@ -27,6 +26,7 @@ import {
   scanCurrentHeadings,
   getOutlineItems,
   filterOutlines,
+  stepScope,
 } from './search'
 
 const tooltipPosition = 'left-1/2 top-full mt-1.5 -translate-x-1/2'
@@ -53,6 +53,10 @@ export function SearchDialog() {
   const inputRef = useRef<HTMLInputElement>(null)
   const seqRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 弹窗是否由触发按钮打开。仅此时关闭后才把焦点还给按钮：快捷键 / 外部事件唤起时
+  // 焦点从未落在按钮上，还回去会让图标顶着焦点环与「搜索」提示（:focus-visible 命中），
+  // 看起来像没关掉
+  const openedViaTriggerRef = useRef(false)
 
   const navigate = useCallback(
     (url: string) => {
@@ -72,6 +76,7 @@ export function SearchDialog() {
     function onKey(e: KeyboardEvent) {
       if ((e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'p') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
+        openedViaTriggerRef.current = false
         setOpen((v) => !v)
       }
     }
@@ -82,29 +87,12 @@ export function SearchDialog() {
     }
   }, [])
 
-  // 页面内的「检索」入口通过一个窄事件接口唤起全局搜索，避免把整页内容做成客户端组件。
-  useEffect(() => {
-    function onOpenSearch(event: Event) {
-      const detail = (event as CustomEvent<OpenSearchEventDetail>).detail
-      if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = null
-      seqRef.current += 1
-      setLoading(false)
-      setQuery('')
-      setPagefindItems(null)
-      setSelectedIndex(-1)
-      setError(null)
-      setActiveScope(detail?.scope ?? 'all')
-      setOpen(true)
-    }
-
-    window.addEventListener(OPEN_SEARCH_EVENT, onOpenSearch)
-    return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpenSearch)
-  }, [])
-
-  // 2. 打开弹窗时初始化：扫描本文大纲
+  // 2. 打开弹窗时初始化：重置范围与本文大纲
   useEffect(() => {
     if (open) {
+      // 每次打开都回到「全部」：作用域只服务于本次检索，不跨次残留
+      // （否则用范围 chips 收窄过一次后，下次 Ctrl+K 会静默地只搜那个范围）
+      setActiveScope('all')
       setTimeout(() => inputRef.current?.focus(), 0)
       setHeadings(scanCurrentHeadings())
     } else {
@@ -286,6 +274,9 @@ export function SearchDialog() {
           aria-label="搜索"
           aria-keyshortcuts="Control+K Meta+K"
           className={iconBtnClass}
+          onClick={() => {
+            openedViaTriggerRef.current = true
+          }}
         >
           <Search className="size-5" aria-hidden />
           <Tip className={tooltipPosition}>搜索</Tip>
@@ -301,7 +292,26 @@ export function SearchDialog() {
           e.preventDefault()
           inputRef.current?.focus()
         }}
-        className="top-20 sm:max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border-subtle p-0 shadow-overlay bg-background"
+        onCloseAutoFocus={(e) => {
+          // 仅当弹窗由触发按钮打开时才把焦点还给按钮（无障碍惯例：还给调用方）。
+          // 快捷键 / 外部事件唤起时按钮从未获得过焦点，还回去只会留下焦点环与提示
+          if (!openedViaTriggerRef.current) e.preventDefault()
+        }}
+        onKeyDown={(e) => {
+          /*
+           * Shift+←/→ 切换搜索范围：不要求先把焦点移到胶囊组，输入框里也能用
+           * （命令面板惯例）。代价是搜索框内失去 Shift+方向键选词——检索词很短，
+           * 且方向键本身仍能移动光标，可接受。
+           */
+          if (!e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return
+          // 输入法组合中的方向键属于候选词导航，不能抢
+          if (e.nativeEvent.isComposing) return
+          if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+
+          e.preventDefault()
+          handleSelectScope(stepScope(activeScope, e.key === 'ArrowRight' ? 1 : -1))
+        }}
+        className="top-[calc(var(--header-height)+1rem)] sm:max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border-subtle p-0 shadow-overlay bg-background"
       >
         <DialogTitle className="sr-only">站内搜索</DialogTitle>
 
@@ -384,6 +394,7 @@ export function SearchDialog() {
             <span>↑↓ 导航</span>
             <span>↵ 打开</span>
             <span>Tab 移动焦点</span>
+            <span>⇧←→ 切换范围</span>
           </div>
           <span>ESC 关闭</span>
         </div>

@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 import { SearchDialog } from '@/components/chrome/search-dialog'
-import { OPEN_SEARCH_EVENT } from '@/lib/search-events'
 import { loadPagefind, type PagefindApi } from '@/lib/pagefind'
 
 vi.mock('@/lib/pagefind', () => ({ loadPagefind: vi.fn() }))
@@ -61,17 +60,54 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(dialog.className.split(' ')).not.toContain('max-w-xl')
   })
 
-  it('响应生活页的打开事件并切换到生活范围', () => {
+  it('顶部锚定偏移绑 --header-height，不用魔数（与分类侧栏吸顶同源）', () => {
     render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
-    act(() => {
-      window.dispatchEvent(
-        new CustomEvent(OPEN_SEARCH_EVENT, { detail: { scope: 'life' } }),
-      )
-    })
+    const dialog = screen.getByRole('dialog', { name: '站内搜索' })
+    expect(dialog.className).toContain('top-[calc(var(--header-height)+1rem)]')
+    expect(dialog.className.split(' ')).not.toContain('top-20')
+  })
 
-    expect(screen.getByRole('dialog', { name: '站内搜索' })).toBeTruthy()
+  it('每次打开都回到「全部」，作用域不跨次残留', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    // 收窄到「生活」
+    fireEvent.click(screen.getByRole('button', { name: '生活' }))
     expect(screen.getByRole('button', { name: '生活' }).getAttribute('aria-pressed')).toBe('true')
+
+    // 关闭后重开：必须回到「全部」，否则顶栏全局搜索会静默地只搜上次的范围
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    expect(screen.getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: '生活' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('快捷键唤起后关闭，焦点不还给搜索按钮（避免图标残留焦点环与提示）', async () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    expect(screen.getByRole('dialog', { name: '站内搜索' })).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: '搜索' }))
+  })
+
+  it('由触发按钮打开时，关闭后焦点归还按钮（无障碍惯例）', async () => {
+    render(<SearchDialog />)
+    const trigger = screen.getByRole('button', { name: '搜索' })
+
+    fireEvent.click(trigger)
+    expect(screen.getByRole('dialog', { name: '站内搜索' })).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    expect(document.activeElement).toBe(trigger)
   })
 
   it('展示直观的分类过滤胶囊（全部 / 文章 / 技能 / 生活 / 音乐）', () => {
@@ -92,6 +128,95 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     const group = screen.getByRole('group', { name: '搜索范围过滤' })
     expect(within(group).getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('true')
     expect(within(group).getByRole('button', { name: '文章' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('范围胶囊整组只占一个 Tab 停靠点（roving tabindex 停在当前范围上）', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const group = screen.getByRole('group', { name: '搜索范围过滤' })
+    const stops = () => within(group).getAllByRole('button').map((b) => b.tabIndex)
+
+    expect(stops()).toEqual([0, -1, -1, -1, -1])
+
+    fireEvent.click(within(group).getByRole('button', { name: '生活' }))
+    expect(stops()).toEqual([-1, -1, -1, 0, -1])
+  })
+
+  it('组内 ←/→/Home/End 移动焦点并直接切换范围，首尾回绕', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const group = screen.getByRole('group', { name: '搜索范围过滤' })
+    const chip = (name: string) => within(group).getByRole('button', { name })
+    const pressed = (name: string) => chip(name).getAttribute('aria-pressed')
+
+    fireEvent.keyDown(chip('全部'), { key: 'ArrowRight' })
+    expect(pressed('文章')).toBe('true')
+    expect(document.activeElement).toBe(chip('文章'))
+
+    fireEvent.keyDown(chip('文章'), { key: 'End' })
+    expect(pressed('音乐')).toBe('true')
+    expect(document.activeElement).toBe(chip('音乐'))
+
+    // 末尾再按 →：回绕到「全部」
+    fireEvent.keyDown(chip('音乐'), { key: 'ArrowRight' })
+    expect(pressed('全部')).toBe('true')
+
+    fireEvent.keyDown(chip('全部'), { key: 'ArrowLeft' })
+    expect(pressed('音乐')).toBe('true')
+
+    fireEvent.keyDown(chip('音乐'), { key: 'Home' })
+    expect(pressed('全部')).toBe('true')
+  })
+
+  it('Shift+←/→ 切换范围：焦点在输入框里也生效，首尾回绕', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByLabelText('搜索关键词')
+    const pressed = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed')
+
+    fireEvent.keyDown(input, { key: 'ArrowRight', shiftKey: true })
+    expect(pressed('文章')).toBe('true')
+
+    for (let i = 0; i < 4; i += 1) {
+      fireEvent.keyDown(input, { key: 'ArrowRight', shiftKey: true })
+    }
+    expect(pressed('全部')).toBe('true')
+
+    fireEvent.keyDown(input, { key: 'ArrowLeft', shiftKey: true })
+    expect(pressed('音乐')).toBe('true')
+  })
+
+  it('Shift+←/→ 走的是同一条范围切换路径：带查询词时用新范围重新检索', async () => {
+    const search = vi.fn().mockResolvedValue({ results: [] })
+    mockLoad.mockResolvedValue(makeApi(search))
+
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    const input = screen.getByLabelText('搜索关键词')
+    fireEvent.change(input, { target: { value: 'tea' } })
+    await waitFor(() => expect(search).toHaveBeenCalledWith('tea'))
+
+    fireEvent.keyDown(input, { key: 'ArrowRight', shiftKey: true })
+
+    await waitFor(() => {
+      expect(search).toHaveBeenCalledWith('tea', { filters: { type: ['posts'] } })
+    })
+  })
+
+  it('输入法组合中的 Shift+←/→ 不抢键，范围保持不变', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    fireEvent.keyDown(screen.getByLabelText('搜索关键词'), {
+      key: 'ArrowRight',
+      shiftKey: true,
+      isComposing: true,
+    })
+
+    expect(screen.getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('true')
   })
 
   /*
@@ -123,6 +248,7 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     const bar = screen.getByText('ESC 关闭').closest('div')
     expect(bar?.className).toContain('hidden')
     expect(bar?.className).toContain('sm:flex')
+    expect(screen.getByText('⇧←→ 切换范围')).toBeTruthy()
   })
 
   it('输入关键词全文检索：渲染文章结果分组与命中高亮', async () => {
