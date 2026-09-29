@@ -20,8 +20,9 @@ export type PostItem = {
 const PAGE_SIZE = 15
 
 /*
- * 行结构：移动端只有标题（日期独占一列会把标题挤成一条窄带，sm 起才出现），
- * 标题最多两行截断而不是单行省略。
+ * 行结构：标题在左（占据左边缘，主扫描目标），日期作为尾部元信息右对齐（sm 起出现）；
+ * 移动端只留标题（日期独占一列会把标题挤成一条窄带）。标题最多两行截断而不是单行省略。
+ * 日期不设固定宽度：曾用 w-20，等宽 10 字符在 16px 下约 96px，会在连字符处折断换行。
  */
 const POST_ROW_CLASS = 'list-row group flex items-center gap-3'
 
@@ -38,18 +39,18 @@ export function PostsExplorer({ posts }: { posts: PostItem[] }) {
       allShownText={(total) => `已显示全部 ${total} 篇文章`}
       renderItem={(post) => (
         <>
-          <time
-            dateTime={post.date}
-            className="hidden w-20 shrink-0 font-mono tabular-nums text-muted-foreground sm:block"
-          >
-            {formatDateISO(post.date)}
-          </time>
           <Link
             href={`/posts/${post.slug}`}
             className="type-item line-clamp-2 min-w-0 flex-1 transition-colors group-hover:text-primary"
           >
             {post.title}
           </Link>
+          <time
+            dateTime={post.date}
+            className="hidden shrink-0 whitespace-nowrap font-mono tabular-nums text-muted-foreground sm:block"
+          >
+            {formatDateISO(post.date)}
+          </time>
         </>
       )}
     />

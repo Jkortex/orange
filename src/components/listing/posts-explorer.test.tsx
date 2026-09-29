@@ -100,6 +100,27 @@ describe('PostsExplorer 移动端行布局', () => {
   })
 })
 
+/*
+ * 行结构（用户反馈：PC 上日期在标题前换行）：
+ * 标题占据左边缘（主扫描目标），日期作为尾部元信息右对齐，且不设固定宽度
+ * ——曾用 w-20(80px)，等宽 10 字符在 16px 下约 96px，会在连字符处折断。
+ */
+describe('PostsExplorer 行结构', () => {
+  it('日期在标题之后，且不占左侧固定列', () => {
+    render(<PostsExplorer posts={posts} />)
+
+    const link = screen.getByRole('link', { name: 'CSS Grid 指南' })
+    const time = screen.getByText('2026-09-01')
+    const row = link.parentElement as HTMLElement
+
+    expect(Array.from(row.children).indexOf(time)).toBeGreaterThan(
+      Array.from(row.children).indexOf(link),
+    )
+    expect(time.className).not.toContain('w-20')
+    expect(time.className).toContain('whitespace-nowrap')
+  })
+})
+
 describe('PostsExplorer 异常渲染', () => {
   it('空列表：显示空态提示；无分类可筛，过滤器整条隐藏', () => {
     render(<PostsExplorer posts={[]} />)
