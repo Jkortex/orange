@@ -56,6 +56,18 @@ describe('EntryView 文首目录', () => {
     // 正文区域包含 mx-auto，确保在非 xl 单列大屏下与上方元信息完全居中对齐
     expect(html).toMatch(/<article[^>]*class="[^"]*mx-auto[^"]*"/)
   })
+
+  /*
+   * 折叠目录与上方分割线的间距（用户反馈的真实观感问题）：
+   * 头部下方的收口分割线是 h-px + bg-border-subtle，卡片上边框同为 --border-subtle 的 1px，
+   * 两者贴在一起会连成一条加粗线，圆角两端还会咬出缺口。故折叠目录必须自带 mt-*。
+   */
+  it('移动端折叠目录与上方分割线留有间距，不贴线', async () => {
+    const html = await renderToHtml(makeEntry('## 一\n\n## 二\n\n## 三\n\n正文'))
+
+    const detailsClass = html.match(/<details[^>]*class="([^"]*)"/)?.[1] ?? ''
+    expect(detailsClass, '折叠目录须有上外边距，否则卡片顶边贴着分割线').toMatch(/(^|\s)mt-/)
+  })
 })
 
 describe('EntryView 异常渲染', () => {

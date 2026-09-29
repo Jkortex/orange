@@ -99,9 +99,11 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
         />
         <div aria-hidden="true" className="mt-6 h-px bg-border-subtle" />
 
-        {/* 窄屏/笔记本下正文前轻量折叠式目录 (< xl) */}
+        {/* 窄屏/笔记本下正文前轻量折叠式目录 (< xl)。
+            必须自带 mt-6：上面那条分割线是「头部到此为止」的收口，卡片若贴上去，
+            两者同为 --border-subtle 的 1px 线会连成一条加粗线，圆角两端还会咬出缺口 */}
         {hasToc && (
-          <details className="surface-card group mb-6 overflow-hidden xl:hidden">
+          <details className="surface-card group mt-6 mb-6 overflow-hidden xl:hidden">
             <summary className="type-meta cursor-pointer list-none px-4 py-3 font-medium text-foreground select-none transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between">
                 文章目录 ({headings.length})
