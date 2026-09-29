@@ -235,3 +235,42 @@ describe('配方收敛守卫', () => {
     )
   })
 })
+
+/*
+ * 动效时长分层（四档，各有分工，不是随手取的数）：
+ *   100ms — 只给 theme-toggle 的图标换挡：View Transition 的圆形扩散在 26% 处盖住图标，
+ *           动画必须在那之前收尾，故不能跟大部队用 150ms（这是唯一例外，别扩散）
+ *   150ms — 微交互：hover 变色、图标位移、按下反馈
+ *   200ms — 浮层与局部展开：dialog / sheet / 复制按钮淡入 / 折叠区高度
+ *   300ms — 页面级入场：整页 fade-in、播放条滑入
+ * 禁止即兴新增第五档（如 duration-500）：节奏分层一旦失守，观感就不再是一个整体。
+ */
+const ALLOWED_DURATIONS = [100, 150, 200, 300]
+
+describe('动效时长分层', () => {
+  function durationsIn(source: string): number[] {
+    return [...source.matchAll(/\bduration-(\d+)\b/g)].map(([, n]) => Number(n))
+  }
+
+  it('只使用 100 / 150 / 200 / 300 四档', () => {
+    const offenders: string[] = []
+    for (const file of sourceFiles) {
+      for (const value of durationsIn(readFileSync(file, 'utf8'))) {
+        if (!ALLOWED_DURATIONS.includes(value)) {
+          offenders.push(`${file.slice(SRC.length)} → duration-${value}`)
+        }
+      }
+    }
+    expect(offenders, `时长必须落在四档内：${offenders.join(', ')}`).toEqual([])
+  })
+
+  it('100ms 是 View Transition 专属例外，只许出现在 theme-toggle', () => {
+    const offenders = sourceFiles.filter((file) =>
+      durationsIn(readFileSync(file, 'utf8')).includes(100),
+    )
+    expect(
+      offenders.map((file) => file.slice(SRC.length)),
+      '100ms 只对齐 VT 扩散节奏，别的地方请用 150ms',
+    ).toEqual(['/components/chrome/theme-toggle.tsx'])
+  })
+})

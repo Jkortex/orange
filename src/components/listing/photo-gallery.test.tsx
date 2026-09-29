@@ -18,10 +18,14 @@ describe('PhotoGallery 空数据', () => {
 })
 
 describe('PhotoGallery 单图', () => {
-  it('prose 变体：整宽大图 + 悬停放大提示', () => {
+  /*
+   * 单图必须预留高度：曾经只有 max-h-[30rem]，加载前盒子高 0，图到达时整段正文下移。
+   * 16/10 在 prose 列宽上限（max-w-3xl = 48rem）下正好等于原来的 30rem，桌面观感不变。
+   */
+  it('prose 变体：整宽大图按固定比例预留高度 + 悬停放大提示', () => {
     const { container } = render(<PhotoGallery photos={[photos[0]]} alt="雨天" />)
 
-    expect(container.querySelector('.max-h-\\[30rem\\]')).toBeTruthy()
+    expect(container.querySelector('.aspect-16\\/10')).toBeTruthy()
     expect(screen.getByText('点击查看大图')).toBeTruthy()
   })
 
@@ -71,7 +75,7 @@ describe('PhotoGallery 变体差异', () => {
     )
 
     expect(container.querySelector('.max-w-md')).toBeTruthy()
-    expect(container.querySelector('.max-h-\\[30rem\\]')).toBeNull()
+    expect(container.querySelector('.aspect-16\\/10')).toBeNull()
     expect(screen.queryByText('点击查看大图')).toBeNull()
   })
 

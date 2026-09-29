@@ -18,6 +18,18 @@ const THEMES = [
   { id: 'catppuccin', label: 'Catppuccin' },
 ]
 
+/*
+ * 触发器上的主题名走 CSS（按 html 的 data-theme 属性切换），不走 state。
+ * 原因：data-theme 由 head 里的内联脚本在首帧前写好，而 state 要等 effect 才读到，
+ * 于是选了 Catppuccin 的人每次加载都会先看到「默认」再跳变。
+ * 类名必须字面写在这里 —— Tailwind 只扫描源码里的字面类名，
+ * `[[data-theme='${id}']_&]` 这种拼接不会生成任何规则，静默失效。
+ */
+const THEME_LABEL_CLASS: Record<string, string> = {
+  default: "[[data-theme='default']_&]:inline",
+  catppuccin: "[[data-theme='catppuccin']_&]:inline",
+}
+
 export function ThemeSelect({ className = '' }: { className?: string } = {}) {
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState('default')
@@ -40,8 +52,6 @@ export function ThemeSelect({ className = '' }: { className?: string } = {}) {
     setOpen(false)
   }
 
-  const current = THEMES.find(({ id }) => id === theme) ?? THEMES[0]
-
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenuTrigger asChild>
@@ -50,7 +60,12 @@ export function ThemeSelect({ className = '' }: { className?: string } = {}) {
           aria-label="选择主题"
           className={`type-meta flex items-center gap-1 rounded-full border border-border-subtle bg-surface px-3 py-1.5 font-medium text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:text-foreground ${className}`}
         >
-          {current.label}
+          {/* 两个主题名都在 DOM 里，由 data-theme 决定显示哪个：首帧就是对的，不经过 state */}
+          {THEMES.map(({ id, label }) => (
+            <span key={id} data-theme-label={id} className={`hidden ${THEME_LABEL_CLASS[id] ?? ''}`}>
+              {label}
+            </span>
+          ))}
           <ChevronDown className="size-3.5" aria-hidden />
         </button>
       </DropdownMenuTrigger>

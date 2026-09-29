@@ -25,6 +25,20 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('<table>')
   })
 
+  /*
+   * 宽表在窄屏会被裁掉：表格自身 overflow: hidden（为圆角），body 又是 overflow-x: clip，
+   * 触屏无从滚动。表格必须套一层 overflow-x-auto 容器，而这个 class 正是
+   * a11y-scrollable 用来补 tabindex 的选择器。
+   */
+  it('表格套横向滚动容器，窄屏不会被裁且可键盘聚焦', async () => {
+    const html = await renderToHtml(
+      '| 一 | 二 | 三 | 四 | 五 |\n| - | - | - | - | - |\n| 1 | 2 | 3 | 4 | 5 |',
+    )
+
+    expect(html).toMatch(/<div class="overflow-x-auto"><table>/)
+    expect(html).toContain('</table></div>')
+  })
+
   it('remark-directive 自定义块映射为组件（:::note）', async () => {
     const html = await renderToHtml(':::note\n提示内容\n:::')
 

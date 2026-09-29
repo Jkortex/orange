@@ -72,6 +72,17 @@ const components = {
   note: ({ node: _node, ...rest }: ComponentProps<'aside'> & { node?: unknown }) => (
     <aside data-callout="note" {...rest} />
   ),
+  /*
+   * 宽表套一层横向滚动容器：表格自身是 overflow: hidden（为圆角），而 body 的
+   * overflow-x: clip 又堵掉了整页横滚，5 列表格在手机上会被裁掉且触屏无从滚动。
+   * 自动表格布局下 width:100% 是最小值，表格盒会涨到 min-content 而溢出这层容器，
+   * 于是滚动条落在这里 —— a11y-scrollable 查询的正是 .prose .overflow-x-auto。
+   */
+  table: ({ node: _node, ...rest }: ComponentProps<'table'> & { node?: unknown }) => (
+    <div className="overflow-x-auto">
+      <table {...rest} />
+    </div>
+  ),
   'code-demo': ({ node: _node, ...rest }: CodeDemoProps & { node?: unknown }) => (
     <CodeDemo {...rest} />
   ),

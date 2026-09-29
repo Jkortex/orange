@@ -58,7 +58,12 @@ export function PhotoGallery({
               alt={alt}
               loading="lazy"
               decoding="async"
-              className={isProse ? 'max-h-[30rem] w-full object-cover' : 'max-h-80 w-auto max-w-full object-cover'}
+              /*
+               * 用固定比例而不是 max-h-[30rem]：没有确定高度时图片加载前盒子高 0，
+               * 图到达瞬间整段正文下移（最坏一屏）。prose 列宽上限 max-w-3xl = 48rem，
+               * 16/10 恰好等于原来的 30rem 上限，桌面观感不变而移动端也有了预留。
+               */
+              className={isProse ? 'aspect-16/10 w-full object-cover' : 'max-h-80 w-auto max-w-full object-cover'}
             />
             {isProse && (
               <span className="type-caption absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 font-medium text-foreground opacity-0 backdrop-blur-xs transition-opacity duration-200 group-hover:opacity-100">

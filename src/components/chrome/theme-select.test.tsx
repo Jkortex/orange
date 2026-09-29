@@ -26,20 +26,35 @@ async function flushRadixListeners() {
 }
 
 describe('ThemeSelect 正常渲染', () => {
-  it('默认菜单关闭，触发按钮显示当前主题「默认」', () => {
+  /*
+   * 主题名走 CSS 而不是 state：data-theme 由 head 里的内联脚本在首帧前写好，
+   * 而 state 要等 effect 才读到 —— 走 state 的话选了 Catppuccin 的人每次加载
+   * 都会先看到「默认」再跳变。代价是两个标签同时在 DOM 里。
+   */
+  it('两个主题标签都在 DOM 里，各自带按 data-theme 切换的类', () => {
     render(<ThemeSelect />)
 
     const button = screen.getByRole('button', { name: '选择主题' })
-    expect(button).toHaveProperty('textContent', '默认')
-    expect(screen.queryByRole('menu')).toBeNull()
-    expect(button.getAttribute('aria-expanded')).toBe('false')
+    const labels = Array.from(button.querySelectorAll('[data-theme-label]'))
+
+    expect(labels.map((el) => el.getAttribute('data-theme-label'))).toEqual(['default', 'catppuccin'])
+    expect(labels.map((el) => el.textContent)).toEqual(['默认', 'Catppuccin'])
+
+    // 每个标签都必须带对应主题的变体类，漏一个就会有一个主题名永远不显示
+    for (const el of labels) {
+      const id = el.getAttribute('data-theme-label')
+      expect(el.className, `${id} 缺少 data-theme 变体类`).toContain(`data-theme='${id}'`)
+    }
   })
 
-  it('html 已为 catppuccin 时触发按钮显示对应主题', () => {
-    document.documentElement.dataset.theme = 'catppuccin'
+  it('菜单默认关闭，且重复的标签不进无障碍名（名字仍是「选择主题」）', () => {
     render(<ThemeSelect />)
 
-    expect(screen.getByRole('button', { name: '选择主题' })).toHaveProperty('textContent', 'Catppuccin')
+    const button = screen.getByRole('button', { name: '选择主题' })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(button.getAttribute('aria-expanded')).toBe('false')
+    // 文本是拼接串，但 aria-label 覆盖了它，读屏只会念「选择主题」
+    expect(button.textContent).toBe('默认Catppuccin')
   })
 
   it('点击触发按钮展开菜单，含「默认」与「Catppuccin」两个可选项', () => {
@@ -80,7 +95,6 @@ describe('ThemeSelect 交互', () => {
     expect(document.documentElement.dataset.theme).toBe('catppuccin')
     expect(localStorage.getItem('theme-name')).toBe('catppuccin')
     expect(screen.queryByRole('menu')).toBeNull()
-    expect(screen.getByRole('button', { name: '选择主题' })).toHaveProperty('textContent', 'Catppuccin')
   })
 
   it('选中项带 check 图标（lucide-check）', () => {
