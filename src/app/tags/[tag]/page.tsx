@@ -30,7 +30,8 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
   return (
     <section className="mx-auto w-full max-w-2xl">
       <PageHeader title={`标签：${tag}`} />
-      <ul>
+      {/* px-2：.list-row 外扩 0.75rem，不补内边距分隔线会贴到屏幕边缘（见 explorer.tsx 同处说明） */}
+      <ul className="px-2 md:px-0">
         {entries.map((entry) => (
           <li
             key={entry.slug}

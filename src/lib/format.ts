@@ -1,5 +1,18 @@
-// 界面日期格式：统一 YYYY-MM-DD
+// 界面字符串格式：日期、时长与排序（服务端与客户端共用，故不依赖 node 专有 API）
 // 内容日期由 YAML 的日历日期解析为 UTC；统一取 UTC 字段，避免服务端/浏览器时区导致日期漂移。
+
+/**
+ * 不依赖运行环境的字典序（码位比较），保证 manifest、静态输出与客户端水合三者同序。
+ *
+ * 必须用它而不是 `localeCompare`：后者走 ICU 排序（中文按拼音、大小写/标点按语言规则），
+ * 结果随宿主 locale 变化。静态导出的 HTML 在构建期烤死、却在访客浏览器里水合，
+ * 两者一旦不同序，服务端渲染的列表就会与客户端不一致 —— React 报
+ * “A tree hydrated but some attributes … didn't match”。
+ */
+export function compareText(a: string, b: string) {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
 export function formatDate(date: Date) {
   const y = date.getUTCFullYear()
   const m = String(date.getUTCMonth() + 1).padStart(2, '0')

@@ -18,37 +18,29 @@ describe('HeaderNav 顶部导航组件', () => {
   it('渲染所有导航链接', () => {
     render(<HeaderNav />)
 
-    expect(screen.getByRole('link', { name: '首页' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '文章' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '生活' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '音乐' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '技能' })).toBeTruthy()
   })
 
-  it('访问根路径 / 时，「首页」高亮并带有 aria-current="page"', () => {
+  it('访问根路径 / 时，「文章」高亮并带有 aria-current="page"', () => {
     currentPath = '/'
     render(<HeaderNav />)
 
-    const home = screen.getByRole('link', { name: '首页' })
     const posts = screen.getByRole('link', { name: '文章' })
+    const life = screen.getByRole('link', { name: '生活' })
 
-    expect(home.getAttribute('aria-current')).toBe('page')
-    expect(home.className).toContain('text-primary')
-    expect(posts.getAttribute('aria-current')).toBeNull()
-  })
-
-  it('访问 /posts 或 /posts/[slug] 时，「文章」高亮并带有 aria-current="page"', () => {
-    currentPath = '/posts'
-    const { rerender } = render(<HeaderNav />)
-
-    let posts = screen.getByRole('link', { name: '文章' })
     expect(posts.getAttribute('aria-current')).toBe('page')
     expect(posts.className).toContain('text-primary')
+    expect(life.getAttribute('aria-current')).toBeNull()
+  })
 
+  it('访问 /posts/[slug] 详情时，「文章」高亮并带有 aria-current="page"', () => {
     currentPath = '/posts/2026-09-13-hello-orange'
-    rerender(<HeaderNav />)
+    render(<HeaderNav />)
 
-    posts = screen.getByRole('link', { name: '文章' })
+    const posts = screen.getByRole('link', { name: '文章' })
     expect(posts.getAttribute('aria-current')).toBe('page')
     expect(posts.className).toContain('text-primary')
   })
@@ -80,7 +72,7 @@ describe('HeaderNav 行内布局契约', () => {
   it('是普通行内导航：没有出血、没有内部横向滚动', () => {
     render(<HeaderNav />)
 
-    const nav = screen.getByRole('link', { name: '首页' }).parentElement
+    const nav = screen.getByRole('link', { name: '文章' }).parentElement
     expect(nav?.className).not.toContain('overflow-x-auto')
     expect(nav?.className).not.toContain('-mx-4')
   })
@@ -88,7 +80,7 @@ describe('HeaderNav 行内布局契约', () => {
   it('导航项不参与压缩（压缩会把文字挤变形）', () => {
     render(<HeaderNav />)
 
-    for (const name of ['首页', '文章', '生活', '音乐', '技能']) {
+    for (const name of ['文章', '生活', '音乐', '技能']) {
       expect(screen.getByRole('link', { name }).className).toContain('shrink-0')
     }
   })

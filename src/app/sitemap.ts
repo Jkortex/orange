@@ -17,16 +17,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const generatedAt = new Date()
   const routes: MetadataRoute.Sitemap = [
     {
+      // 根路径即文章列表
       url: siteUrl,
       lastModified: generatedAt,
       changeFrequency: 'daily',
       priority: 1.0,
-    },
-    {
-      url: joinSiteUrl(siteUrl, '/posts'),
-      lastModified: generatedAt,
-      changeFrequency: 'daily',
-      priority: 0.9,
     },
     {
       url: joinSiteUrl(siteUrl, '/life'),

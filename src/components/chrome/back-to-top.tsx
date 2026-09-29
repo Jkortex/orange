@@ -1,29 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { usePlayerIndex } from '@/components/player/player-provider'
 import { IconButton } from '@/components/primitives/icon-button'
+import { floatingStackOffset, useScrolledPast } from '@/lib/floating-stack'
 
 /*
  * 回到顶部：
- * - 滚动出现（阈值 300px），不常驻占位；滚回顶部后平滑消失
- * - 有播放队列时上移避让播放条（窄屏下给播放条让位）
+ * - 滚动出现（阈值 = floating-stack 的 BACK_TO_TOP_THRESHOLD），不常驻占位；滚回顶部后平滑消失
+ * - 档位取浮动栈的基准格 floatingStackOffset(false, …)：它是整条浮动栈的锚点，
+ *   未滚动时常驻按钮正落在它的档位上；有播放队列时整栈（含它自己）抬一层避让播放条
  * - 动效尊重减少动态偏好；图标化按钮语义与全站一致（aria-label + hover 提示）
  * - 磨砂玻璃按钮，层次靠边框与背景，不靠阴影与浮动
  */
 
 export function BackToTop() {
   const index = usePlayerIndex()
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    // 当页面滚动超过 300px 时灵敏出现，避免用户在短文或浅滚动时无法回到顶部
-    const onScroll = () => setVisible(window.scrollY > 300)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  const visible = useScrolledPast()
 
   if (!visible) return null
 
@@ -38,9 +31,10 @@ export function BackToTop() {
     <IconButton
       label="回到顶部"
       onClick={scrollTop}
-      wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-[bottom,transform,opacity] duration-200 ease-out animate-in fade-in-0 zoom-in-90 slide-in-from-bottom-2 ${
-        index === null ? 'bottom-6' : 'bottom-20'
-      }`}
+      wrapperClassName={`group fixed right-4 sm:right-6 md:right-8 z-40 inline-flex transition-[bottom,transform,opacity] duration-200 ease-out animate-in fade-in-0 zoom-in-90 slide-in-from-bottom-2 ${floatingStackOffset(
+        false,
+        index !== null,
+      )}`}
       buttonClassName="border border-border-strong bg-surface/85 backdrop-blur-md hover:border-primary/50 hover:bg-surface hover:text-primary"
       tipClassName="bottom-full right-0 mb-2"
     >

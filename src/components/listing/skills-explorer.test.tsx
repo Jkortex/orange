@@ -29,10 +29,10 @@ const skills: SkillItem[] = [
 ]
 
 describe('SkillsExplorer 正常渲染', () => {
-  it('侧栏渲染「最近」与分类（含条数）', () => {
+  it('侧栏渲染「全部」与分类（含条数）', () => {
     render(<SkillsExplorer skills={skills} />)
 
-    expect(screen.getByRole('button', { name: '最近' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '全部' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'workflow 1' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'git 1' })).toBeTruthy()
   })

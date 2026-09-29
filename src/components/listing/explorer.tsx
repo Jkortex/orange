@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { aggregateCategories, CategoryFilter } from '@/components/listing/category-filter'
 import { EmptyState } from '@/components/primitives/empty-state'
+import { cn } from '@/lib/utils'
 
 /*
  * 通用过滤列表（posts-explorer / skills-explorer 共用，同属 listing 域）：
@@ -39,11 +40,14 @@ export function Explorer<T extends { category?: string }>({
   pageSize,
   allShownText = (total) => `已显示全部 ${total} ${unit}`,
 }: ExplorerProps<T>) {
-  const [active, setActive] = useState<string | null>(null) // null = 最近
+  const [active, setActive] = useState<string | null>(null) // null = 全部
   const [visibleCount, setVisibleCount] = useState(pageSize ?? items.length)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const categories = aggregateCategories(items)
+  // 分类 ≤1 时过滤器没有选择余地（技能页目前只有 workflow 一个分类），
+  // 整条隐藏并让列表占满宽度，而不是给用户一个只能选「全部/那一个」的死控件
+  const hasFilter = categories.length > 1
   const filtered = active ? items.filter((item) => item.category === active) : items
   const displayed = filtered.slice(0, visibleCount)
   const hasMore = visibleCount < filtered.length
@@ -76,18 +80,26 @@ export function Explorer<T extends { category?: string }>({
   }, [hasMore, filtered.length, pageSize])
 
   return (
-    <div className="grid w-full gap-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-10">
-      <CategoryFilter
-        categories={categories}
-        active={active}
-        onSelect={handleSelect}
-        navLabel={navLabel}
-      />
+    <div
+      className={cn(
+        'grid w-full gap-4 md:gap-10',
+        hasFilter ? 'md:grid-cols-[10rem_minmax(0,1fr)]' : 'md:grid-cols-1',
+      )}
+    >
+      {hasFilter && (
+        <CategoryFilter
+          categories={categories}
+          active={active}
+          onSelect={handleSelect}
+          navLabel={navLabel}
+          total={items.length}
+        />
+      )}
 
       <section className="min-w-0">
         {/* 条数在 h2 外：保持标题可及名干净（仅分类名） */}
         <div className="mb-3 flex items-baseline gap-2">
-          <h2 className="type-section">{active ?? '最近'}</h2>
+          <h2 className="type-section">{active ?? '全部'}</h2>
           <span className="type-meta font-mono tabular-nums text-muted-foreground">
             共 {filtered.length} {unit}
           </span>
@@ -97,10 +109,12 @@ export function Explorer<T extends { category?: string }>({
           <EmptyState message={emptyMessage} />
         ) : (
           <>
-            {/* key 随分类重挂列表，播放一次淡入，表达过滤切换的即时反馈 */}
+            {/* key 随分类重挂列表，播放一次淡入，表达过滤切换的即时反馈。
+                移动端给列表容器补内边距：.list-row 本身外扩 0.75rem，不补的话
+                分隔线会贴到屏幕边缘（正文只剩 16px），两侧没有呼吸感 */}
             <ul
-              key={active ?? 'recent'}
-              className="animate-in fade-in-50 duration-200"
+              key={active ?? 'all'}
+              className="animate-in fade-in-50 duration-200 px-2 md:px-0"
             >
               {displayed.map((item) => (
                 <li key={getKey(item)} className={rowClassName}>

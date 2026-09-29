@@ -1,7 +1,7 @@
 import type { CollectionType } from '@/lib/content'
 
 /*
- * 类型徽标（AGENTS.md 界面布局规范 §4.5，首页/归档共用）：
+ * 类型徽标（分类 / 标签页共用；搜索结果复用同一 LABELS 映射）：
  * 内容型文本永不图标化隐藏；未知类型防御性回退「内容」
  */
 

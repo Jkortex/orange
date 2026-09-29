@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { aggregateCategories, CategoryFilter, filterPillClass } from '@/components/listing/category-filter'
@@ -31,6 +31,40 @@ describe('aggregateCategories', () => {
 
   it('空集合返回空数组', () => {
     expect(aggregateCategories([])).toEqual([])
+  })
+
+  it('按码位排序，与服务端 getCategories 同序（中文/大小写混排也不走拼音序）', () => {
+    // localeCompare 会走 ICU 排序（中文按拼音），与服务端 compareText 的码位序不同，
+    // 静态导出时 HTML 在构建环境烤死、客户端按访客 locale 水合 → 分类列表顺序错位
+    const items = [
+      { category: '架构' },
+      { category: 'CSS' },
+      { category: '数据库' },
+      { category: '工作流' },
+    ]
+    expect(aggregateCategories(items)).toEqual([
+      // 码位：'C'(0x43) < '工'(0x5DE5) < '数'(0x6570) < '架'(0x67B6)
+      { name: 'CSS', count: 1 },
+      { name: '工作流', count: 1 },
+      { name: '数据库', count: 1 },
+      { name: '架构', count: 1 },
+    ])
+  })
+
+  it('排序结果不随运行环境的 localeCompare 实现变化', () => {
+    const items = [{ category: 'css' }, { category: '架构' }, { category: 'workflow' }]
+    const expected = aggregateCategories(items)
+
+    const original = String.prototype.localeCompare
+    // 换成「敌意」实现：任何用到 localeCompare 的排序都会立刻乱序
+    String.prototype.localeCompare = function () {
+      return 1
+    }
+    try {
+      expect(aggregateCategories(items)).toEqual(expected)
+    } finally {
+      String.prototype.localeCompare = original
+    }
   })
 })
 
@@ -78,14 +112,15 @@ describe('CategoryFilter 正常渲染', () => {
         active={active}
         onSelect={setActive}
         navLabel="文章分类"
+        total={3}
       />
     )
   }
 
-  it('渲染「最近」与分类（含条数），默认最近激活', () => {
+  it('渲染「全部」与分类（含条数），默认激活「全部」', () => {
     render(<Harness />)
     expect(screen.getByRole('navigation', { name: '文章分类' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: '最近' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: 'css 2' })).toBeTruthy()
   })
 
@@ -93,7 +128,7 @@ describe('CategoryFilter 正常渲染', () => {
     render(<Harness />)
     fireEvent.click(screen.getByRole('button', { name: 'meta 1' }))
     expect(screen.getByRole('button', { name: 'meta 1' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByRole('button', { name: '最近' }).getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByRole('button', { name: '全部' }).getAttribute('aria-pressed')).toBe('false')
   })
 
   it('计数跟随选中态颜色（不写死），且桌面端右对齐', () => {
@@ -105,72 +140,201 @@ describe('CategoryFilter 正常渲染', () => {
 })
 
 /*
- * 移动端分类控件（用户反馈：横滑药丸条读不出「还有更多」）：
- * 收起时只是一行 36px 的下拉按钮（显示当前分类），点开后在下方浮层里
- * 用可换行的药丸网格把所有分类一次摊开——没有横向滚动，也不把页面撑长。
- * 桌面端（md 起）仍是原来的纵向吸顶侧栏。
+ * 移动端分类控件：右下角浮动筛选按钮 + 底部抽屉。
+ * 前两版（整条横滑药丸带 / 常驻单行下拉）都被否——前者读不出「右边还有」且占满屏宽，
+ * 后者白占一整行、像原生 select、还与下方标题重复「全部」。现在脱离文档流。
  */
-describe('CategoryFilter 移动端下拉筛选', () => {
-  function renderSidebar(active: string | null = null) {
+describe('CategoryFilter 移动端浮动筛选', () => {
+  const CATS = [
+    { name: 'css', count: 2 },
+    { name: 'meta', count: 1 },
+  ]
+
+  function renderFilter(
+    active: string | null = null,
+    onSelect: (n: string | null) => void = () => {},
+    total = 3,
+  ) {
     return render(
       <CategoryFilter
-        categories={[
-          { name: 'css', count: 2 },
-          { name: 'meta', count: 1 },
-        ]}
+        categories={CATS}
         active={active}
-        onSelect={() => {}}
+        onSelect={onSelect}
         navLabel="文章分类"
+        total={total}
       />,
     )
   }
 
-  it('收起状态只有一行下拉按钮，显示当前分类', () => {
-    renderSidebar('css')
+  it('收起时是脱离文档流的浮动按钮，不占一整行', () => {
+    const { container } = renderFilter()
 
-    const trigger = screen.getByRole('button', { name: '分类筛选：css' })
-    expect(trigger).toBeTruthy()
+    const trigger = screen.getByRole('button', { name: '分类筛选：全部' })
+    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
-    expect(trigger.className).toContain('h-9')
+
+    // fixed 定位 = 不参与文档流，列表不会被顶下去
+    const floating = trigger.closest('span')?.className ?? ''
+    expect(floating).toContain('fixed')
+    // 不再有整宽的吸顶分类条
+    expect(container.innerHTML).not.toContain('top-[var(--header-height)]')
   })
 
-  it('点开后浮层里是可换行的药丸网格，横向不再滚动', async () => {
-    renderSidebar()
+  it('idle 只显示图标；选中后按钮自身显示分类名（状态不用点开也能读）', () => {
+    const { unmount } = renderFilter()
+    expect(screen.getByRole('button', { name: '分类筛选：全部' }).querySelector('.truncate')).toBeNull()
+    unmount()
 
-    fireEvent.click(screen.getByRole('button', { name: '分类筛选：最近' }))
+    renderFilter('css')
+    const trigger = screen.getByRole('button', { name: '分类筛选：css' })
+    expect(trigger.querySelector('.truncate')?.textContent).toBe('css')
+    expect(trigger.className, '选中态用品牌色胶囊表达').toContain('bg-primary')
+  })
 
-    const panel = await screen.findByRole('dialog')
-    const grid = panel.querySelector('[data-category-grid]')
-    expect(grid?.className).toContain('flex-wrap')
-    expect(grid?.className).not.toContain('overflow-x-auto')
+  /*
+   * 与 BackToTop / MobileTocDrawer 是叠放的一对，视觉规格必须逐项一致，
+   * 否则图标中心会错开、两个圆看起来不是一套。BackToTop 的实际取值：
+   *   size="md"(size-9=36px) + size-4 图标 + border-border-strong bg-surface/85
+   * 这里把同一组值钉死，改动时不会单方面漂移。
+   */
+  it('规格与 BackToTop 完全一致（尺寸/图标/描边/底色）', () => {
+    renderFilter()
+    const btn = screen.getByRole('button', { name: '分类筛选：全部' })
 
-    for (const name of ['最近', 'css 2', 'meta 1']) {
-      expect(within(panel).getByRole('button', { name })).toBeTruthy()
+    expect(btn.getAttribute('data-size'), '盒子尺寸须与 BackToTop 同为 md(36px)').toBe('md')
+    expect(btn.className).toContain('border-border-strong')
+    expect(btn.className).toContain('bg-surface/85')
+    expect(btn.className).toContain('backdrop-blur-md')
+    expect(btn.querySelector('svg')?.getAttribute('class')).toContain('size-4')
+  })
+
+  it('右缘基准与 BackToTop 相同（叠放时右缘齐平）', () => {
+    renderFilter()
+    const floating = screen.getByRole('button', { name: '分类筛选：全部' }).closest('span')?.className ?? ''
+    expect(floating).toContain('right-4')
+    expect(floating).toContain('sm:right-6')
+    expect(floating).toContain('md:right-8')
+  })
+
+  it('选中态胶囊去掉描边：圆形态图标按 36px 居中，pr-2.5 才能与它同轴', () => {
+    renderFilter('css')
+    const btn = screen.getByRole('button', { name: '分类筛选：css' })
+    expect(btn.className).toContain('border-0')
+    expect(btn.className).toContain('pr-2.5')
+    // 分类名在图标左侧，图标仍在最右
+    const icon = btn.querySelector('svg')
+    expect(icon?.nextSibling, '图标须是最后一个子元素').toBeNull()
+    expect(btn.querySelector('.truncate')?.textContent).toBe('css')
+  })
+
+  /*
+   * 选中态胶囊宽度曾靠 `w-auto` 覆盖 `size-9` 的 width 实现——但 tailwind-merge
+   * 不把 size-* 与 w-* 视为同组冲突，两者都会保留，最终宽度只由 Tailwind 生成
+   * CSS 时 .w-auto 恰好排在 .size-9 之后决定。这是对工具内部排序的隐式依赖，
+   * 重排即失效（标签被裁）。现在 auto 模式只发高度类，不再发宽度类。
+   */
+  it('选中态是「只锁高度」的胶囊：不再发固定宽度类', () => {
+    renderFilter('css')
+    const btn = screen.getByRole('button', { name: '分类筛选：css' })
+    expect(btn.className).toContain('h-9')
+    expect(btn.className, '不应再带 size-9 —— 否则宽度只能靠 .w-auto 排在其后才生效').not.toContain('size-9')
+  })
+
+  it('未选中态仍是正方形图标按钮（size-9）', () => {
+    renderFilter()
+    expect(screen.getByRole('button', { name: '分类筛选：全部' }).className).toContain('size-9')
+  })
+
+  it('与 BackToTop 共用浮动栈档位：未滚动占 bottom-6，滚动后上抬让位', () => {
+    renderFilter()
+    const floating = () =>
+      screen.getByRole('button', { name: '分类筛选：全部' }).closest('span')?.className ?? ''
+
+    // 顶部时 BackToTop 不可见，本按钮就落在它的档位上，不悬空
+    expect(floating()).toContain('bottom-6')
+
+    // 滚过阈值后 BackToTop 出现，本按钮上抬一层，两者间留 gap-2
+    window.scrollY = 400
+    fireEvent.scroll(window)
+    expect(floating()).toContain('bottom-[4.25rem]')
+
+    expect(floating(), 'md 起走桌面侧栏，浮动按钮隐藏').toContain('md:hidden')
+  })
+
+  /*
+   * 硬刷新且页面已滚动时，useScrolledPast 初值为 false，档位要在水合后的 effect
+   * 里才纠正到上抬档。若 wrapper 不带过渡，这一步就是 44px 瞬移；带上 bottom 过渡
+   * 后与目录按钮一致，是 200ms 平滑上浮。
+   */
+  it('档位切换带过渡：刷新时的档位纠正是滑动而非瞬移', () => {
+    renderFilter()
+    const floating = screen.getByRole('button', { name: '分类筛选：全部' }).closest('span')?.className ?? ''
+    expect(floating).toContain('transition-[bottom')
+    expect(floating).toContain('duration-200')
+  })
+
+  it('点开是底部抽屉，一次摊开全部分类且带条数', async () => {
+    renderFilter()
+
+    fireEvent.click(screen.getByRole('button', { name: '分类筛选：全部' }))
+
+    const sheet = await screen.findByRole('dialog')
+
+    // 「全部」带总数，其余带各自条数
+    for (const name of ['全部 3', 'css 2', 'meta 1']) {
+      expect(within(sheet).getByRole('button', { name })).toBeTruthy()
     }
+    // 两列网格，横向不滚动
+    const grid = sheet.querySelector('ul')
+    expect(grid?.className).toContain('grid-cols-2')
+    expect(sheet.innerHTML).not.toContain('overflow-x-auto')
   })
 
-  it('浮层里的分类药丸带条数，并标出当前选中项', async () => {
-    renderSidebar('css')
+  it('「全部」计数取总条目数（含无分类），不是分类数之和', async () => {
+    // CATS 之和为 3，但真实条目数为 5（有 2 条无分类）——「全部」即不筛选，计数须一致
+    renderFilter(null, () => {}, 5)
+
+    fireEvent.click(screen.getByRole('button', { name: '分类筛选：全部' }))
+    const sheet = await screen.findByRole('dialog')
+
+    expect(within(sheet).getByRole('button', { name: '全部 5' })).toBeTruthy()
+    expect(within(sheet).queryByRole('button', { name: '全部 3' })).toBeNull()
+  })
+
+  it('抽屉里标出当前选中项', async () => {
+    renderFilter('css')
 
     fireEvent.click(screen.getByRole('button', { name: '分类筛选：css' }))
 
-    const panel = await screen.findByRole('dialog')
-    expect(within(panel).getByRole('button', { name: 'css 2' }).getAttribute('aria-pressed')).toBe('true')
-    expect(within(panel).getByRole('button', { name: '最近' }).getAttribute('aria-pressed')).toBe('false')
+    const sheet = await screen.findByRole('dialog')
+    expect(within(sheet).getByRole('button', { name: 'css 2' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(sheet).getByRole('button', { name: '全部 3' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('选中分类后回调用该名字并收起抽屉（一次点击完成）', async () => {
+    const onSelect = vi.fn()
+    renderFilter(null, onSelect)
+
+    fireEvent.click(screen.getByRole('button', { name: '分类筛选：全部' }))
+    const sheet = await screen.findByRole('dialog')
+    fireEvent.click(within(sheet).getByRole('button', { name: 'meta 1' }))
+
+    expect(onSelect).toHaveBeenCalledWith('meta')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
   it('移动端不再有横滑药丸条；桌面侧栏整块隐藏到 md 起', () => {
-    const { container } = renderSidebar()
+    const { container } = renderFilter()
 
     const aside = container.querySelector('aside')?.className ?? ''
     expect(aside).toContain('hidden')
     expect(aside).toContain('md:block')
-    expect(container.querySelector('ul')?.className ?? '').not.toContain('overflow-x-auto')
+    expect(container.querySelector('aside ul')?.className ?? '').not.toContain('overflow-x-auto')
   })
 
-  it('吸顶位置跟随 --header-height（不再是横滑条的 top-14）', () => {
-    const { container } = renderSidebar()
+  it('吸顶位置跟随 --header-height（桌面侧栏）', () => {
+    const { container } = renderFilter()
 
-    expect(container.innerHTML).toContain('top-[var(--header-height)]')
+    expect(container.querySelector('aside')?.className ?? '').toContain('top-[calc(var(--header-height)+1rem)]')
   })
 })

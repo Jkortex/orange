@@ -319,15 +319,6 @@ export function useOptionalPlayer(): PlayerContextValue | null {
   )
 }
 
-export function useOptionalPlayerPlayback(): PlayerPlaybackValue | null {
-  const state = useContext(PlayerStateContext)
-  const actions = useContext(PlayerActionsContext)
-  return useMemo(
-    () => (state && actions ? { ...state, ...actions } : null),
-    [state, actions],
-  )
-}
-
 /**
  * 队列内容比较：file 序列一致即视为同一份曲目（file 为稳定 URL 标识）。
  * 不用引用比较——跨页面/跨组件实例入队后引用必不相等，会导致播放状态判断失效

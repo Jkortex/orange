@@ -43,7 +43,7 @@ function renderExplorer(props?: Partial<React.ComponentProps<typeof Explorer<Ite
 describe('Explorer 正常渲染', () => {
   it('分类过滤 + 行 slot 渲染 + 计数单位', () => {
     renderExplorer()
-    expect(screen.getByRole('heading', { name: '最近' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '全部' })).toBeTruthy()
     expect(screen.getByText('共 3 篇')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'x 2' }))
@@ -79,5 +79,33 @@ describe('Explorer 异常渲染', () => {
     renderExplorer({ items: [] })
     expect(screen.getByText('空空如也。')).toBeTruthy()
     expect(screen.getByText('共 0 篇')).toBeTruthy()
+  })
+
+  /*
+   * 分类只有 1 个时，过滤器没有选择余地（技能页目前只有 workflow 一个分类）：
+   * 与其给一个只能选「全部/那一个」的死控件，不如整条隐藏并让列表占满宽度。
+   */
+  it('分类 ≤1 时隐藏过滤器，列表单列占满', () => {
+    const { container } = renderExplorer({
+      items: [
+        { key: 'a', label: '甲', category: 'only' },
+        { key: 'b', label: '乙', category: 'only' },
+      ],
+    })
+
+    expect(screen.queryByRole('button', { name: '测试分类' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: '测试分类' })).toBeNull()
+
+    const grid = container.firstElementChild as HTMLElement
+    expect(grid.className).toContain('md:grid-cols-1')
+    expect(grid.className).not.toContain('10rem')
+  })
+
+  it('分类 ≥2 时过滤器照常渲染并保留侧栏栅格', () => {
+    const { container } = renderExplorer()
+
+    expect(screen.getByRole('navigation', { name: '测试分类' })).toBeTruthy()
+    const grid = container.firstElementChild as HTMLElement
+    expect(grid.className).toContain('md:grid-cols-[10rem_minmax(0,1fr)]')
   })
 })

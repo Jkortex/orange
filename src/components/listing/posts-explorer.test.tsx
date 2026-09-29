@@ -14,18 +14,18 @@ const posts: PostItem[] = [
 ]
 
 describe('PostsExplorer 正常渲染', () => {
-  it('侧栏渲染「最近」与全部分类（含条数）', () => {
+  it('侧栏渲染「全部」与各分类（含条数）', () => {
     render(<PostsExplorer posts={posts} />)
 
-    expect(screen.getByRole('button', { name: '最近' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '全部' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'css 2' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'meta 1' })).toBeTruthy()
   })
 
-  it('默认展示全部文章（最近），按日期倒序排列', () => {
+  it('默认展示全部文章，按日期倒序排列', () => {
     render(<PostsExplorer posts={posts} />)
 
-    expect(screen.getByRole('heading', { name: '最近' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '全部' })).toBeTruthy()
     const links = screen.getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
       'CSS Grid 指南',
@@ -53,10 +53,10 @@ describe('PostsExplorer 正常渲染', () => {
     expect(screen.queryByRole('link', { name: '关于写作' })).toBeNull()
   })
 
-  it('点击「最近」恢复全部文章', () => {
+  it('点击「全部」取消筛选，恢复完整列表', () => {
     render(<PostsExplorer posts={posts} />)
     fireEvent.click(screen.getByRole('button', { name: 'meta 1' }))
-    fireEvent.click(screen.getByRole('button', { name: '最近' }))
+    fireEvent.click(screen.getByRole('button', { name: '全部' }))
 
     expect(screen.getByRole('link', { name: 'CSS Grid 指南' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '关于写作' })).toBeTruthy()
@@ -66,14 +66,14 @@ describe('PostsExplorer 正常渲染', () => {
   it('激活分类带 aria-pressed=true，其余为 false', () => {
     render(<PostsExplorer posts={posts} />)
 
-    const recent = screen.getByRole('button', { name: '最近' })
+    const all = screen.getByRole('button', { name: '全部' })
     const css = screen.getByRole('button', { name: 'css 2' })
-    expect(recent.getAttribute('aria-pressed')).toBe('true')
+    expect(all.getAttribute('aria-pressed')).toBe('true')
     expect(css.getAttribute('aria-pressed')).toBe('false')
 
     fireEvent.click(css)
     expect(css.getAttribute('aria-pressed')).toBe('true')
-    expect(recent.getAttribute('aria-pressed')).toBe('false')
+    expect(all.getAttribute('aria-pressed')).toBe('false')
   })
 })
 
@@ -101,24 +101,37 @@ describe('PostsExplorer 移动端行布局', () => {
 })
 
 describe('PostsExplorer 异常渲染', () => {
-  it('空列表：显示空态提示，侧栏仅「最近」', () => {
+  it('空列表：显示空态提示；无分类可筛，过滤器整条隐藏', () => {
     render(<PostsExplorer posts={[]} />)
 
     expect(screen.getByText('还没有文章。')).toBeTruthy()
-    expect(screen.getByRole('button', { name: '最近' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'css' })).toBeNull()
     expect(screen.getByText('共 0 篇')).toBeTruthy()
+    // 0 个分类 = 没有选择余地，不给死控件
+    expect(screen.queryByRole('navigation', { name: '文章分类' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '分类筛选：全部' })).toBeNull()
   })
 
-  it('全部文章无分类：侧栏仅「最近」，最近下展示全部', () => {
+  it('全部文章无分类：过滤器隐藏，列表照常展示全部', () => {
     const uncategorized: PostItem[] = [
       { slug: '2026-01-01-solo', title: '无分类文章', date: '2026-01-01T00:00:00.000Z' },
     ]
     render(<PostsExplorer posts={uncategorized} />)
 
-    expect(screen.getByRole('button', { name: '最近' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /css|meta/ })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: '文章分类' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '分类筛选：全部' })).toBeNull()
     expect(screen.getByRole('link', { name: '无分类文章' })).toBeTruthy()
+  })
+
+  it('只有一个分类时同样隐藏过滤器（无选择余地）', () => {
+    const single: PostItem[] = [
+      { slug: '2026-01-01-a', title: '甲', date: '2026-01-01T00:00:00.000Z', category: 'workflow' },
+      { slug: '2026-01-02-b', title: '乙', date: '2026-01-02T00:00:00.000Z', category: 'workflow' },
+    ]
+    render(<PostsExplorer posts={single} />)
+
+    expect(screen.queryByRole('navigation', { name: '文章分类' })).toBeNull()
+    expect(screen.getByRole('link', { name: '甲' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '乙' })).toBeTruthy()
   })
 })
 

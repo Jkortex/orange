@@ -6,7 +6,7 @@ import {
   SkillPackageExplorer,
   type RenderedSkillFile,
 } from '@/components/listing/skill-package-explorer'
-import { SKILL_ENTRY_FILE, skillFileHref } from '@/lib/skill-routes'
+import { SKILL_ENTRY_FILE } from '@/lib/skill-routes'
 
 /*
  * skill 包详情视图（每个文件一个静态页，`activePath` 决定本页渲染哪个文件）：
@@ -48,7 +48,6 @@ export async function SkillPackageView({
         pkg={pkg}
         renderedFile={renderedFile}
         activePath={file.path}
-        pageHref={skillFileHref(pkg.slug, file.path)}
       />
     </>
   )

@@ -20,7 +20,8 @@ describe('HotkeyHelpModal 快捷键帮助弹窗组件', () => {
     fireEvent.keyDown(document, { key: '?' })
     expect(screen.getByRole('dialog', { name: /快捷键指南/ })).toBeDefined()
     expect(screen.getAllByText(/命令面板/).length).toBeGreaterThan(0)
-    expect(screen.getByText(/回到.*首页/)).toBeDefined()
+    // 「g h 回到博客首页」已随首页下线移除（且全站本就未绑定该键）
+    expect(screen.queryByText(/回到.*首页/)).toBeNull()
     expect(screen.getByText(/上一篇 \/ 下一篇/)).toBeDefined()
   })
 

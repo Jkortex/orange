@@ -16,7 +16,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tip } from '@/components/primitives/tip'
-import { useOptionalPlayerPlayback } from '@/components/player/player-provider'
 import {
   type SearchScope,
   type SearchGroup,
@@ -24,20 +23,13 @@ import {
   SEARCH_LISTBOX_ID,
   searchOptionId,
   SearchFilterChips,
-  SearchEmptyState,
   SearchResultsList,
-  getSystemActions,
-  filterActions,
-  getCategoryItems,
-  filterCategories,
-  type SearchCategory,
   scanCurrentHeadings,
   getOutlineItems,
   filterOutlines,
 } from './search'
 
 const tooltipPosition = 'left-1/2 top-full mt-1.5 -translate-x-1/2'
-const RECENT_KEY = 'orange_recent_visits'
 
 /* 范围 → 类型徽标文案（复用 TypeBadge 的唯一映射，避免两处标签漂移） */
 const SCOPE_BADGES: Partial<Record<SearchScope, string>> = {
@@ -47,7 +39,7 @@ const SCOPE_BADGES: Partial<Record<SearchScope, string>> = {
   music: TYPE_LABELS.music,
 }
 
-export function SearchDialog({ categories = [] }: { categories?: SearchCategory[] }) {
+export function SearchDialog() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -56,13 +48,11 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
   const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [recentVisits, setRecentVisits] = useState<Array<{ url: string; title: string }>>([])
   const [headings, setHeadings] = useState<ReturnType<typeof scanCurrentHeadings>>([])
 
   const inputRef = useRef<HTMLInputElement>(null)
   const seqRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const player = useOptionalPlayerPlayback()
 
   const navigate = useCallback(
     (url: string) => {
@@ -112,17 +102,11 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
     return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpenSearch)
   }, [])
 
-  // 2. 打开弹窗时初始化：扫描大纲、读取最近访问
+  // 2. 打开弹窗时初始化：扫描本文大纲
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 0)
       setHeadings(scanCurrentHeadings())
-      try {
-        const stored = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
-        setRecentVisits(stored)
-      } catch {
-        setRecentVisits([])
-      }
     } else {
       if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = null
@@ -133,15 +117,7 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
     }
   }, [open])
 
-  // 3. 构建静态候选动作与分类
-  const systemActions = useMemo(
-    () => getSystemActions({ onClose: () => setOpen(false), navigate, player }),
-    [navigate, player],
-  )
-  const categoryItems = useMemo(
-    () => getCategoryItems(categories, () => setOpen(false), navigate),
-    [categories, navigate],
-  )
+  // 3. 本文章节大纲（内容检索的一部分）
   const outlineItems = useMemo(
     () => getOutlineItems(headings, () => setOpen(false)),
     [headings],
@@ -266,32 +242,11 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
       }
     }
 
-    // 分组 C：分类与栏目直达
-    if (activeScope === 'all' || activeScope === 'posts') {
-      const filteredCat = filterCategories(categoryItems, q)
-      if (filteredCat.length > 0) {
-        list.push({
-          id: 'group-categories',
-          label: '分类与专栏',
-          items: filteredCat,
-        })
-      }
-    }
-
-    // 分组 D：快捷系统动作
-    if (activeScope === 'all') {
-      const filteredAct = filterActions(systemActions, q)
-      if (filteredAct.length > 0) {
-        list.push({
-          id: 'group-actions',
-          label: '快捷操作',
-          items: filteredAct,
-        })
-      }
-    }
-
+    // 搜索只返回内容：Pagefind 命中的文章/条目 + 本文小节大纲。
+    // 原先还有「分类与专栏直达」与「快捷操作」两组（导航与系统动作），
+    // 属于导航而非内容检索，已整体移除。
     return list
-  }, [query, activeScope, pagefindItems, outlineItems, categoryItems, systemActions])
+  }, [query, activeScope, pagefindItems, outlineItems])
 
   // 6. 扁平化所有展示项，供键盘上下导航
   const flatItems = useMemo(() => {
@@ -320,12 +275,6 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
     }
   }
 
-  // 8. 清空最近访问
-  function handleClearRecent() {
-    localStorage.removeItem(RECENT_KEY)
-    setRecentVisits([])
-  }
-
   const iconBtnClass =
     'group relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95'
 
@@ -342,6 +291,8 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
           <Tip className={tooltipPosition}>搜索</Tip>
         </button>
       </DialogTrigger>
+      {/* 宽度：移动端沿用 DialogContent 基类的 max-w-[calc(100%-2rem)]（两侧各留 16px，不贴满视口），
+          sm 起才放宽到 max-w-xl。不可写死 max-w-xl——tailwind-merge 会顶掉基类留白，移动端就贴边了 */}
       <DialogContent
         aria-label="站内搜索"
         showCloseButton={false}
@@ -350,7 +301,7 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
           e.preventDefault()
           inputRef.current?.focus()
         }}
-        className="top-20 max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border-subtle p-0 shadow-overlay bg-background"
+        className="top-20 sm:max-w-xl translate-y-0 gap-0 overflow-hidden rounded-2xl border-border-subtle p-0 shadow-overlay bg-background"
       >
         <DialogTitle className="sr-only">站内搜索</DialogTitle>
 
@@ -409,15 +360,10 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
           {error ? (
             <p className="type-meta p-6 text-center text-destructive">{error}</p>
           ) : !query.trim() ? (
-            <SearchEmptyState
-              recentVisits={recentVisits}
-              onClearRecent={handleClearRecent}
-              onSelectRecent={(item) => {
-                navigate(item.url)
-              }}
-              suggestedActions={systemActions}
-              onSelectAction={(action) => action.onSelect()}
-            />
+            /* 空态刻意留白：搜索只负责检索内容，不塞推荐、不列历史 */
+            <p className="type-meta p-8 text-center text-muted-foreground">
+              输入关键词，检索全站文章、生活、音乐、技能与本页小节
+            </p>
           ) : flatItems.length === 0 ? (
             <div className="type-meta p-8 text-center text-muted-foreground">
               未找到与 &quot;<span className="text-foreground font-medium">{query}</span>&quot; 相关的结果
@@ -431,8 +377,9 @@ export function SearchDialog({ categories = [] }: { categories?: SearchCategory[
           )}
         </div>
 
-        {/* 底栏快捷说明 */}
-        <div className="panel-bar type-caption flex items-center justify-between border-t border-border-subtle px-3.5 py-2 text-muted-foreground select-none">
+        {/* 底栏快捷说明：只给有物理键盘的场景看。触屏上 ↑↓/Tab/ESC 都不存在，
+            整行纯属占位，sm 起才显示 */}
+        <div className="panel-bar type-caption hidden items-center justify-between border-t border-border-subtle px-3.5 py-2 text-muted-foreground select-none sm:flex">
           <div className="flex items-center gap-3">
             <span>↑↓ 导航</span>
             <span>↵ 打开</span>

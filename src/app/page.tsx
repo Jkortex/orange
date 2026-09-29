@@ -1,14 +1,29 @@
-import { getAllEntries } from '@/lib/content'
-import { HomeHeader, HomeContent } from '@/components/home'
+import type { Metadata } from 'next'
+import { Newspaper } from 'lucide-react'
+import { getCollection } from '@/lib/content'
+import { PostsExplorer, type PostItem } from '@/components/listing/posts-explorer'
+import { PageHeader } from '@/components/listing/page-header'
 
-export default function HomePage() {
-  // 首页只保留混合时间线；品牌与站点定位由顶栏和简介承担，避免重复信号。
-  const entries = getAllEntries().slice(0, 10)
+export const metadata: Metadata = { title: '文章' }
+
+// 站点根 = 文章列表：左侧分类列表（构建期由内容聚合）+ 右侧条目列表，默认「全部」= 按日期倒序。
+// 数据构建期内嵌进客户端组件，切换分类纯客户端过滤，不发内容请求（AGENTS.md 内容与渲染纪律）
+export default function PostsPage() {
+  const posts: PostItem[] = getCollection('posts').map((entry) => ({
+    slug: entry.slug,
+    title: entry.data.title,
+    date: entry.data.date.toISOString(),
+    category: entry.data.category,
+  }))
 
   return (
-    <section className="mx-auto w-full max-w-2xl animate-in fade-in-50 duration-300">
-      <HomeHeader badge="个人博客 · 代码 / 生活 / 音乐" />
-      <HomeContent entries={entries} />
-    </section>
+    <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
+      <PageHeader
+        title="文章"
+        description="技术笔记、实践记录与经验总结。"
+        icon={<Newspaper aria-hidden />}
+      />
+      <PostsExplorer posts={posts} />
+    </div>
   )
 }

@@ -12,7 +12,6 @@ import { GeistMono } from 'geist/font/mono'
 import { HeaderNav } from '@/components/chrome/header-nav'
 import { MobileNavDrawer } from '@/components/chrome/mobile-nav-drawer'
 import { BrandMark } from '@/components/chrome/brand-mark'
-import { getCategories } from '@/lib/content'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -25,8 +24,6 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem('theme-name'
 
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const categories = getCategories()
-
   return (
     <html
       lang="zh-CN"
@@ -47,9 +44,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             播放条为 fixed 悬浮层（不占文档流、footer 不让位），无队列时零常驻留白 */}
         <PlayerProvider>
           {/* 顶栏全宽单行（AGENTS.md 界面布局规范第 1 条，sticky z-40）：
-              移动端是 品牌 + 汉堡菜单 + 搜索 + 主题，5 个栏目收进侧滑抽屉（经典移动端导航）；
-              sm 起汉堡隐藏，改为行内文字导航。高度取自 --header-height，
-              分类条吸顶与锚点避让都跟着它走 */}
+              品牌居左；栏目导航与搜索/主题同处右侧簇。移动端导航收进汉堡侧滑抽屉，
+              sm 起改为行内文字导航（display:none 让读屏与 Tab 顺序一并让位）。高度取自
+              --header-height，分类条吸顶与锚点避让都跟着它走 */}
           <header className="sticky top-0 z-40 border-b border-border-subtle bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
             <nav className="flex min-h-[var(--header-height)] w-full items-center gap-x-2 px-4 py-2.5 sm:px-6 sm:py-3">
               <Link href="/" className="type-item flex shrink-0 items-center gap-2 font-semibold transition-colors hover:text-primary">
@@ -59,15 +56,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Orange
               </Link>
 
-              {/* 行内文字导航只在 sm 及以上出现；display:none 让读屏与 Tab 顺序一并让位 */}
-              <div className="hidden sm:block">
-                <HeaderNav />
-              </div>
-
               <div className="ml-auto flex items-center gap-x-1 sm:gap-x-2">
+                {/* 行内文字导航只在 sm 及以上出现，移动端由 MobileNavDrawer 承担 */}
+                <div className="hidden sm:block">
+                  <HeaderNav />
+                </div>
                 <MobileNavDrawer />
                 <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/70 sm:inline-block" />
-                <SearchDialog categories={categories} />
+                <SearchDialog />
                 <ThemeSelect className="hidden sm:inline-flex" />
                 <ThemeToggle />
               </div>

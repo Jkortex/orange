@@ -9,17 +9,16 @@ import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 
 /*
  * 移动端栏目菜单（经典汉堡 + 侧滑抽屉）：
- * - 顶栏在移动端保持单行：品牌 + 菜单 + 搜索 + 主题；5 个栏目收进抽屉，逐行列出、各占一行。
+ * - 顶栏在移动端保持单行：品牌 + 菜单 + 搜索 + 主题；4 个栏目收进抽屉，逐行列出、各占一行。
  * - sm 起由顶栏行内导航接管，抽屉触发器隐藏。
- * - 图标沿用各集合首页的图标（posts=Newspaper / life=NotebookPen / music=Music / skills=Wrench），
+ * - 图标沿用各集合的图标（文章=Newspaper（现为根路径 /）/ life=NotebookPen / music=Music / skills=Wrench），
  *   菜单里图标只是辅助，栏目名始终是可见文本。
  * - 搜索全站只保留顶栏那一个入口，抽屉里不重复放。
  * - 焦点陷阱、Esc、遮罩点击、滚动锁全部由 Sheet（Radix Dialog）负责，本组件只管内容与关闭时机。
  */
 
 const SECTION_ICONS: Record<string, LucideIcon> = {
-  '/': Home,
-  '/posts': Newspaper,
+  '/': Newspaper,
   '/life': NotebookPen,
   '/music': Music,
   '/skills': Wrench,
@@ -31,7 +30,8 @@ export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[]
   const firstItemRef = useRef<HTMLAnchorElement>(null)
 
   function isActive(href: string) {
-    if (href === '/') return pathname === '/'
+    // 根路径即文章列表；文章详情在 /posts/<slug>，也归「文章」高亮
+    if (href === '/') return pathname === '/' || pathname.startsWith('/posts/')
     return pathname === href || pathname.startsWith(`${href}/`)
   }
 

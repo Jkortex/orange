@@ -51,7 +51,6 @@ function renderExplorer(activePath: string) {
       pkg={pkg}
       renderedFile={file}
       activePath={file.path}
-      pageHref={activePath === 'SKILL.md' ? '/skills/test-skill' : '/skills/test-skill/templates/tmpl'}
     />,
   )
 }

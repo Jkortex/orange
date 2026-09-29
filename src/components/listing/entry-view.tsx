@@ -10,7 +10,6 @@ import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
 import { A11yScrollable } from '@/components/primitives/a11y-scrollable'
 import { ReadingProgress } from '@/components/reading/reading-progress'
 import { AdjacentNav } from '@/components/reading/adjacent-nav'
-import { RecentTracker } from '@/components/chrome/recent-tracker'
 import { DetailHeader } from '@/components/listing/detail-header'
 import { PagefindFilters } from '@/components/listing/pagefind-filters'
 
@@ -45,10 +44,10 @@ export function entryMetadata(type: CollectionType, slug: string): Metadata {
 export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> }) {
   const isLife = entry.collection === 'life'
   // 默认返回路径指向确定路由（无站内来源历史时兜底）：
-  // posts 默认回文章列表；life 默认回生活列表；若有站内来源（如从首页进文章）由 BackButton 动态接管
+  // posts 默认回文章列表（根路径）；life 默认回生活列表；若有站内来源由 BackButton 动态接管
   const fallback = isLife
     ? { href: '/life', label: '生活' }
-    : { href: '/posts', label: '文章列表' }
+    : { href: '/', label: '文章列表' }
   // 长文在正文前生成锚点目录
   const headings = shouldShowToc(entry.body) ? extractToc(entry.body) : []
   // 阅读时长与字数估算
@@ -66,9 +65,6 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
     <div className="w-full animate-in fade-in-50 duration-300">
       {/* 顶部滚动进度指示条 */}
       <ReadingProgress />
-
-      {/* 记录当前页面到最近访问列表 */}
-      <RecentTracker url={`/${entry.collection}/${entry.slug}`} title={entry.data.title} />
 
       {/* 搜索过滤元数据：按类型/分类下推给 Pagefind 索引 */}
       <PagefindFilters type={entry.collection} category={entry.data.category} />

@@ -15,7 +15,6 @@ export const SHORTCUTS: ShortcutItem[] = [
   { keys: 'g c', desc: '命令面板 — 命令模式 (>)', category: '命令' },
   { keys: 'g a', desc: '命令面板 — 分类模式 (@)', category: '命令' },
   { keys: 'g s', desc: '命令面板 — 页面符号 (#)', category: '命令' },
-  { keys: 'g h', desc: '回到博客首页', category: '导航' },
   { keys: '[  /  ]', desc: '上一篇 / 下一篇', category: '阅读' },
   { keys: 't', desc: '切换深浅主题', category: '命令' },
   { keys: '?', desc: '显示快捷键帮助', category: '命令' },

@@ -22,7 +22,7 @@ describe('EntryView 返回路径与元信息', () => {
   it('正文顶部有指向父级集合的文字返回（确定路由，非浏览器历史）', async () => {
     const html = await renderToHtml(makeEntry('正文'))
 
-    expect(html).toContain('href="/posts"')
+    expect(html).toContain('href="/"')
     expect(html).toContain('文章列表')
   })
 
@@ -62,7 +62,7 @@ describe('EntryView 异常渲染', () => {
   it('空正文不抛错，无目录但仍有返回', async () => {
     const html = await renderToHtml(makeEntry(''))
 
-    expect(html).toContain('href="/posts"')
+    expect(html).toContain('href="/"')
     expect(html).not.toContain('文章目录')
   })
 })

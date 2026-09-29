@@ -51,6 +51,16 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('搜索关键词'))
   })
 
+  it('移动端不占满视口：保留基类的左右留白，仅 sm 起放宽到 max-w-xl', () => {
+    render(<SearchDialog />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+
+    const dialog = screen.getByRole('dialog', { name: '站内搜索' })
+    expect(dialog.className, '移动端须保留 100%-2rem 的左右留白').toContain('max-w-[calc(100%-2rem)]')
+    expect(dialog.className, 'sm 起才放宽到 max-w-xl').toContain('sm:max-w-xl')
+    expect(dialog.className.split(' ')).not.toContain('max-w-xl')
+  })
+
   it('响应生活页的打开事件并切换到生活范围', () => {
     render(<SearchDialog />)
 
@@ -84,7 +94,12 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(within(group).getByRole('button', { name: '文章' }).getAttribute('aria-pressed')).toBe('false')
   })
 
-  it('空状态：展示常用推荐动作与最近访问记录', () => {
+  /*
+   * 空态刻意留白：搜索只负责检索内容。
+   * 原来这里塞过「常用推荐」（切换深浅色 / 前往首页 / 前往文章列表）与「最近访问」，
+   * 前者在顶栏已有一等公民入口、后者是本地历史，两者都不是内容检索的结果，故整体移除。
+   */
+  it('空态只留检索提示，不推荐动作也不列历史', () => {
     localStorage.setItem(
       'orange_recent_visits',
       JSON.stringify([{ url: '/posts/hello', title: '你好 Orange' }]),
@@ -93,26 +108,21 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
-    expect(screen.getByText('最近访问')).toBeTruthy()
-    expect(screen.getByText('你好 Orange')).toBeTruthy()
-    expect(screen.getByText('常用推荐')).toBeTruthy()
-    expect(screen.getByText('切换深色 / 浅色模式')).toBeTruthy()
+    expect(screen.getByText(/输入关键词/)).toBeTruthy()
+    expect(screen.queryByText('常用推荐')).toBeNull()
+    expect(screen.queryByText('最近访问')).toBeNull()
+    expect(screen.queryByText('你好 Orange')).toBeNull()
+    expect(screen.queryByRole('button', { name: '清除记录' })).toBeNull()
   })
 
-  it('空状态：支持一键清空最近访问记录', () => {
-    localStorage.setItem(
-      'orange_recent_visits',
-      JSON.stringify([{ url: '/posts/hello', title: '你好 Orange' }]),
-    )
-
+  // 触屏上不存在物理键盘，↑↓/Tab/ESC 提示纯属占位，整条底栏 sm 起才显示
+  it('快捷键底栏默认隐藏，仅 sm 起显示', () => {
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
-    const clearBtn = screen.getByRole('button', { name: '清除记录' })
-    fireEvent.click(clearBtn)
-
-    expect(screen.queryByText('你好 Orange')).toBeNull()
-    expect(localStorage.getItem('orange_recent_visits')).toBeNull()
+    const bar = screen.getByText('ESC 关闭').closest('div')
+    expect(bar?.className).toContain('hidden')
+    expect(bar?.className).toContain('sm:flex')
   })
 
   it('输入关键词全文检索：渲染文章结果分组与命中高亮', async () => {
@@ -281,7 +291,11 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(option.id)
   })
 
-  it('自然匹配快捷动作：输入“主题”即可直达切换深浅模式', async () => {
+  /*
+   * 搜索已收敛为纯内容检索：系统动作与分类直达两组结果整体下线，
+   * 输入「主题」「CSS」不应再产生任何导航型结果。
+   */
+  it('纯内容检索：系统动作与分类直达不再作为结果出现', async () => {
     mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
 
     render(<SearchDialog />)
@@ -290,25 +304,10 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     fireEvent.change(input, { target: { value: '主题' } })
 
     await waitFor(() => {
-      expect(screen.getByText('快捷操作 (1)')).toBeTruthy()
-      expect(screen.getByText('切换深色 / 浅色模式')).toBeTruthy()
+      expect(screen.getByText(/未找到与/)).toBeTruthy()
     })
-  })
-
-  it('自然匹配分类：输入“CSS”即可直达 CSS 分类专栏', async () => {
-    mockLoad.mockResolvedValue(makeApi(vi.fn().mockResolvedValue({ results: [] })))
-
-    render(<SearchDialog categories={[{ name: 'css', count: 2 }]} />)
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    const input = screen.getByLabelText('搜索关键词')
-    fireEvent.change(input, { target: { value: 'CSS' } })
-
-    await waitFor(() => {
-      expect(screen.getByText(/分类与专栏/)).toBeTruthy()
-    })
-
-    fireEvent.click(screen.getByRole('link', { name: /CSS/ }))
-    expect(mockPush).toHaveBeenCalledWith('/category/css')
+    expect(screen.queryByText(/快捷操作/)).toBeNull()
+    expect(screen.queryByText(/分类与专栏/)).toBeNull()
   })
 
   it('自然匹配本文章节大纲：输入章节标题直达对应锚点', async () => {

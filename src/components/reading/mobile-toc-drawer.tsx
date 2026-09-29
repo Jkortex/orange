@@ -1,17 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { List, X } from 'lucide-react'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
-import { useOptionalPlayerIndex } from '@/components/player/player-provider'
+import { useFloatingStackOffset } from '@/lib/floating-stack'
 import { IconButton } from '@/components/primitives/icon-button'
 
 /*
  * 移动端/窄屏目录抽屉与悬浮入口（< xl）：
  * - 与 BackToTop 共享同一垂直基准轴线（right-4 sm:right-6 md:right-8）与组件规范（IconButton size-9）
- * - 页面滚动超过 300px（BackToTop 出现）时，平滑上浮腾出位置，形成视觉协调的双钮操作栈
- * - 播放条出现时自适应同步抬升，严防层叠遮挡
+ * - 档位由 useFloatingStackOffset 统一裁决：BackToTop 出现时平滑上浮腾出位置，
+ *   形成视觉协调的双钮操作栈；播放条出现时再抬一层，严防层叠遮挡
  */
 
 export function MobileTocDrawer({
@@ -22,16 +22,7 @@ export function MobileTocDrawer({
   className?: string
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const playerIndex = useOptionalPlayerIndex()
-  const hasPlayer = playerIndex !== null
-
-  useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 300)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  const bottomClass = useFloatingStackOffset()
 
   if (headings.length === 0) return null
 
@@ -40,11 +31,6 @@ export function MobileTocDrawer({
     scrollToHeading(id)
     setIsOpen(false)
   }
-
-  // 计算垂直底距：与 BackToTop 保持 8px（gap-2）紧凑协调间距
-  const bottomClass = !hasPlayer
-    ? (isScrolled ? 'bottom-[4.25rem]' : 'bottom-6')
-    : (isScrolled ? 'bottom-[7.75rem]' : 'bottom-20')
 
   return (
     <div className={`xl:hidden ${className}`}>

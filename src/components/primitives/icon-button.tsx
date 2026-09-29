@@ -23,6 +23,12 @@ export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   tipClassName?: string
   /** 触摸目标尺寸（md = 36px） */
   size?: IconButtonSize
+  /**
+   * 宽度行为：默认与 size 同为正方形；'auto' 只锁高度、宽度随内容撑开（带文字的胶囊）。
+   * 后者不再输出固定宽度类——size-* 的 width 与 w-auto 不属同一冲突组，tailwind-merge
+   * 不会去重，二者共存时宽度只能靠 Tailwind 输出顺序决胜，故从源头避免共存。
+   */
+  width?: 'auto'
 }
 
 const defaultWrapperClass = 'group relative inline-flex'
@@ -34,6 +40,13 @@ const SIZE_CLASS: Record<IconButtonSize, string> = {
   lg: 'size-10',
 }
 
+/** width="auto" 只锁高度，宽度交给内容与内边距 */
+const HEIGHT_CLASS: Record<IconButtonSize, string> = {
+  sm: 'h-8',
+  md: 'h-9',
+  lg: 'h-10',
+}
+
 const BASE_CLASS =
   'flex items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95'
 
@@ -43,6 +56,7 @@ export function IconButton({
   buttonClassName,
   tipClassName,
   size = 'md',
+  width,
   children,
   ...rest
 }: IconButtonProps) {
@@ -52,7 +66,7 @@ export function IconButton({
         type="button"
         aria-label={label}
         data-size={size}
-        className={cn(BASE_CLASS, SIZE_CLASS[size], buttonClassName)}
+        className={cn(BASE_CLASS, (width === 'auto' ? HEIGHT_CLASS : SIZE_CLASS)[size], buttonClassName)}
         {...rest}
       >
         {children}

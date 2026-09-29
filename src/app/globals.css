@@ -197,7 +197,7 @@
     letter-spacing: -0.015em;
   }
 
-  /* 列表条目标题：全站出现频率最高的文本（首页/文章/技能/分类/标签/专辑卡） */
+  /* 列表条目标题：全站出现频率最高的文本（文章/技能/分类/标签/专辑卡） */
   .type-item {
     font-size: 1rem;
     line-height: 1.45;
@@ -302,7 +302,7 @@
     color: var(--muted-foreground);
   }
 
-  /* 无底色变体：仅描边（首页 hero 徽标等纯标签场景） */
+  /* 无底色变体：仅描边（纯标签场景） */
   .chip-quiet {
     background-color: transparent;
   }

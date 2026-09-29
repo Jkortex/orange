@@ -34,7 +34,7 @@ describe('MobileNavDrawer 顶栏菜单', () => {
   it('打开后逐行列出全部栏目（每项独占一行，不再挤在一行里）', async () => {
     await openDrawer()
 
-    for (const name of ['首页', '文章', '生活', '音乐', '技能']) {
+    for (const name of ['文章', '生活', '音乐', '技能']) {
       expect(screen.getByRole('link', { name })).toBeTruthy()
     }
     // 竖排列表：每一项都是块级行，行高足够点按
@@ -82,7 +82,7 @@ describe('MobileNavDrawer 顶栏菜单', () => {
 
     // 关闭按钮在 DOM 末尾，浮层默认聚焦它；用户预期是「打开就能按第一个栏目」
     await waitFor(() => {
-      expect(document.activeElement).toBe(screen.getByRole('link', { name: '首页' }))
+      expect(document.activeElement).toBe(screen.getByRole('link', { name: '文章' }))
     })
   })
 })

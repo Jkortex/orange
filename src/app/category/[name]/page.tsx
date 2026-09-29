@@ -31,7 +31,8 @@ export default async function CategoryPage({ params }: Params) {
   return (
     <section className="mx-auto w-full max-w-2xl">
       <PageHeader title={`分类：${name}`} />
-      <ol>
+      {/* px-2：.list-row 外扩 0.75rem，不补内边距分隔线会贴到屏幕边缘（见 explorer.tsx 同处说明） */}
+      <ol className="px-2 md:px-0">
         {entries.map((entry) => (
           <li
             key={`${entry.collection}/${entry.slug}`}

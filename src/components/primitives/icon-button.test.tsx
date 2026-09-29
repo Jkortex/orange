@@ -54,6 +54,21 @@ describe('IconButton 尺寸契约', () => {
     expect(button.className).toContain('size-10')
     expect(button.className).not.toContain('size-8')
   })
+
+  it('width="auto" 只锁高度、不发宽度：宽度随内容撑开', () => {
+    render(
+      <IconButton label="胶囊" size="md" width="auto">
+        标签
+      </IconButton>,
+    )
+    const button = screen.getByRole('button', { name: '胶囊' })
+    expect(button.className).toContain('h-9')
+    expect(button.className, 'auto 模式不得再发固定宽度，否则宽度只能靠 .w-auto 排在 .size-* 之后才生效').not.toContain(
+      'size-9',
+    )
+    expect(button.className).not.toContain('w-9')
+    expect(button.getAttribute('data-size')).toBe('md')
+  })
 })
 
 describe('IconButton 异常渲染', () => {

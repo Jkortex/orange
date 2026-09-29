@@ -13,8 +13,8 @@ export type BackButtonProps = {
 
 /*
  * 动态返回导航：
- * - 从首页进入文章/技能时，动态呈现「← 首页」，点击返回首页并保留状态与滚动位
- * - 从列表页进入时呈现「← 文章列表 / ← 技能列表」
+ * - 依据站内来源动态给出返回目标与文案：来自根路径（文章列表）→「← 文章列表」，
+ *   来自 /skills →「← 技能列表」，来自分类/标签页 → 对应名称
  * - 直接访问（如外链/书签）时使用确定的语义集合 fallbackHref 兜底，保障 SEO 与容错
  * - 原生 window.history.back() 保留精确滚动位置，无 AppRouter 上下文依赖
  */
@@ -34,13 +34,7 @@ export function BackButton({ fallbackHref, fallbackLabel, className = '' }: Back
         if (refUrl.hostname === window.location.hostname) {
           const pathname = refUrl.pathname
           if (pathname === '/' || pathname === '') {
-            setTarget({ href: '/', label: '首页', canGoBack: true })
-            return
-          }
-          if (pathname === '/posts' || pathname.startsWith('/posts?')) {
-            if (fallbackHref.startsWith('/posts')) {
-              setTarget({ href: '/posts', label: '文章列表', canGoBack: true })
-            }
+            setTarget({ href: '/', label: '文章列表', canGoBack: true })
             return
           }
           if (pathname === '/skills' || pathname.startsWith('/skills?')) {

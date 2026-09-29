@@ -632,7 +632,7 @@ description: 红绿重构循环，测试先行。
     expect(listSkillSlugs({ contentDir })).toEqual(['2026-09-14-tdd-basics'])
   })
 
-  it('getSkillEntries 转为可聚合条目（首页/分类/tags 入流）', () => {
+  it('getSkillEntries 转为可聚合条目（分类/tags 入流）', () => {
     writeSkill('2026-09-14-tdd-basics')
 
     const entries = getSkillEntries({ contentDir })

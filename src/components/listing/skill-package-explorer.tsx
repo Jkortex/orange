@@ -9,7 +9,6 @@ import { formatDate } from '@/lib/format'
 import { Toc } from '@/components/reading/toc'
 import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
 import { ReadingProgress } from '@/components/reading/reading-progress'
-import { RecentTracker } from '@/components/chrome/recent-tracker'
 import { DetailHeader } from '@/components/listing/detail-header'
 import { useCopyText } from '@/components/primitives/use-copy-text'
 import { scrollToHeading } from '@/lib/scroll'
@@ -27,8 +26,6 @@ export type SkillPackageExplorerProps = {
   /** 本页渲染的文件（服务端只编译这一个） */
   renderedFile: RenderedSkillFile
   activePath: string
-  /** 当前页地址（最近访问记录用） */
-  pageHref: string
 }
 
 function getFileIcon(path: string) {
@@ -43,7 +40,6 @@ export function SkillPackageExplorer({
   pkg,
   renderedFile,
   activePath,
-  pageHref,
 }: SkillPackageExplorerProps) {
   const { copied, copyText } = useCopyText(2000)
   const [downloading, setDownloading] = useState(false)
@@ -89,13 +85,10 @@ export function SkillPackageExplorer({
     <article id="skill-top" className="w-full animate-in fade-in-50 duration-300">
       <ReadingProgress />
 
-      {/* 记录当前文件到最近访问 */}
-      <RecentTracker url={pageHref} title={pkg.data.title} />
-
       {/* 顶部 Header 区块：动态返回链接与技能信息、下载按钮 */}
       <DetailHeader
-        backHref="/"
-        backLabel="首页"
+        backHref="/skills"
+        backLabel="技能列表"
         title={pkg.data.title}
         meta={
           <>

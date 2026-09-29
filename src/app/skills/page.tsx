@@ -24,7 +24,7 @@ export default function SkillsPage() {
     <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
       <PageHeader
         title="技能"
-        description="可交互的开发技能包与工作流 · 按分类过滤，即时切换。"
+        description="可交互的开发技能包与工作流。"
         icon={<Wrench aria-hidden />}
       />
       <SkillsExplorer skills={skills} />

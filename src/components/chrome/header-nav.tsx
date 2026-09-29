@@ -9,8 +9,7 @@ export type NavItem = {
 }
 
 export const defaultNavItems: NavItem[] = [
-  { href: '/', label: '首页' },
-  { href: '/posts', label: '文章' },
+  { href: '/', label: '文章' },
   { href: '/life', label: '生活' },
   { href: '/music', label: '音乐' },
   { href: '/skills', label: '技能' },
@@ -25,8 +24,9 @@ export function HeaderNav({ items = defaultNavItems }: { items?: NavItem[] }) {
   const pathname = usePathname()
 
   function isActive(href: string) {
+    // 根路径即文章列表；文章详情在 /posts/<slug>，也归「文章」高亮
     if (href === '/') {
-      return pathname === '/'
+      return pathname === '/' || pathname.startsWith('/posts/')
     }
     return pathname === href || pathname.startsWith(`${href}/`)
   }

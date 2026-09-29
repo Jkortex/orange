@@ -2,6 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
 import { z } from 'zod'
+// 相对导入：本文件也被 scripts/*.ts 以 node --experimental-strip-types 直接加载，那条路径不解析 @/ 别名
+import { compareText } from './format.ts'
 
 /*
  * 内容层（AGENTS.md 内容与渲染纪律）：
@@ -165,11 +167,6 @@ function assertEntryFilename(filePath: string) {
   }
 }
 
-/** 不依赖运行环境的字典序，保证 manifest 和静态输出可重复。 */
-function compareText(a: string, b: string) {
-  return a < b ? -1 : a > b ? 1 : 0
-}
-
 function compareEntries<T extends CollectionType>(
   a: CollectionEntry<T>,
   b: CollectionEntry<T>,
@@ -313,7 +310,7 @@ export function getAdjacentEntries<T extends CollectionType>(
   }
 }
 
-/** 全类型聚合，按日期倒序（首页混合时间线 / 归档共用，AGENTS.md 界面布局规范第 6 条） */
+/** 全类型聚合，按日期倒序（归档共用） */
 export function getAllEntries(options?: GetOptions): CollectionEntry<CollectionType>[] {
   if (!options?.contentDir && !options?.skipManifest) {
     const manifest = loadManifestFromDisk()
@@ -519,7 +516,7 @@ function listPackageFiles(pkgDir: string): SkillFile[] {
   return out.sort((a, b) => compareText(a.path, b.path))
 }
 
-/** skill 包转为可聚合条目（body 取 SKILL.md 正文，供首页/分类/tags 入流） */
+/** skill 包转为可聚合条目（body 取 SKILL.md 正文，供分类/tags 入流） */
 export function getSkillEntries(options?: GetOptions): CollectionEntry<'skills'>[] {
   if (!options?.contentDir && !options?.skipManifest) {
     const manifest = loadManifestFromDisk()

@@ -49,7 +49,6 @@ describe('sitemap 技能包文件页', () => {
 
     expect(urls()).toEqual([
       'https://orange.example.com',
-      'https://orange.example.com/posts',
       'https://orange.example.com/life',
       'https://orange.example.com/music',
       'https://orange.example.com/skills',

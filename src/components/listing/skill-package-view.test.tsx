@@ -29,10 +29,10 @@ function makePackage(): SkillPackage {
 }
 
 describe('SkillPackageView 目录展示', () => {
-  it('返回首页 + 标题 + 技能元信息（name/version）', async () => {
+  it('返回技能列表 + 标题 + 技能元信息（name/version）', async () => {
     const html = await renderToHtml(makePackage())
 
-    expect(html).toContain('href="/"')
+    expect(html).toContain('href="/skills"')
     expect(html).toContain('TDD 基础')
     expect(html).toContain('tdd-basics')
     expect(html).toContain('1.0.0')

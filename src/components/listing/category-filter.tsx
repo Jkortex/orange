@@ -1,18 +1,36 @@
 'use client'
 
-import { ChevronDown } from 'lucide-react'
-import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useState } from 'react'
+import { SlidersHorizontal } from 'lucide-react'
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { useFloatingStackOffset } from '@/lib/floating-stack'
+import { IconButton } from '@/components/primitives/icon-button'
+import { compareText } from '@/lib/format'
 
 /*
  * 分类过滤复用（posts-explorer / skills-explorer 共用，同属 listing 域）：
- * - aggregateCategories：由条目聚合分类与条数（名称排序，与服务端 getCategories 一致）
- * - filterPillClass：分类胶囊 active/默认态
+ * - aggregateCategories：由条目聚合分类与条数（码位排序，与服务端 getCategories 同序）
+ * - filterPillClass：桌面端分类行 active/默认态
  * - CategoryFilter：移动端与桌面端两套控件
- *   · 移动端：单行下拉（显示当前分类）+ 浮层里可换行的药丸网格。
- *     早先是一整条横滑药丸带，读不出「右边还有」且会占掉整屏宽度；
- *     现在收起只占一行 36px，展开也一次摊开全部分类，不产生横向滚动。
+ *   · 移动端：右下角浮动筛选按钮 + 底部抽屉。
+ *     这里换过两版都被否：整条横滑药丸带（读不出「右边还有」、占满屏宽）、
+ *     常驻单行下拉（白占一整行、像原生 select、且与下方标题重复「全部」）。
+ *     现在完全脱离文档流：折叠时只有一颗 36px 图标按钮（size-9）；选中分类后按钮自身变成
+ *     品牌色胶囊并显示分类名，不点开也知道当前筛的是哪个。点开是底部抽屉，
+ *     一次摊开全部分类，且是拇指可达区。
  *   · 桌面端（md 起）：吸顶纵向侧栏，计数右对齐成列。
- * 「最近」是默认虚拟分类，两端都在第一位。
+ * - 浮动按钮与 BackToTop / MobileTocDrawer 共用同一条垂直基准轴线（right-4 sm:right-6）：
+ *   叠在 BackToTop 出现位（bottom-6 / bottom-20）之上，播放条出现时整体再抬一层。
+ *   档位切换带 bottom 过渡（同目录按钮）——刷新且已滚动时档位在水合后才纠正，
+ *   有过渡才是平滑上浮而非 44px 瞬移。
+ * 「全部」是默认虚拟分类，两端都在第一位。
  */
 
 export type CategoryItem = { name: string; count: number }
@@ -26,12 +44,10 @@ export function aggregateCategories<T extends { category?: string }>(items: T[])
   }
   return [...counts.entries()]
     .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => compareText(a.name, b.name))
 }
 
-/** 分类项样式（active 高亮 / 默认弱化）。
- *  两端共用同一套胶囊配方：移动端浮层里换行排列，桌面端拉满侧栏宽度后
- *  改为行形状圆角，选中态靠可见边框表达（不填充，两侧仅边框有无之分）。 */
+/** 桌面端分类行样式（拉满侧栏宽度后改为行形状圆角，选中态靠可见边框表达，不填充） */
 export function filterPillClass(active: boolean) {
   return [
     'type-meta flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors duration-150 md:w-full md:rounded-lg',
@@ -41,68 +57,108 @@ export function filterPillClass(active: boolean) {
   ].join(' ')
 }
 
+/** 抽屉里的分类卡：两列网格中的整行可点目标，计数右对齐 */
+function sheetItemClass(active: boolean) {
+  return [
+    'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition-colors duration-150',
+    active
+      ? 'border-primary/50 bg-primary/10 font-medium text-primary'
+      : 'border-border-subtle bg-surface text-foreground hover:border-primary/40',
+  ].join(' ')
+}
+
 export type CategoryFilterProps = {
   categories: CategoryItem[]
-  /** null = 最近（全部） */
+  /** null = 全部（不筛选） */
   active: string | null
   onSelect: (name: string | null) => void
   /** 导航无障碍名（文章分类 / 技能分类） */
   navLabel: string
+  /** 全部条目数（含无分类的）——「全部」即不筛选，展示所有条目，故计数不能用分类数之和（会漏掉无分类条目） */
+  total: number
 }
 
-export function CategoryFilter({ categories, active, onSelect, navLabel }: CategoryFilterProps) {
-  const activeLabel = active ?? '最近'
+export function CategoryFilter({ categories, active, onSelect, navLabel, total }: CategoryFilterProps) {
+  const [open, setOpen] = useState(false)
+  const activeLabel = active ?? '全部'
+  // 与回到顶部 / 移动端目录共用档位：它出现时本按钮上抬让位，播放条出现时再抬一层
+  const bottomClass = useFloatingStackOffset()
 
   return (
     <>
-      {/* 移动端：单行下拉。展开层用 Popover 浮在列表上方，不把页面撑长 */}
-      <div className="sticky top-[var(--header-height)] z-30 -mx-4 border-b border-border-subtle bg-background/85 px-4 py-2 backdrop-blur-md md:hidden">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label={`分类筛选：${activeLabel}`}
-              className="surface-card type-meta flex h-9 w-full items-center justify-between gap-2 px-3 text-left font-medium text-foreground transition-colors duration-150 hover:border-primary/40"
-            >
-              <span className="truncate">{activeLabel}</span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                {active !== null && <span className="tabular-nums">{categories.find((c) => c.name === active)?.count ?? 0}</span>}
-                <ChevronDown className="size-4" aria-hidden />
-              </span>
-            </button>
-          </PopoverTrigger>
+      {/* 移动端：右下角浮动筛选按钮。与 BackToTop / MobileTocDrawer 是同一套规格：
+          size="md"(36px) + size-4 图标 + 同一组描边/底色/hover，右缘同为 right-4 sm:right-6 md:right-8，
+          三者叠放时图标才会落在同一条竖轴上。选中态变品牌色胶囊：去掉描边（实心底色本就不需要），
+          并把分类名放在图标左侧、右内边距取 pr-2.5 —— 圆形态的图标是按 36px 居中的，
+          其右缘距按钮外沿 (36-16)/2 = 10px，无描边时 pr-2.5 恰好等价，两态图标严丝合缝同轴。 */}
+      <IconButton
+        label={`分类筛选：${activeLabel}`}
+        size="md"
+        // 选中态是带文字的胶囊：只锁 36px 高度，宽度随内容（见 IconButton width 说明）
+        width={active ? 'auto' : undefined}
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        wrapperClassName={`group fixed right-4 z-40 sm:right-6 md:right-8 md:hidden transition-[bottom,transform,opacity] duration-200 ease-out ${bottomClass}`}
+        buttonClassName={
+          'border border-border-strong bg-surface/85 backdrop-blur-md ' +
+          'hover:border-primary/50 hover:bg-surface hover:text-primary' +
+          (active
+            ? ' w-auto gap-1.5 border-0 bg-primary pl-3 pr-2.5 font-medium text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+            : '')
+        }
+        tipClassName="bottom-full right-0 mb-2"
+      >
+        {active && <span className="max-w-[6rem] truncate text-sm">{active}</span>}
+        <SlidersHorizontal className="size-4 shrink-0" aria-hidden />
+      </IconButton>
 
-          <PopoverContent
-            aria-label={navLabel}
-            className="w-[min(22rem,calc(100vw-2rem))]"
-          >
-            <div data-category-grid className="flex flex-wrap gap-1.5">
-              <PopoverClose asChild>
-                <button
-                  type="button"
-                  aria-pressed={active === null}
-                  onClick={() => onSelect(null)}
-                  className={filterPillClass(active === null)}
-                >
-                  最近
-                </button>
-              </PopoverClose>
-              {categories.map(({ name, count }) => (
-                <PopoverClose asChild key={name}>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="bottom"
+          className="max-h-[75vh] gap-0 rounded-t-2xl border-border-subtle pb-[env(safe-area-inset-bottom)]"
+        >
+          <SheetHeader className="border-b border-border-subtle px-5 py-4">
+            <SheetTitle className="type-section text-foreground">{navLabel}</SheetTitle>
+            <SheetDescription className="sr-only">
+              按分类筛选{navLabel}，选择后即时生效
+            </SheetDescription>
+          </SheetHeader>
+
+          <nav aria-label={navLabel} className="overflow-y-auto px-4 py-4">
+            <ul className="grid grid-cols-2 gap-2">
+              <li>
+                <SheetClose asChild>
                   <button
                     type="button"
-                    aria-pressed={active === name}
-                    onClick={() => onSelect(name)}
-                    className={filterPillClass(active === name)}
+                    aria-pressed={active === null}
+                    onClick={() => onSelect(null)}
+                    className={sheetItemClass(active === null)}
                   >
-                    {name} <span className="type-caption tabular-nums">{count}</span>
+                    <span className="truncate">全部</span>{' '}
+                    <span className="type-caption tabular-nums text-muted-foreground">{total}</span>
                   </button>
-                </PopoverClose>
+                </SheetClose>
+              </li>
+              {categories.map(({ name, count }) => (
+                <li key={name}>
+                  <SheetClose asChild>
+                    <button
+                      type="button"
+                      aria-pressed={active === name}
+                      onClick={() => onSelect(name)}
+                      className={sheetItemClass(active === name)}
+                    >
+                      <span className="truncate">{name}</span>{' '}
+                      <span className="type-caption tabular-nums text-muted-foreground">{count}</span>
+                    </button>
+                  </SheetClose>
+                </li>
               ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
+            </ul>
+          </nav>
+        </SheetContent>
+      </Sheet>
 
       {/* 桌面端：吸顶纵向侧栏 */}
       <aside className="sticky top-[calc(var(--header-height)+1rem)] z-30 hidden min-w-0 md:block md:max-h-[calc(100vh-var(--header-height)-2rem)] md:overflow-y-auto md:pr-2">
@@ -115,7 +171,7 @@ export function CategoryFilter({ categories, active, onSelect, navLabel }: Categ
                 onClick={() => onSelect(null)}
                 className={filterPillClass(active === null)}
               >
-                最近
+                全部
               </button>
             </li>
             {categories.map(({ name, count }) => (
@@ -127,7 +183,7 @@ export function CategoryFilter({ categories, active, onSelect, navLabel }: Categ
                   className={filterPillClass(active === name)}
                 >
                   {name}{' '}
-                  {/* 不写死颜色：随胶囊状态继承（active 时转品牌色），桌面端推到右缘成列 */}
+                  {/* 不写死颜色：随行状态继承（active 时转品牌色），桌面端推到右缘成列 */}
                   <span className="type-caption tabular-nums md:ml-auto">{count}</span>
                 </button>
               </li>

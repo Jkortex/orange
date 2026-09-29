@@ -10,22 +10,23 @@ afterEach(() => {
 
 describe('BackButton 动态返回组件', () => {
   it('默认渲染兜底链接与文案', () => {
-    render(<BackButton fallbackHref="/posts" fallbackLabel="文章列表" />)
+    render(<BackButton fallbackHref="/" fallbackLabel="文章列表" />)
 
     const link = screen.getByRole('link', { name: /文章列表/ })
-    expect(link.getAttribute('href')).toBe('/posts')
+    expect(link.getAttribute('href')).toBe('/')
   })
 
-  it('当 document.referrer 为首页时，动态更新为「首页」', async () => {
+  it('当来源为根路径（文章列表）时，动态返回「文章列表」→ /', async () => {
     Object.defineProperty(document, 'referrer', {
       value: 'http://localhost/',
       configurable: true,
     })
 
-    render(<BackButton fallbackHref="/posts" fallbackLabel="文章列表" />)
+    // 兜底给的是生活列表；来源是根路径时应改判为文章列表
+    render(<BackButton fallbackHref="/life" fallbackLabel="生活" />)
 
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: /首页/ })
+      const link = screen.getByRole('link', { name: /文章列表/ })
       expect(link.getAttribute('href')).toBe('/')
     })
   })
@@ -36,7 +37,7 @@ describe('BackButton 动态返回组件', () => {
       configurable: true,
     })
 
-    render(<BackButton fallbackHref="/posts" fallbackLabel="文章列表" />)
+    render(<BackButton fallbackHref="/" fallbackLabel="文章列表" />)
 
     await waitFor(() => {
       const link = screen.getByRole('link', { name: /分类/ })
@@ -51,29 +52,26 @@ describe('BackButton 动态返回组件', () => {
       configurable: true,
     })
 
-    render(<BackButton fallbackHref="/posts" fallbackLabel="文章列表" />)
+    render(<BackButton fallbackHref="/" fallbackLabel="文章列表" />)
 
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: /首页/ })
+      const link = screen.getByRole('link', { name: /文章列表/ })
       expect(link.getAttribute('href')).toBe('/')
     })
   })
 
-  it('当文章页（fallbackHref="/posts"）遇到来源为 /skills 时，不跨类型跳到技能，保持「文章列表」', async () => {
+  it('当文章页（fallbackHref="/"）遇到来源为 /skills 时，不跨类型跳到技能，保持「文章列表」', async () => {
     Object.defineProperty(document, 'referrer', {
       value: 'http://localhost/skills',
       configurable: true,
     })
 
-    render(<BackButton fallbackHref="/posts" fallbackLabel="文章列表" />)
+    render(<BackButton fallbackHref="/" fallbackLabel="文章列表" />)
 
     await waitFor(() => {
       const link = screen.getByRole('link', { name: /文章列表/ })
-      expect(link.getAttribute('href')).toBe('/posts')
+      expect(link.getAttribute('href')).toBe('/')
     })
     expect(screen.queryByRole('link', { name: /技能列表/ })).toBeNull()
   })
 })
-
-
-

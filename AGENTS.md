@@ -13,7 +13,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 ## Architecture
 
 - **Static-export red line**: no Server Actions / ISR / image optimization; `node:fs` only in `src/lib/content.ts` (build-time reads); clients never fetch content
-- **Directory ownership**: `src/app/` = thin routes only (params + build-time data + assembly; dynamic routes need `generateStaticParams`); `src/components/` by domain (`chrome/` = layout shell, `player/`, `reading/`, `listing/`, `home/`, `primitives/` = only after second reuse, `ui/` = frozen shadcn vendor, `test-utils/` = tests only); `src/lib/` = content layer + markdown pipeline; `utils.ts` holds only `cn`
+- **Directory ownership**: `src/app/` = thin routes only (params + build-time data + assembly; dynamic routes need `generateStaticParams`); `src/components/` by domain (`chrome/` = layout shell, `player/`, `reading/`, `listing/`, `primitives/` = only after second reuse, `ui/` = frozen shadcn vendor, `test-utils/` = tests only); `src/lib/` = content layer + markdown pipeline; `utils.ts` holds only `cn`
 - rss/sitemap/robots read `NEXT_PUBLIC_SITE_URL` (placeholder default `https://orange.example.com`) — must be set in production
 
 ## Content pipeline (main footgun zone)
@@ -40,11 +40,11 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 ## Layout rules (mandatory)
 
 1. **Global skeleton is constant**: header (sticky, z-40) / main (flex-1, width owned by each page) / footer + player bar (fixed bottom, z-50) + search (toolbar button + Ctrl/Cmd+K). Pages only swap main content
-   - 顶栏恒为单行：移动端 5 个栏目收进 `MobileNavDrawer`，`sm` 起换行内 `HeaderNav`；`--header-height` 是顶栏高度的唯一来源，sticky 偏移与锚点避让都读它
+   - 顶栏恒为单行：移动端 4 个栏目收进 `MobileNavDrawer`，`sm` 起换行内 `HeaderNav`；`--header-height` 是顶栏高度的唯一来源，sticky 偏移与锚点避让都读它
 2. **Page-owned widths**: default `max-w-2xl`, prose `max-w-prose`; posts/skills index dual-column `max-w-5xl`; skills detail is a 3-pane explorer at `max-w-7xl`. Chrome (header/footer) is full-bleed at `px-4 sm:px-6` — it never inherits a page's width
    - 技能包每个文件一个静态页：`SKILL.md` = `/skills/<slug>`，其余 = `/skills/<slug>/<path 去扩展名>`（映射与撞车检查见 `src/lib/skill-routes.ts`）
 3. **Player bar is global chrome**: `PlayerProvider` in layout owns queue + singleton Audio — **components must never create their own `Audio`**; playback survives navigation; renders nothing when queue empty. 播放条 `fixed` 不占流，其占位块由 `PlayerBarLoader` 负责，main 不留常驻底部内边距
-4. **Homepage = unified mixed timeline**: all types date-desc with type badges, no sectioned blocks; posts page = category list left (build-time, click = client-side filter on inlined data, no requests) + entries right
+4. **Root `/` = posts list**: category list left (build-time, click = client-side filter on inlined data, no requests) + entries right. No cross-type homepage; article details live at `/posts/<slug>` (bare `/posts` is not a page)
 5. **Search**: results from the build-time Pagefind index (only exists after `pnpm build`); UI drawn with semantic tokens; **the "no index in dev" fallback message is expected**, not a bug (`src/lib/pagefind.ts` → null). 范围过滤下推 `filters: { type }`，所以每个详情页都要渲染 `PagefindFilters`；输入框是 `combobox`，结果是 `listbox`
 
 ## React discipline
