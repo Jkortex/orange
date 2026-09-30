@@ -103,7 +103,8 @@ export function centerViewBoxOnContent(
  * 这也是它不能放进 markdown 构建期管线的原因。
  */
 export function centerSvgViewBox(svg: SVGSVGElement): void {
-  const current = parseViewBox(svg.getAttribute('viewBox'))
+  const originalRaw = svg.getAttribute('data-original-viewbox') ?? svg.getAttribute('viewBox')
+  const current = parseViewBox(originalRaw)
   if (!current) return
 
   let box: Box
@@ -113,6 +114,11 @@ export function centerSvgViewBox(svg: SVGSVGElement): void {
   } catch {
     // 未布局、已脱离文档、或环境没实现 —— 都不是错误，放弃校正即可
     return
+  }
+
+  // 记录未被校准过的初始 viewBox，使多次调用（如字体就绪、动画结束后二次刷新）保持幂等
+  if (!svg.hasAttribute('data-original-viewbox') && svg.hasAttribute('viewBox')) {
+    svg.setAttribute('data-original-viewbox', svg.getAttribute('viewBox')!)
   }
 
   const next = centerViewBoxOnContent(current, box)

@@ -26,12 +26,12 @@ export function remarkMermaid(options: RemarkMermaidOptions = {}) {
       try {
         const svg = renderMermaidSVG(node.value, {
           transparent: true,
-          bg: 'var(--card)',
+          bg: 'var(--surface)',
           fg: 'var(--foreground)',
-          line: 'var(--border)',
+          line: 'var(--border-strong)',
           accent: 'var(--primary)',
           muted: 'var(--muted-foreground)',
-          surface: 'var(--muted)',
+          surface: 'var(--surface-hover)',
           border: 'var(--border)',
         })
 

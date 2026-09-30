@@ -143,6 +143,10 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('客户端')
     expect(html).toContain('微服务')
     expect(html).toContain('var(--primary)')
+    expect(html).toContain('var(--surface)')
+    expect(html).toContain('var(--surface-hover)')
+    expect(html).toContain('var(--border-strong)')
+    expect(html).toContain('var(--muted-foreground)')
   })
 
   /*

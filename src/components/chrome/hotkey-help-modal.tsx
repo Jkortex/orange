@@ -72,7 +72,7 @@ export function HotkeyHelpModal() {
           // 本浮层由 '?' 唤起，没有触发器，照默认走焦点就掉到 <body> 上，
           // 键盘用户会丢掉原来的位置。故拦下来，自己还给打开前的元素。
           event.preventDefault()
-          restoreFocusRef.current?.focus()
+          restoreFocusRef.current?.focus({ preventScroll: true })
         }}
       >
         <div className="flex items-center justify-between gap-2 border-b border-border-subtle pb-3">

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MediaZoom, type MediaZoomSource } from '@/components/reading/media-zoom'
 import {
@@ -203,13 +203,37 @@ describe('MediaZoom 生命周期', () => {
     expect(percent()).toBe('100%')
   })
 
-  it('关闭后把焦点还给触发按钮', async () => {
+  it('关闭后把焦点还给触发按钮，且防止视口跳滚', async () => {
     const { trigger } = open()
+    const focusSpy = vi.spyOn(trigger, 'focus')
 
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 
     // Radix 在 setTimeout(0) 里走 onCloseAutoFocus
-    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await waitFor(() => {
+      expect(document.activeElement).toBe(trigger)
+      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+    })
+  })
+
+  it('移动端响应式高度与表面底色契约', () => {
+    open()
+    const dialog = screen.getByRole('dialog', { name: /系统架构图/ })
+    expect(dialog.className).toContain('h-[75dvh]')
+    expect(dialog.className).toContain('sm:h-[85dvh]')
+    expect(dialog.className).toContain('bg-surface')
+  })
+
+  it('移动端底部快捷关闭按钮点击后关闭浮层', async () => {
+    open()
+    const closeButtons = screen.getAllByRole('button', { name: '关闭放大查看' })
+    // 应有两个关闭按钮：顶栏一个，移动端底部快捷胶囊一个
+    expect(closeButtons.length).toBe(2)
+    const mobileClose = closeButtons[1]
+    expect(mobileClose.textContent).toContain('关闭')
+
+    fireEvent.click(mobileClose)
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 })

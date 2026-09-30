@@ -71,4 +71,33 @@ describe('MermaidCanvas', () => {
     expect(viewBoxOf(container)).toBe('0 0 720.64 510')
     expect(container.querySelector('svg')).not.toBeNull()
   })
+
+  it('父级 Dialog 触发 animationend 动画结束事件时，会重新校准与重排', () => {
+    const parent = document.createElement('div')
+    parent.setAttribute('data-slot', 'dialog-content')
+    document.body.appendChild(parent)
+
+    const { container } = render(
+      <MermaidCanvas svg={svgWith('0 0 720.64 510')} />,
+      { container: parent },
+    )
+    expect(viewBoxOf(container)).toBe('21.53 0 699.11 510')
+
+    // 模拟动画结束后字形度量稳定、bbox 发生微调
+    stubSvgBBox({ x: 50, y: 30, width: 640.64, height: 450 })
+    parent.dispatchEvent(new Event('animationend'))
+
+    expect(viewBoxOf(container)).toBe('20 0 700.64 510')
+    parent.remove()
+  })
+
+  it('定时器到期时会兜底重新刷新一次', async () => {
+    const { container } = rendered(svgWith('0 0 720.64 510'))
+    expect(viewBoxOf(container)).toBe('21.53 0 699.11 510')
+
+    stubSvgBBox({ x: 50, y: 30, width: 640.64, height: 450 })
+    await new Promise((r) => setTimeout(r, 260))
+
+    expect(viewBoxOf(container)).toBe('20 0 700.64 510')
+  })
 })

@@ -170,13 +170,14 @@ export function MediaZoom({ source, label, hint, className, children }: MediaZoo
            * 高度必须是**确定值**（h- 而非 max-h-）：画布要按百分比撑满剩余空间，
            * 而百分比只在父级高度确定时才有意义；内容撑高的话，缩放时浮层会跟着一起长高乱跳。
            * 不写 max-w-5xl 而写 sm:max-w-5xl：基类的 max-w-[calc(100%-2rem)] 负责移动端两侧留白。
-           * 用 dvh 而不是 vh：移动端地址栏收起/展开时 vh 不变，90vh 会把底边顶出可视区。
+           * 移动端采用 75dvh 释放上下遮罩安全区，桌面端展开至 85dvh；显式指定 bg-surface 统一表面底色。
+           * 用 dvh 而不是 vh：移动端地址栏收起/展开时 vh 不变，固定 vh 会把底边顶出可视区。
            */
-          className="flex h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
+          className="flex h-[75dvh] sm:h-[85dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl bg-surface"
           onCloseAutoFocus={(event) => {
             // Radix 对 modal 浮层只把焦点还给 DialogTrigger；本浮层没有触发器，自己还给触发按钮
             event.preventDefault()
-            triggerRef.current?.focus()
+            triggerRef.current?.focus({ preventScroll: true })
           }}
         >
           <DialogTitle className="sr-only">{source.alt}（放大查看）</DialogTitle>
@@ -249,6 +250,20 @@ export function MediaZoom({ source, label, hint, className, children }: MediaZoo
                 />
               )}
             </TransformComponent>
+
+            {/* 移动端底部快捷关闭胶囊：单手握持时大拇指在下半屏，无需探手点按顶栏 */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-3.5 z-10 flex justify-center sm:hidden">
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  aria-label="关闭放大查看"
+                  className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border-strong bg-surface/90 px-4 py-2 text-xs font-medium text-foreground shadow-elevation-pop backdrop-blur-md transition active:scale-95 hover:bg-surface-hover"
+                >
+                  <X className="size-3.5" aria-hidden />
+                  <span>关闭</span>
+                </button>
+              </DialogClose>
+            </div>
           </TransformWrapper>
         </DialogContent>
       </Dialog>
