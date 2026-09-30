@@ -7,7 +7,9 @@ type Params = { params: Promise<{ slug: string }> }
 export const dynamicParams = false
 
 export function generateStaticParams() {
-  return getCollection('life').map(({ slug }) => ({ slug }))
+  const entries = getCollection('life')
+  if (entries.length === 0) return [{ slug: '__empty__' }]
+  return entries.map(({ slug }) => ({ slug }))
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {

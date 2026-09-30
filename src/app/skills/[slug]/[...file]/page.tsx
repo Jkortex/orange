@@ -29,6 +29,7 @@ export function generateStaticParams() {
       routes.push({ slug, file: skillRouteParams(file.path) })
     }
   }
+  if (routes.length === 0) return [{ slug: '__empty__', file: ['__empty__'] }]
   return routes
 }
 

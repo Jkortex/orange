@@ -8,7 +8,9 @@ type Params = { params: Promise<{ slug: string }> }
 export const dynamicParams = false
 
 export function generateStaticParams() {
-  return listSkillSlugs().map((slug) => ({ slug }))
+  const slugs = listSkillSlugs()
+  if (slugs.length === 0) return [{ slug: '__empty__' }]
+  return slugs.map((slug) => ({ slug }))
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {

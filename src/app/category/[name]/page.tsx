@@ -11,7 +11,9 @@ type Params = { params: Promise<{ name: string }> }
 export const dynamicParams = false
 
 export function generateStaticParams() {
-  return getCategories().map(({ name }) => ({ name }))
+  const categories = getCategories()
+  if (categories.length === 0) return [{ name: '__empty__' }]
+  return categories.map(({ name }) => ({ name }))
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {

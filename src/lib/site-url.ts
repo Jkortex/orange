@@ -1,4 +1,4 @@
-export const DEFAULT_SITE_URL = 'https://orange.example.com'
+export const DEFAULT_SITE_URL = 'https://orange-cnc.pages.dev'
 
 /** 统一读取并规范化站点根地址，避免 sitemap/rss/robots 各自拼接出不同 URL。 */
 export function getSiteUrl(value: string | undefined = process.env.NEXT_PUBLIC_SITE_URL): string {

@@ -26,7 +26,7 @@ describe('RSS route', () => {
 
     const xml = await GET().text()
 
-    expect(xml).toContain('https://orange.example.com/posts/rss&amp;test')
+    expect(xml).toContain('https://orange-cnc.pages.dev/posts/rss&amp;test')
     expect(xml).toContain(']]]]><![CDATA[>')
     expect(xml).toContain('<title>RSS &lt;标题&gt;</title>')
   })

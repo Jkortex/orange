@@ -10,7 +10,9 @@ import { PageHeader } from '@/components/listing/page-header'
 export const dynamicParams = false
 
 export function generateStaticParams() {
-  return getAllTags(TAGGED_TYPES).map((tag) => ({ tag }))
+  const tags = getAllTags(TAGGED_TYPES)
+  if (tags.length === 0) return [{ tag: '__empty__' }]
+  return tags.map((tag) => ({ tag }))
 }
 
 export async function generateMetadata({
