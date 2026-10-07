@@ -157,10 +157,11 @@ export function EntryView({
               <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
             </article>
 
-            {/* 右侧 TOC 列：顶端与正文第一行完美平齐！高度被 grid stretch 自动拉伸，sticky 滚动常驻 */}
+            {/* 右侧 TOC 列：顶端与正文第一行完美平齐！高度被 grid stretch 自动拉伸，sticky 滚动常驻。
+                高度上限经 className 交给 Toc 自己（滚动发生在卡片内部），外层只负责 sticky 定位 */}
             <aside className="hidden xl:block">
-              <div className="sticky top-[calc(var(--header-height)+1.5rem)] max-h-[calc(100vh-var(--header-height)-3rem)] overflow-y-auto pr-1">
-                <Toc headings={headings} />
+              <div className="sticky top-[calc(var(--header-height)+1.5rem)]">
+                <Toc headings={headings} className="max-h-[calc(100vh-var(--header-height)-3rem)]" />
               </div>
             </aside>
           </div>

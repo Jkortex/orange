@@ -9,6 +9,16 @@ import { scrollToHeading } from '@/lib/scroll'
  * - 纯客户端响应式高亮当前阅读位置（IntersectionObserver）
  * - 桌面端可在右侧 sticky 悬浮，移动端可嵌入在正文前
  * - 激活项胶囊微底色 + 悬浮位移微动效，提升长文导航沉浸感
+ *
+ * 滚动契约（长目录，如 35 节）：滚动发生在卡片**内部**，只有列表滚动，
+ * 卡片头部（「目录 · N 节」）与圆角/描边固定不动。故卡片是 flex 纵向：
+ * 头部 shrink-0，列表 min-h-0 + flex-1 + overflow-y-auto；高度上限由调用方经
+ * className 传入（如 max-h-[calc(100vh-var(--header-height)-3rem)]）。
+ * 调用方不要再在外层容器上加 overflow-y-auto —— 那会让整张卡片（含头部与边框）一起滚走。
+ *
+ * 列表只允许纵向滚动：overflow-y-auto 会把 overflow-x 一并算成 auto，稍有溢出（如激活项
+ * hover 的 translate-x-0.5）就冒出横向滚动条，故显式 overflow-x-hidden。pr-2 把滚动条
+ * 从文字旁推开一点，避免贴着标题文字。
  */
 
 export function Toc({ headings, className = '' }: { headings: TocHeading[]; className?: string }) {
@@ -49,13 +59,13 @@ export function Toc({ headings, className = '' }: { headings: TocHeading[]; clas
   return (
     <nav
       aria-label="文章目录"
-      className={`surface-card p-3.5 ${className}`}
+      className={`surface-card flex flex-col p-3.5 ${className}`}
     >
-      <div className="mb-2.5 flex items-center justify-between px-1">
+      <div className="mb-2.5 flex shrink-0 items-center justify-between px-1">
         <p className="type-caption font-semibold uppercase tracking-wider text-muted-foreground">目录</p>
         <span className="type-caption font-mono text-muted-foreground">{headings.length} 节</span>
       </div>
-      <ol className="relative space-y-1 border-l border-border-subtle pl-2.5">
+      <ol className="relative min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-2 border-l border-border-subtle pl-2.5">
         {headings.map((heading) => {
           const isActive = activeId === heading.id
           return (

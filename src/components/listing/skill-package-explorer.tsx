@@ -253,9 +253,9 @@ export function SkillPackageExplorer({
 
         {/* 右侧当前文件目录 (仅大屏 lg: 显示) */}
         <aside className="hidden lg:block">
-          <div className="sticky top-[calc(var(--header-height)+1.5rem)] max-h-[calc(100vh-var(--header-height)-3rem)] overflow-y-auto pr-1">
+          <div className="sticky top-[calc(var(--header-height)+1.5rem)]">
             {headings.length > 0 ? (
-              <Toc headings={headings} />
+              <Toc headings={headings} className="max-h-[calc(100vh-var(--header-height)-3rem)]" />
             ) : (
               <div className="surface-card border-dashed type-meta p-4 text-center text-muted-foreground">
                 本文档无子章节

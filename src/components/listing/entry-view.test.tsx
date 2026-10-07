@@ -55,6 +55,8 @@ describe('EntryView 文首目录', () => {
     expect(html).toMatch(/<details[^>]*class="[^"]*xl:hidden[^"]*"/)
     // 正文区域包含 mx-auto，确保在非 xl 单列大屏下与上方元信息完全居中对齐
     expect(html).toMatch(/<article[^>]*class="[^"]*mx-auto[^"]*"/)
+    // 桌面右侧目录把高度上限交给 Toc 卡片（滚动在卡片内部，头部与边框不随滚动走）
+    expect(html).toContain('max-h-[calc(100vh-var(--header-height)-3rem)]')
   })
 
   /*
