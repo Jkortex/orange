@@ -32,12 +32,38 @@ export const FLOATING_STACK_BUTTON =
 export const FLOATING_STACK_TIP = 'bottom-full right-0 mb-2'
 
 /**
+ * 左下角浮动入口（草稿预览）锚点：与右下角浮动栈镜像。
+ * 必须独立成常量、不能复用 FLOATING_STACK_ANCHOR —— IconButton 的 wrapperClassName 原样拼接、
+ * 不经 tailwind-merge，right-* 与 left-* 会同时输出，把 inline-flex 的 span 横向拉满。
+ * 竖向档位用 draftStackOffset(hasPlayerBar)：只避让全宽播放条与左下角的开发调试徽标，
+ * 不套 useFloatingStackOffset()（那含"给右侧回到顶部让位"的滚动档位）。
+ */
+export const FLOATING_STACK_ANCHOR_LEFT =
+  'group fixed left-4 sm:left-6 md:left-8 z-40 transition-[bottom,transform,opacity] duration-200 ease-out'
+
+/** 左下角提示气泡定位（按钮上方左对齐，FLOATING_STACK_TIP 是 right-0 不能复用） */
+export const FLOATING_STACK_TIP_LEFT = 'bottom-full left-0 mb-2'
+
+/**
  * 档位表。scrolled=false 的两档与 back-to-top 自身的 bottom-6 / bottom-20 严格相等——
  * 因为回到顶部此时不可见，常驻按钮正好占用它的位置；scrolled=true 才上抬让位。
  */
 export function floatingStackOffset(scrolled: boolean, playerBar: boolean) {
   if (playerBar) return scrolled ? 'bottom-[7.75rem]' : 'bottom-20'
   return scrolled ? 'bottom-[4.25rem]' : 'bottom-6'
+}
+
+/**
+ * 左下角草稿入口（仅本地开发渲染）的竖向档位。
+ *
+ * 与右下角浮动栈不同：左下角是 Next.js 开发调试徽标的地盘。该徽标固定在
+ * `left: 20px; bottom: 20px`、是 36px 高的圆（源码 `ty = 20`、`--size = 36/scale`），
+ * 顶沿离视口底 56px。常驻档位 bottom-6（24px）会正好压在徽标上，所以无播放条时
+ * 整体抬到徽标之上：bottom-[4.5rem]（72px，留 16px 净空）。有播放条时 bottom-20
+ * （80px）本就高过徽标顶沿（56px）与 64px 高的播放条，无需再抬。
+ */
+export function draftStackOffset(playerBar: boolean) {
+  return playerBar ? 'bottom-20' : 'bottom-[4.5rem]'
 }
 
 /** 滚动是否已超过阈值 */

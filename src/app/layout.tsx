@@ -5,6 +5,7 @@ import { ThemeToggle } from '@/components/chrome/theme-toggle'
 import { PlayerProvider } from '@/components/player/player-provider'
 import { PlayerBarLoader } from '@/components/chrome/player-bar-loader'
 import { BackToTop } from '@/components/chrome/back-to-top'
+import { DraftFloatingButton } from '@/components/chrome/draft-floating-button'
 import { SearchDialog } from '@/components/chrome/search-dialog'
 import { HotkeyHelpModal } from '@/components/chrome/hotkey-help-modal'
 import { RouteScrollReset } from '@/components/chrome/route-scroll-reset'
@@ -98,6 +99,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </footer>
           <PlayerBarLoader />
           <BackToTop />
+          {/* 草稿预览入口：仅本地开发渲染（server 侧静态内联，生产构建分支为 false 直接消除） */}
+          {process.env.NODE_ENV === 'development' && <DraftFloatingButton />}
           <HotkeyHelpModal />
           <RouteScrollReset />
         </PlayerProvider>

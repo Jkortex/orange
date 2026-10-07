@@ -41,19 +41,36 @@ export function entryMetadata(type: CollectionType, slug: string): Metadata {
   }
 }
 
-export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> }) {
+export function EntryView({
+  entry,
+  backHref,
+  backLabel,
+  draft = false,
+}: {
+  entry: CollectionEntry<'posts' | 'life'>
+  /** 覆盖默认返回目标（草稿回 /drafts）；未传时保持 posts/life 默认行为 */
+  backHref?: string
+  backLabel?: string
+  /** 草稿模式：显示「草稿」标识，不渲染 PagefindFilters，相邻导航留空（草稿不在生产索引/集合内） */
+  draft?: boolean
+}) {
   const isLife = entry.collection === 'life'
   // 默认返回路径指向确定路由（无站内来源历史时兜底）：
   // posts 默认回文章列表（根路径）；life 默认回生活列表；若有站内来源由 BackButton 动态接管
-  const fallback = isLife
-    ? { href: '/life', label: '生活' }
-    : { href: '/', label: '文章列表' }
+  const fallback =
+    backHref && backLabel
+      ? { href: backHref, label: backLabel }
+      : isLife
+        ? { href: '/life', label: '生活' }
+        : { href: '/', label: '文章列表' }
   // 长文在正文前生成锚点目录
   const headings = shouldShowToc(entry.body) ? extractToc(entry.body) : []
   // 阅读时长与字数估算
   const { words, minutes } = estimateReadingTime(entry.body)
-  // 相邻条目导航（posts 与 life 均支持上一篇/下一篇）
-  const adjacent = getAdjacentEntries(entry.collection, entry.slug)
+  // 相邻条目导航（posts 与 life 均支持上一篇/下一篇）；草稿不在任何集合内，留空
+  const adjacent = draft
+    ? { prev: null, next: null }
+    : getAdjacentEntries(entry.collection, entry.slug)
 
   // 生活随笔随手拍照片
   const photos = 'photos' in entry.data && Array.isArray(entry.data.photos) ? entry.data.photos : undefined
@@ -66,11 +83,16 @@ export function EntryView({ entry }: { entry: CollectionEntry<'posts' | 'life'> 
       {/* 顶部滚动进度指示条 */}
       <ReadingProgress />
 
-      {/* 搜索过滤元数据：按类型/分类下推给 Pagefind 索引 */}
-      <PagefindFilters type={entry.collection} category={entry.data.category} />
+      {/* 搜索过滤元数据：按类型/分类下推给 Pagefind 索引（草稿不进生产索引，跳过） */}
+      {!draft && <PagefindFilters type={entry.collection} category={entry.data.category} />}
 
       {/* 顶部元信息：动态返回链接 + 标题与元数据 */}
       <div className={`mx-auto w-full ${contentWidth} mb-8`}>
+        {draft && (
+          <p className="chip chip-subtle type-meta mb-4 inline-flex items-center gap-1.5 text-muted-foreground">
+            <span aria-hidden="true">●</span> 草稿 · 仅本地可见
+          </p>
+        )}
         <DetailHeader
           backHref={fallback.href}
           backLabel={fallback.label}

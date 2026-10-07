@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllEntries, getAllTags, getCategories, getCollection, getEntriesByCategory, getEntriesByTag, getEntry, getSkillEntries, getSkillPackage, listSkillSlugs } from '@/lib/content'
+import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllEntries, getAllTags, getCategories, getCollection, getDraft, getDrafts, getEntriesByCategory, getEntriesByTag, getEntry, getSkillEntries, getSkillPackage, isDraftsEnabled, listSkillSlugs } from '@/lib/content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
@@ -665,5 +665,73 @@ describe('getAdjacentEntries 相邻条目', () => {
     const oldestAdj = getAdjacentEntries('posts', '2026-09-01-first', { contentDir })
     expect(oldestAdj.next?.slug).toBe('2026-09-02-second')
     expect(oldestAdj.prev).toBeNull()
+  })
+})
+
+describe('草稿读取（dev-only 专区）', () => {
+  it('getDrafts 解析草稿，形状为 posts 条目，按日期倒序', () => {
+    writeFixture(
+      'drafts/2026-09-01-first.md',
+      '---\ntitle: 草稿一\ndate: 2026-09-01\n---\n草稿正文一',
+    )
+    writeFixture(
+      'drafts/2026-09-13-second.md',
+      '---\ntitle: 草稿二\ndate: 2026-09-13\ndescription: 描述\n---\n草稿正文二',
+    )
+
+    const drafts = getDrafts({ contentDir })
+
+    expect(drafts).toHaveLength(2)
+    expect(drafts[0].collection).toBe('posts')
+    expect(drafts[0].slug).toBe('2026-09-13-second')
+    expect(drafts[0].data.title).toBe('草稿二')
+    expect(drafts[0].data.description).toBe('描述')
+    expect(drafts[0].body).toContain('草稿正文二')
+    expect(drafts[1].slug).toBe('2026-09-01-first')
+  })
+
+  it('草稿目录不存在时返回空数组', () => {
+    expect(getDrafts({ contentDir })).toEqual([])
+  })
+
+  it('getDraft 命中返回单条；缺失抛 ContentNotFoundError', () => {
+    writeFixture('drafts/2026-09-01-hello.md', '---\ntitle: 你好\ndate: 2026-09-01\n---\n正文')
+
+    expect(getDraft('2026-09-01-hello', { contentDir }).data.title).toBe('你好')
+    expect(() => getDraft('2026-09-02-missing', { contentDir })).toThrowError(ContentNotFoundError)
+  })
+
+  it('getDraft 拒绝路径穿越的 slug', () => {
+    expect(() => getDraft('../secret', { contentDir })).toThrowError(ContentNotFoundError)
+  })
+
+  it('草稿文件名校验失败时报错，错误信息包含文件路径', () => {
+    writeFixture('drafts/notes.md', '---\ntitle: 随手记\ndate: 2026-09-01\n---\n正文')
+
+    expect(() => getDrafts({ contentDir })).toThrowError(/notes\.md/)
+  })
+
+  it('草稿 frontmatter 校验失败时报错，不静默吞掉', () => {
+    writeFixture('drafts/2026-09-01-missing-title.md', '---\ndate: 2026-09-01\n---\n正文')
+
+    expect(() => getDrafts({ contentDir })).toThrowError(/missing-title/)
+  })
+
+  it('未启用（无 contentDir 注入，NODE_ENV 非 development）时不可读：返回空 / 抛错', () => {
+    expect(isDraftsEnabled()).toBe(false)
+    expect(getDrafts()).toEqual([])
+    expect(() => getDraft('any')).toThrowError(ContentNotFoundError)
+  })
+
+  it('草稿不会泄漏进内容聚合与 manifest', () => {
+    writeFixture('posts/2026-09-01-post.md', '---\ntitle: 文章\ndate: 2026-09-01\n---\n正文')
+    writeFixture('drafts/2026-09-01-draft.md', '---\ntitle: 草稿\ndate: 2026-09-02\n---\n草稿正文')
+
+    const entries = getAllEntries({ contentDir })
+    const manifest = buildContentManifest({ contentDir })
+
+    expect(entries.map((entry) => entry.slug)).not.toContain('2026-09-01-draft')
+    expect(Object.keys(manifest.collections)).not.toContain('drafts')
+    expect(manifest.allEntries.map((entry) => String(entry.collection))).not.toContain('drafts')
   })
 })

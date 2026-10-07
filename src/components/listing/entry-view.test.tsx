@@ -132,3 +132,25 @@ describe('EntryView 生活随笔详情渲染', () => {
     expect(html).not.toContain('分钟阅读')
   })
 })
+
+describe('EntryView 草稿模式', () => {
+  it('backHref/backLabel 覆盖默认返回目标', async () => {
+    const html = await renderServerComponent(
+      h(EntryView, { entry: makeEntry('正文'), backHref: '/drafts', backLabel: '草稿列表' }),
+    )
+
+    expect(html).toContain('href="/drafts"')
+    expect(html).toContain('草稿列表')
+    expect(html).not.toContain('文章列表')
+  })
+
+  it('草稿模式显示草稿标识，且不渲染 Pagefind 过滤与相邻导航', async () => {
+    const html = await renderServerComponent(
+      h(EntryView, { entry: makeEntry('正文'), draft: true }),
+    )
+
+    expect(html).toContain('草稿 · 仅本地可见')
+    expect(html).not.toContain('data-pagefind-filter')
+    expect(html).not.toContain('aria-label="相邻文章"')
+  })
+})

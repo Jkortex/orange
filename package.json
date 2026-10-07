@@ -8,7 +8,7 @@
     "dev": "next dev -H 0.0.0.0",
     "prebuild": "node --experimental-strip-types scripts/build-content.ts",
     "build": "next build",
-    "postbuild": "pagefind --site out",
+    "postbuild": "pagefind --site out && node --experimental-strip-types scripts/audit-export.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "npx serve out"

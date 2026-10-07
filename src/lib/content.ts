@@ -264,6 +264,44 @@ export function getEntry<T extends CollectionType>(
   return parseEntry<T>(type, filePath, fs.readFileSync(filePath, 'utf8'))
 }
 
+/*
+ * 草稿（content/drafts/）：仅本地开发可读的预览专区，绝不进入任何生产聚合。
+ * 不注册进 collectionSchemas / TAGGED_TYPES，故 manifest、sitemap、rss、tags、categories 均不可见。
+ * 故意绕过 manifest 与模块缓存、直读 fs：编辑已有草稿后刷新浏览器即生效（新增文件仍需重启，见 AGENTS.md 清单缓存约定）。
+ */
+
+/** 草稿是否可读：仅开发环境开启；测试经 options.contentDir 注入临时目录时也开启 */
+export function isDraftsEnabled(options?: GetOptions): boolean {
+  return process.env.NODE_ENV === 'development' || Boolean(options?.contentDir)
+}
+
+function resolveDraftsDir(options?: GetOptions) {
+  return path.join(options?.contentDir ?? DEFAULT_CONTENT_DIR, 'drafts')
+}
+
+/** 读取全部草稿，按日期倒序（复用 posts 的 schema 与文件名约定，形状即 CollectionEntry<'posts'>） */
+export function getDrafts(options?: GetOptions): CollectionEntry<'posts'>[] {
+  if (!isDraftsEnabled(options)) return []
+  const dir = resolveDraftsDir(options)
+  if (!fs.existsSync(dir)) return []
+  return fs
+    .readdirSync(dir)
+    .filter((file) => file.endsWith('.md'))
+    .map((file) =>
+      parseEntry('posts', path.join(dir, file), fs.readFileSync(path.join(dir, file), 'utf8')),
+    )
+    .sort(compareEntries)
+}
+
+/** 读取单条草稿；未启用 / slug 非法 / 文件不存在均抛 ContentNotFoundError（页面转 404） */
+export function getDraft(slug: string, options?: GetOptions): CollectionEntry<'posts'> {
+  if (!isDraftsEnabled(options)) throw new ContentNotFoundError(`草稿仅在本地开发可用：${slug}`)
+  assertSafeSlug(slug)
+  const filePath = path.join(resolveDraftsDir(options), `${slug}.md`)
+  if (!fs.existsSync(filePath)) throw new ContentNotFoundError(`草稿不存在：${filePath}`)
+  return parseEntry('posts', filePath, fs.readFileSync(filePath, 'utf8'))
+}
+
 export type AdjacentEntry = {
   slug: string
   title: string
