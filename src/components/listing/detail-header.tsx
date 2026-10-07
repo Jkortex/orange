@@ -41,7 +41,7 @@ export function DetailHeader({
         }
       >
         <div className={divided ? 'space-y-2.5' : 'space-y-4'}>
-          <h1 className="type-display text-balance">{title}</h1>
+          <h1 className="type-display">{title}</h1>
           {(meta || tags.length > 0) && (
             <div className="type-meta flex flex-wrap items-center gap-x-3 gap-y-2 text-muted-foreground">
               {meta}

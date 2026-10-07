@@ -152,9 +152,11 @@
     padding-right: 0px !important;
   }
 
-  /* 标题自动平衡换行，避免孤字与锯齿断行 */
+  /* 标题避免末行孤字（pretty）但不重排行长——首行照常顶满。
+     balance 会为均衡各行而主动截短首行，中文标题下这种右侧留白很明显，故不用；
+     不支持 pretty 的浏览器（如 Firefox）退回默认贪心换行，首行同样顶满 */
   h1, h2, h3 {
-    text-wrap: balance;
+    text-wrap: pretty;
   }
 
   /* 锚点跳转避让 sticky 顶栏（高度随断点变化，读变量而不是写死） */
