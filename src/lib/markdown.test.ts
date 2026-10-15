@@ -212,6 +212,24 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).not.toContain('node=')
     expect(html).not.toContain('[object Object]')
   })
+
+  it(':::system-flow 指令转换为 SystemFlow 动效组件', async () => {
+    const md = [
+      ':::system-flow',
+      'title: 核心交易链路拓扑',
+      '```json',
+      JSON.stringify({
+        nodes: [{ id: 'order', label: 'Order Service', type: 'service' }],
+        edges: [],
+      }),
+      '```',
+      ':::',
+    ].join('\n')
+
+    const html = await renderToHtml(md)
+    expect(html).toContain('核心交易链路拓扑')
+    expect(html).toContain('Order Service')
+  })
 })
 
 describe('MarkdownRenderer 异常渲染', () => {

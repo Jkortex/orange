@@ -606,3 +606,27 @@ html.dark code[data-theme] span[style*='--shiki'] {
   }
 }
 
+/*
+ * XY Flow 主题变量映射（AGENTS.md UI 主题规范）：
+ * - 将 XY Flow 的基础边框、连线与节点颜色映射为项目本身的语义 Token
+ * - 确保在 light / dark 以及任意 data-theme 切换时协调一致
+ */
+.react-flow {
+  --xy-edge-stroke-default: var(--border);
+  --xy-edge-stroke-animated: var(--primary);
+  --xy-node-background-color: var(--card);
+  --xy-node-border-default: var(--border-subtle);
+  --xy-node-color-default: var(--foreground);
+  --xy-background-pattern-dots-color: var(--border-subtle);
+  --xy-controls-button-background: var(--card);
+  --xy-controls-button-background-hover: var(--muted);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-border: var(--border-subtle);
+  background-color: transparent !important;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+
