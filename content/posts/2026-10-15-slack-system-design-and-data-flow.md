@@ -1,7 +1,7 @@
 ---
-title: 工业级 Slack 消息系统架构设计与数据流转（动效交互版）
+title: 工业级 Slack 消息系统全景设计：从容量估算、功能矩阵到动效推演
 date: 2026-10-15
-description: 结合实际 Go + Kafka + ScyllaDB/Postgres + Redis 工程实现，通过 3 组可交互的时序推演动画，深度剖析工业级 Slack 消息系统的服务分层、全局单调保序、防队头阻塞扇出与弱网 Catch-Up 自愈闭环。
+description: 结合实际运行的 Go + Kafka + ScyllaDB/Postgres + Redis 工程，从容量估算、功能与非功能需求矩阵、到全局保序、防队头阻塞扇出、搜索投影与弱网 Catch-Up 自愈闭环，通过 3 组可交互动效彻底讲透 Slack 系统设计。
 category: architecture
 tags:
   - 系统设计
@@ -11,28 +11,79 @@ tags:
   - 架构演进
 ---
 
-即时通讯（IM / Messaging System）是分布式系统设计的试金石。在《System Design and Behavioral Intelligence》一书中，Slack 式架构被视为兼具高并发长连与严苛一致性要求的典型范例。
+即时通讯（IM / Messaging System）是分布式系统设计的经典集大成者。在《System Design and Behavioral Intelligence》中，“Designing a Slack-like Messaging System”被作为剖析高并发有状态连接、严格全局保序、读写分离以及弱网容灾的标杆案例。
 
-为了让架构设计不再停留在纸面图纸上，本文结合真实跑通的开源工程实现（Go + Kafka 4.1 KRaft + PostgreSQL 17 / ScyllaDB 6.2 + Redis 7.4），通过 **3 组步进式交互动效**，彻底讲透一个工业级 Slack 消息系统是如何设计的，以及数据究竟是如何在各个节点间流转的。
+结合在本地真实跑通的完整工程实现（基于 **Go 1.27 + Kafka 4.1 KRaft + PostgreSQL 17 / ScyllaDB 6.2 + Redis 7.4**），本文不仅要讲清楚数据流，更要全景覆盖该系统的**非功能需求（容量与性能估算）、全量功能矩阵、底层核心数据模型以及 3 组步进式交互动效推演**。
 
 ---
 
-## 一、 架构总览与服务分层
+## 一、 系统定位与需求分析
 
-系统采用**关注点分离（Separation of Concerns）**与**读写分离**原则，解耦为无状态业务层、有状态长连层、保序流中枢与多适配存储层：
+### 1. 非功能需求（Non-Functional Requirements, NFR）与容量估算
 
-1. **无状态业务网关 (`cmd/web`)**：暴露 REST API，负责身份鉴权、两阶段写入防重锁控制、历史消息范围查询以及后台持久化消费（Persister）。可水平无状态弹性扩缩容。
-2. **有状态长连网关 (`cmd/rtim`)**：专职维护客户端长连接（WebSocket），维护五向内存订阅路由树（`user / conn / channel / conversation / org`），专攻毫秒级低延迟广播与在线状态中继。
-3. **保序流处理中枢 (Kafka)**：
-   - 业务流 `chat.org.<org_id>`：承载频道消息、会话消息与成员变更事件，通过 Key 分区保证时序。
-   - 瞬态流 `presence`：承载打字指示与心跳上下线事件，纯内存流转，绝不落库。
-4. **存储与状态适配层**：
-   - **消息存储**：遵循整洁架构端口规范（`MessageStore` 接口），既可用 PostgreSQL 复合索引模拟时序范围读，也可无缝一键切换到 ScyllaDB 原生宽列分区。
-   - **Redis 7.4（旁路状态）**：维护会话 Token、两态分布式防重锁与在线心跳，**绝不阻塞主写入路径**。
+在系统设计的最初阶段，必须通过明确的数学估算推导基础设施的规模边界与技术选型合理性：
 
-### 交互演练 ①：核心写入与实时推送主链路推演
+| 维度 | 设计指标 | 推导过程与架构含义 |
+| :--- | :--- | :--- |
+| **活跃用户规模** | 10M DAU（日活跃用户） | 假设 75% 用户在工作时间同时在线 $\rightarrow$ **7.5M 并发长连接**。单机无法承载，必须构建有状态长连网关集群（RTIM）。 |
+| **消息写入吞吐** | 日均 10 亿条（1B msgs/day） | 平均写入：$10^9 / 86400 \approx 11,574 \text{ msg/s}$；考虑 3 倍业务峰值：**~36,000 QPS 写入峰值**。必须由高吞吐流系统（Kafka）承接。 |
+| **读扩散/扇出放大** | 平均频道成员数 30 人 | 写入 3.6w QPS 经长连扇出放大 30 倍 $\rightarrow$ **~1,080,000 条推送/秒**。长连层必须绝对避免队头阻塞（Head-of-Line Blocking）。 |
+| **存储容量估算** | 单条消息平均 250 字节 | 纯消息增量：$10^9 \times 250\text{B} \approx 250\text{ GB/天}$；年增量约 $91\text{ TB}$。**5 年累积约 0.45 PB**（计入元数据与检索索引估算 **~0.9 PB**）。必须引入冷热数据分层归档或分布式宽列数据库。 |
+| **延迟服务等级协议 (SLA)** | 端到端推送 P99 < 100ms | 从发送端提交到同频其他在线客户端接收，P99 必须低于 100 毫秒；进入频道拉取最近 50 条历史 P99 < 50ms。 |
+| **可靠性与可用性** | 99.99% 可用性（四九） | 年故障时间低于 52.6 分钟。消息**绝不丢失（Zero-Loss）**，且在弱网重连与网络分区下具备单调保序自愈能力。 |
 
-在下方流程图中，点击**「下一步」**或**「自动播放」**，可以直观观察一条消息从 Alice 客户端发出，经历网关幂等、Kafka 仲裁、异步落库与 RTIM 广播推送给 Bob 的完整过程：
+### 2. 功能需求矩阵（Functional Requirements, FR）
+
+本工程对照工业级 Slack 规范，实现了完整的八大核心功能领域：
+
+- **FR1 会话建立与身份鉴权**：REST 登录签发 32 字节随机不透明 Token（存储于 Redis，支持主动撤销），客户端拉取所属组织、频道列表、未读数与 RTIM WebSocket 接入地址。
+- **FR2 频道消息收发（Channel）**：公域多播。支持公开与私有频道，严格基于 `channel_id` 进行分区保序，支持基于位点的游标分页（Cursor Pagination）。
+- **FR3 私聊与群聊会话（Conversation / DM）**：私域点对点与多人小群。采用 `conv:<id>` 命名空间；DM 建立具备强幂等性（重复 `/dm bob` 永远复用同一会话）；成员变更事件（`conversation_added`）与消息共享同一分区，实现严格时序驱动的自动订阅。
+- **FR4 已读回执（Read Receipts）与未读计数**：轻量级设计，不维护昂贵的逐人 `seen_by` 列表，而是维护 `read_state(user_id, target, last_read_offset)` 游标；未读数严格基于 Offset 进行统计，彻底杜绝服务器时钟漂移引发的“幽灵未读数”。
+- **FR5 瞬态事件广播（Typing & Presence）**：在线/离开状态心跳中继、正在输入提示（Typing Indicator）。纯内存流转，绝不落库。大频道（>1000 人）自动静默 Typing 广播以防扇出雪崩。
+- **FR6 离线推送通知（Offline Notifications）**：独立共享消费组 `push-notifier` 消费业务流；对目标全连接均离线的用户，入队 Redis `notify:pending:<uid>` ZSET（上限 100 条，TTL 7 天）；客户端重连上线时自动重放补齐。
+- **FR7 全文检索与下游投影（Search & Projection）**：利用 Kafka 独立消费组构建下游搜索投影表 `public.search_message`（生成列 `tsvector` + GIN 索引），支持组织与权限隔离的全文检索，使消息核心存储与搜索完全解耦。
+- **FR8 历史数据归档（Archiver 冷热分离）**：常驻 ETL 进程将超过 1825 天（5 年）的历史冷消息自动导出为分片 NDJSON 冷存储并从热表清理；在 ScyllaDB 模式下直接由原生 TTL 自动淘汰。
+
+---
+
+## 二、 架构总览与服务分层设计
+
+系统严格遵循**关注点分离**与**读写分离**原则，解耦为无状态业务层、有状态长连层、流处理中枢与存储适配层：
+
+```
+                Client (Web / Mobile / CLI)
+                     │
+             ┌───────┴────────┐
+           REST            WebSocket
+             │                 │
+             ▼                 ▼
+      ┌──────────────┐   ┌──────────────────┐
+      │ cmd/web      │   │ cmd/rtim         │
+      │ 无状态 REST   │   │ 有状态 WebSocket  │
+      │ · 登录/鉴权   │   │ · 连接管理        │
+      │ · 写入幂等控制│   │ · 内存订阅树扇出  │
+      │ · 异步持久化  │   │ · 中继 presence   │
+      │   (persister)│   │   与成员变更事件  │
+      └──┬────────┬──┘   └────────▲─────────┘
+         │        │               │ 独立 Group 广播
+         │ 落库    │ 同步发布      │ 消费全部 Partitions
+         ▼        ▼               │
+      ┌────────┐ ┌────────────────┴───────────┐
+      │存储适配│ │ Kafka 4.1 KRaft           │
+      │Postgres│ │ · chat.org.<org>   保序流  │
+      │ScyllaDB│ │ · presence         瞬态流  │
+      └────────┘ └─────────────────────────────┘
+         ▲
+         │ 旁路辅助：会话 / presence 注册表 / 分布式防重锁 / 限流
+      ┌────────┐
+      │ Redis  │
+      └────────┘
+```
+
+### 交互演练 ①：主链路核心写入与实时推送推演
+
+点击下方流程图中的**「下一步」**或**「自动播放」**，观察一条消息经历客户端提交、网关两态锁抢占、Kafka 同步写入确认、异步持久化与长连广播的全流程：
 
 :::system-flow
 title: Slack 核心写入与实时推送主链路推演
@@ -99,45 +150,52 @@ title: Slack 核心写入与实时推送主链路推演
 
 ---
 
-## 二、 关键设计 ①：全局单调保序与写入确认
+## 三、 核心技术设计与工程取舍深度剖析
 
-### 1. 为什么以 Kafka Offset 为唯一绝对权威？
+### 1. 全局单调保序：彻底废除物理时钟，确立 Kafka Offset 绝对权威
 
-在分布式集群中，各台机器的本地物理时钟（Physical Clock）必然存在**时钟漂移（Clock Skew）**或 NTP 校准回拨。若按服务端接收时的 `created_at` 排序，在并发场景下极易产生**“先回答、后提问”**或**“幽灵未读数”**的乱序现象。
+即时通讯系统最常见的重大缺陷是依赖生产者或网关的物理时间戳（`created_at`）进行消息排序。在分布式集群中，服务器之间的 **NTP 时钟同步误差、跃变与时钟漂移（Clock Skew）** 不可避免，极易造成**“回复出现在提问之前”**或未读数乱跳。
 
-- **Key 分区策略**：
-  - 频道消息：以 `channel_id` 作为 Kafka 消息的 Key；
-  - 私聊与群聊：以 `conv:<conversation_id>` 作为 Kafka 消息的 Key。
-- **保序保证**：
-  Kafka 根据 Key 进行哈希散列，**同一频道或会话的全部消息必然物理锁定在同一个 Partition 分区内**。
-- **全局唯一时序**：
-  系统直接以该消息在 **Kafka 分区内的单调自增 `kafka_offset` 作为全生命周期的唯一时序权威**。落库、本地缓存、客户端排序与增量对齐全部只认 `offset`，彻底免疫物理时钟漂移。
+- **Key 哈希分区锁定**：
+  - 频道消息：以 `channel_id` 作为 Kafka Key；
+  - 会话消息：以 `conv:<conversation_id>` 作为 Kafka Key。
+  - Kafka 保证相同 Key 必然路由到同一个物理 Partition。因此，**单个频道/会话的所有消息物理上严格排定在单一分区内部**。
+- **Kafka Offset 权威排序**：
+  放弃物理时钟，直接以该记录在 **Kafka 分区内部的自增 `kafka_offset` 作为全系统时序的唯一单调绝对权威**。落库字段为 `(kafka_partition, kafka_offset)`，数据库索引排序与客户端界面渲染只遵循 offset，彻底根治乱序。
 
-### 2. 同步直写 Kafka：坚决不做虚假确认
+### 2. 写入两态幂等锁：防止重复流流转与并发竞争
 
-许多初级设计喜欢使用 Redis Stream 做前置缓冲：先写入 Redis 立即返回 202 成功，后台再异步转投 Kafka。
-这种设计的致命隐患在于：**返回成功不等于数据已被持久化**。一旦 Redis 实例在转投前崩溃，客户端认为“已发出的消息”便彻底蒸发。
+客户端网络抖动时必然发起重试，如何防止 Kafka 和数据库产生重复垃圾数据？
 
-本系统采用**同步直写 Kafka（`RequiredAcks=all`）**：
-- 只有当 Kafka Broker 集群完成 ISR 副本仲裁写入后，Web 网关才向客户端返回 `200 OK`；
-- 若 Kafka 出现短时不可用，接口直接返回 `5xx` 明确告知客户端重试——**宁可失败，也绝不给出欺骗性的乐观确认**。
+- **确定性 UUIDv5 派生**：服务端根据 `(kind, user_id, target_id, client_msg_id)` 确定性哈希派生全局 `message_id`。**显式包含 user_id**，杜绝不同客户端因生成相同 `client_msg_id` 导致的互相覆盖碰撞。
+- **Redis 两态锁生命周期**：
+  1. **领占态（In-Flight）**：请求进入时，网关通过原子指令 `SET lock:<msg_id> token NX EX 15` 抢占短锁；
+  2. **并发竞争处理**：并发同 key 请求不直接报错，而是短暂轮询等待 Leader 执行结果。Leader 成功则返回相同的 200 OK，超时 3 秒则返回 504 引导客户端安全重试；
+  3. **完成态（Done）**：Kafka 同步写入成功后，通过 Lua 脚本原子将锁晋升为长 TTL（24 小时）的已完成标志；若发布失败，仅当持有当前 token 时才释放锁。已完成的重试请求直接返回 200，绝不再次投递 Kafka。
+
+### 3. 会话成员变更与消息的强时序一致性（服务端驱动订阅）
+
+**经典难题**：Alice 新建一个群拉 Bob 进群并立即发送第一条消息；此时 Bob 已经在线，其客户端此前并未订阅该群，如何确保 Bob 既不漏消息、又不需要轮询刷新？
+
+- **解法：事件与消息同流同 Key**
+  1. `POST /conversations` 创建会话成功、在返回 HTTP 响应**之前**，Web 模块构造一条 `type: "conversation_added"` 的成员事件记录；
+  2. 将该事件同步发布至 `chat.org.<org>`，**Key 同样设为 `conv:<id>`**（与该会话后续的消息使用完全相同的 Key）；
+  3. 由于 Key 相同，事件记录必然位于该分区的**更小 Offset 位置**，排在随后的第一条聊天消息之前；
+  4. RTIM 网关依序消费该分区，读取到 `conversation_added` 时，立即在内存中对所有成员执行 `SubscribeUserToConversation` 并推送通知；
+  5. 随后消费到第一条聊天消息时，Bob 的连接已完成订阅，消息平滑推送到端，**零漏读、零轮询、零客户端手动干预**。
 
 ---
 
-## 三、 关键设计 ②：实时扇出与慢连接淘汰治理
+## 四、 实时扇出治理与弱网自愈体系
 
-在 RTIM 实时广播（Fan-out）阶段，系统设计了针对性的抗雪崩防护：
+### 1. 独立消费组广播 vs 每连接有界队列（Buffer=256）
 
-1. **避免消费组负载均衡陷阱**：
-   Kafka 消费组默认将分区均摊给组成员。若多台 RTIM 实例共用同一个 `group_id`，消息只能被其中一台实例收到，连在其它网关上的用户将全部失联。
-   - **方案**：每个 RTIM 节点启动时自动分配唯一的消费组 ID（`rtim-<hostname>`），各节点独立拉取全量分区，达成**全集群无遗漏广播**。
-2. **每连接独立有界缓冲（Buffer=256）**：
-   在千人大频道中，如果某个用户处于地铁弱网，TCP 接收窗口冻结，若使用同步阻塞发送，网关消费协程将被死锁，造成全频道的**队头阻塞（Head-of-Line Blocking）**。
-   - **方案**：每个 WebSocket 客户端连接独享一个容量为 256 的异步发送队列。
-3. **慢连接主动熔断淘汰**：
-   当某个客户端缓冲区满溢时，网关立即触发熔断保护，**主动断开该慢连接**并释放资源，绝不拖垮主广播循环。
+- **广播而非负载均衡**：Kafka 消费组默认平摊分区。本系统为每个 RTIM 节点赋予独立的 Group ID（`rtim-<hostname>`），使得每台网关各自拉取全量分区，实现集群广播。
+- **慢连接主动熔断淘汰**：
+  在特大频道广播中，若某一个移动端用户处于弱网（TCP 滑动窗口收缩为 0），传统的同步遍历发送会直接锁死网关的消费协程，导致同频道的其余成百上千名正常用户全部被卡死（队头阻塞）。
+  - **方案**：每个连接独占一个 `chan []byte`（容量 256）。广播协程采用 `select ... default` 非阻塞入队。一旦队列满溢，**网关立即主动关闭该慢连接**，淘汰弱网客户端，确保广播主循环毫秒级畅通。
 
-### 交互演练 ②：实时扇出并发控制与慢连接淘汰
+### 交互演练 ②：RTIM 实时扇出与慢连接主动熔断
 
 :::system-flow
 title: RTIM 长连网关扇出与慢连接主动熔断
@@ -196,18 +254,14 @@ title: RTIM 长连网关扇出与慢连接主动熔断
 
 ---
 
-## 四、 关键设计 ③：四层协同防线与 Catch-Up 增量补齐
+### 2. 重连退避与 Catch-Up 增量自愈协议
 
-慢连接被主动断开或弱网断线后，如何保证读者不会丢失任何一条聊天记录？系统构建了四层防线体系：
+当慢连接被主动断开、或客户端穿越电梯遭遇网络断线后，系统通过四层机制完成自愈：
 
-1. **持久化刷盘**：发消息同步提交 Kafka，落地前不返回成功；
-2. **位点续传**：Persister 服务在数据库完成落库后才 Commit Offset，进程崩溃重启无缝自愈；
-3. **离线推送兜底**：当目标用户全设备离线时，异步任务接入 APNs / FCM 发起系统通知；
-4. **客户端 Catch-Up 增量对齐协议**：
-   - 客户端本地持久化存储当前会话已确认接收的最大 `last_offset`；
-   - 客户端重连握手后，通过 HTTP 接口拉取缺失区间：`GET /messages?channel_id=xxx&since_offset=last_offset`；
-   - 服务端直接基于数据库的范围索引，拉取 `(last_offset, current_offset]` 的增量列表；
-   - 客户端在本地补齐空洞，并平滑拼合后续通过 WebSocket 推送的实时流，形成**自愈闭环**。
+1. **指数退避与 Equal Jitter（重连风暴防御）**：
+   客户端断开后以 `base=500ms`、倍率 2、上限 `30s` 进行退避，并加入 `[d/2, d)` 的半固定半随机 Jitter，防止网络恢复瞬间数百万长连接同时发起握手击垮网关集群。
+2. **Catch-Up 补齐协议**：
+   客户端本地记录当前频道已接收的最大 `last_offset`。重新建连后，客户端向 REST 接口发起 `GET /messages?channel_id=xxx&since_offset=102`；服务端利用数据库复合索引快速检索该区间漏掉的消息回填；客户端在内存中完成数据缝合，再接入最新的 WebSocket 实时流。
 
 ### 交互演练 ③：客户端断网自愈与 Catch-Up 协议
 
@@ -266,21 +320,36 @@ title: 客户端断网自愈与 Catch-Up 增量对齐协议
 
 ---
 
-## 五、 关键设计 ④：瞬态流转与大群防风暴
+## 五、 底层存储设计与端口抽象架构
 
-除了正式的聊天消息外，聊天系统还伴随着海量的**“正在输入中（Typing）”**与**“用户在线状态（Presence）”**：
+### 1. 端口与适配器设计（Clean Architecture）
 
-- **瞬态零落库**：状态事件经由独立的 `presence` Kafka 话题流转，在网关与内存连接树完成分发，**绝对不写数据库**，杜绝高频微弱状态对存储 IOPS 的蚕食。
-- **特大频道降级静默**：公共大群（如全员 `#general`）若在线人数突破 1000 人，网关自动屏蔽打字状态广播，防止 1 人输入触发 1000 次无意义长连推送的“扇出风暴”；私有群聊施加 500 人上限，有效锁定单次扩散半径。
+业务核心逻辑仅依赖抽象端口接口 `MessageStore`，与具体数据库引擎彻底解耦：
+
+```go
+type MessageStore interface {
+    SaveChannelMessage(ctx context.Context, m *contracts.ChannelMessage) error
+    SaveConversationMessage(ctx context.Context, m *contracts.ConversationMessage) error
+    RecentChannelMessages(ctx context.Context, orgID int64, channelID int64, limit int) ([]*contracts.ChannelMessage, error)
+    MessagesBefore(ctx context.Context, orgID, channelID, beforeOffset int64, limit int) ([]*contracts.ChannelMessage, error)
+    CountAfterOffset(ctx context.Context, orgID, channelID, offset int64) (int64, error)
+}
+```
+
+### 2. 关系型适配器（PostgreSQL） vs 宽列适配器（ScyllaDB）
+
+| 存储方案 | 物理模型与 DDL 索引 | 适用场景与优劣权衡 |
+| :--- | :--- | :--- |
+| **PostgreSQL 17**（默认） | `CREATE INDEX idx_ch_msg ON channel_message (channel_id, kafka_offset DESC, message_id DESC);`<br>按 `org_id` 经 150 虚拟节点的一致哈希环切入分片 Schema（`shard_0..2`）。 | 开发与轻量部署友好（内存占用低），利用复合 B-Tree 索引等价模拟范围扫描；缺点是写入并发受限于 B-Tree 页面分裂开销。 |
+| **ScyllaDB 6.2**（宽列 NoSQL） | `PRIMARY KEY ((org_id, channel_id), kafka_offset, message_id) WITH CLUSTERING ORDER BY (kafka_offset DESC, message_id DESC);` | 原生宽列分区分簇模型，写入仅追加 LSM-Tree，具备极高吞吐；原生支持 `default_time_to_live` 自动归档，无须外部 ETL。 |
 
 ---
 
-## 六、 总结与架构精要
+## 六、 全景架构决策与防坑指南
 
-| 核心维度 | 典型误区 | 本系统实现方案 | 架构收益 |
-| :--- | :--- | :--- | :--- |
-| **时序基准** | 依赖数据库自增 ID 或服务器本地时间 | **Kafka 分区 Key 哈希 + Offset 权威** | 彻底免疫分布式服务器物理时钟漂移 |
-| **发送确认** | 先存 Redis 返回 202 异步转投 | **同步直写 Kafka（`acks=all`）确认** | 杜绝假成功窗口，达成强持久化承诺 |
-| **实时广播** | 实例共用消费组 / 同步写长连接 | **独立消费组广播 + 独享非阻塞有界队列** | 彻底消除队头阻塞，慢客户端隔离熔断 |
-| **弱网容灾** | 重连时无脑全量拉取历史 | **携带 `last_offset` 的 Catch-Up 增量对齐** | 极低带宽消耗，断网毫秒级自愈 |
-| **存储扩展** | 业务代码与具体数据库驱动硬编码 | **面向 `MessageStore` 端口与适配器设计** | Postgres 复合索引与 ScyllaDB 宽列无感一键切换 |
+1. **为什么坚决不用 JWT 而选 Redis 不透明 Token？**
+   在 IM 系统中，被盗号、踢下线或修改密码需要具备**毫秒级强制吊销能力**。JWT 自包含无法即时撤销（除非引入黑名单反而丢失无状态优势）。32 字节随机 Token 配合 Redis，既让 Web 网关保持完全无状态，又保留了即时踢人与设备管理的灵活性。
+2. **为什么搜索不直接查分片表？**
+   若客户端搜索跨频道消息，查询需向所有分片广播扫库并合并排序。系统通过独立消费组 `search-indexer` 构建全局搜索专用投影表 `search_message`（Postgres GIN 倒排索引）。**投影独立演进**，即使核心消息库替换为不支持全文搜索的 ScyllaDB，搜索体系依然零改动正常运行。
+3. **为什么读回执只更新游标而不是记录每条消息由谁读过？**
+   对于千人大频道，每条消息记录 `seen_by: [uid1, uid2...]` 会带来 $O(N \times M)$ 的恐怖写入写放大。将回执抽象为单调递进的 `last_read_offset` 游标，未读数通过 `COUNT(*) WHERE offset > last_read_offset` 计算，直接将存储开销降为 $O(\text{用户数} \times \text{频道数})$。
