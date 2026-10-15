@@ -629,4 +629,20 @@ html.dark code[data-theme] span[style*='--shiki'] {
   display: none;
 }
 
+/* 连线标签防遮挡增强：独立卡片底色、描边与圆角，杜绝连线穿透文字 */
+.react-flow__edge-textbg {
+  fill: var(--card) !important;
+  fill-opacity: 0.98 !important;
+  stroke: var(--border-subtle) !important;
+  stroke-width: 1px !important;
+  rx: 4px;
+  ry: 4px;
+}
+
+.react-flow__edge-text {
+  fill: var(--foreground) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
 

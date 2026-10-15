@@ -89,22 +89,22 @@ tags:
 title: Slack 核心写入与实时推送主链路推演
 ```json
 {
-  "height": 430,
+  "height": 420,
   "nodes": [
-    { "id": "sender", "type": "client", "label": "Sender (Alice)", "x": 40, "y": 60, "description": "Web / App 客户端" },
-    { "id": "receiver", "type": "client", "label": "Receiver (Bob)", "x": 40, "y": 270, "description": "在线接收端" },
-    { "id": "web", "type": "gateway", "label": "Web API (cmd/web)", "x": 230, "y": 60, "description": "无状态接入网关" },
-    { "id": "redis", "type": "cache", "label": "Redis 7.4", "x": 230, "y": 200, "description": "两态幂等锁/会话" },
-    { "id": "kafka", "type": "queue", "label": "Kafka Broker", "x": 440, "y": 60, "description": "分区保序流中枢" },
-    { "id": "db", "type": "database", "label": "Postgres / ScyllaDB", "x": 650, "y": 60, "description": "时序范围读存储" },
-    { "id": "rtim", "type": "service", "label": "RTIM 网关 (cmd/rtim)", "x": 440, "y": 270, "description": "长连扇出集群" }
+    { "id": "sender", "type": "client", "label": "Sender (Alice)", "x": 20, "y": 45, "description": "Web / App 客户端" },
+    { "id": "web", "type": "gateway", "label": "Web API (cmd/web)", "x": 210, "y": 45, "description": "无状态接入网关" },
+    { "id": "kafka", "type": "queue", "label": "Kafka Broker", "x": 400, "y": 45, "description": "分区保序流中枢" },
+    { "id": "redis", "type": "cache", "label": "Redis 7.4", "x": 210, "y": 175, "description": "两态幂等锁/会话" },
+    { "id": "db", "type": "database", "label": "Postgres / ScyllaDB", "x": 400, "y": 175, "description": "时序范围读存储" },
+    { "id": "rtim", "type": "service", "label": "RTIM 网关 (cmd/rtim)", "x": 400, "y": 305, "description": "长连扇出集群" },
+    { "id": "receiver", "type": "client", "label": "Receiver (Bob)", "x": 20, "y": 305, "description": "在线接收端" }
   ],
   "edges": [
     { "id": "e_send", "source": "sender", "target": "web", "label": "POST /message" },
     { "id": "e_lock", "source": "web", "target": "redis", "label": "两态锁抢占" },
     { "id": "e_produce", "source": "web", "target": "kafka", "label": "同步直写 (acks=all)" },
     { "id": "e_persist", "source": "kafka", "target": "db", "label": "Persister 异步落库" },
-    { "id": "e_broadcast", "source": "kafka", "target": "rtim", "label": "独立 Group 全量广播" },
+    { "id": "e_broadcast", "source": "kafka", "target": "rtim", "label": "独立 Group 广播" },
     { "id": "e_push", "source": "rtim", "target": "receiver", "label": "WebSocket 帧推送" }
   ],
   "steps": [
@@ -201,21 +201,21 @@ title: Slack 核心写入与实时推送主链路推演
 title: RTIM 长连网关扇出与慢连接主动熔断
 ```json
 {
-  "height": 410,
+  "height": 380,
   "nodes": [
-    { "id": "kafka", "type": "queue", "label": "Kafka 消息流", "x": 60, "y": 140, "description": "chat.org.1" },
-    { "id": "rtim", "type": "service", "label": "RTIM 网关进程", "x": 260, "y": 140, "description": "独立 Group 消费广播" },
-    { "id": "fast_buf", "type": "queue", "label": "Fast Queue (256)", "x": 470, "y": 70, "description": "正常客户端队列" },
-    { "id": "slow_buf", "type": "queue", "label": "Slow Queue (Full)", "x": 470, "y": 210, "description": "拥塞溢出队列" },
-    { "id": "user_fast", "type": "client", "label": "User A (高速正常)", "x": 670, "y": 70 },
-    { "id": "user_slow", "type": "client", "label": "User B (网络卡死)", "x": 670, "y": 210 }
+    { "id": "kafka", "type": "queue", "label": "Kafka 消息流", "x": 20, "y": 120, "description": "chat.org.1" },
+    { "id": "rtim", "type": "service", "label": "RTIM 网关进程", "x": 180, "y": 120, "description": "独立 Group 广播" },
+    { "id": "fast_buf", "type": "queue", "label": "Fast Queue (256)", "x": 350, "y": 45, "description": "正常异步队列" },
+    { "id": "slow_buf", "type": "queue", "label": "Slow Queue (Full)", "x": 350, "y": 195, "description": "拥塞满溢队列" },
+    { "id": "user_fast", "type": "client", "label": "User A (正常在线)", "x": 510, "y": 45, "description": "高速接收" },
+    { "id": "user_slow", "type": "client", "label": "User B (弱网卡死)", "x": 510, "y": 195, "description": "触发淘汰" }
   ],
   "edges": [
     { "id": "e_in", "source": "kafka", "target": "rtim", "label": "拉取批量消息" },
     { "id": "e_q1", "source": "rtim", "target": "fast_buf", "label": "非阻塞压入" },
-    { "id": "e_q2", "source": "rtim", "target": "slow_buf", "label": "队列满尝试压入" },
-    { "id": "e_out1", "source": "fast_buf", "target": "user_fast", "label": "正常低延迟投递" },
-    { "id": "e_drop", "source": "slow_buf", "target": "user_slow", "label": "触发熔断主动断开" }
+    { "id": "e_q2", "source": "rtim", "target": "slow_buf", "label": "尝试入队" },
+    { "id": "e_out1", "source": "fast_buf", "target": "user_fast", "label": "毫秒级投递" },
+    { "id": "e_drop", "source": "slow_buf", "target": "user_slow", "label": "熔断断开连接" }
   ],
   "steps": [
     {
@@ -269,13 +269,13 @@ title: RTIM 长连网关扇出与慢连接主动熔断
 title: 客户端断网自愈与 Catch-Up 增量对齐协议
 ```json
 {
-  "height": 410,
+  "height": 380,
   "nodes": [
-    { "id": "client", "type": "client", "label": "Client (重连自愈)", "x": 60, "y": 140, "description": "持有 last_offset=102" },
-    { "id": "web", "type": "gateway", "label": "Web 增量补齐接口", "x": 300, "y": 70, "description": "GET /messages" },
-    { "id": "rtim", "type": "service", "label": "RTIM 实时网关", "x": 300, "y": 210, "description": "WebSocket 重新建连" },
-    { "id": "db", "type": "database", "label": "Message Store (DB)", "x": 550, "y": 70, "description": "范围检索 offset > 102" },
-    { "id": "kafka", "type": "queue", "label": "Kafka 实时流", "x": 550, "y": 210, "description": "新消息 offset >= 106" }
+    { "id": "client", "type": "client", "label": "Client (重连自愈)", "x": 20, "y": 120, "description": "持有 last_offset=102" },
+    { "id": "web", "type": "gateway", "label": "Web 增量补齐接口", "x": 200, "y": 45, "description": "GET /messages" },
+    { "id": "rtim", "type": "service", "label": "RTIM 实时网关", "x": 200, "y": 195, "description": "WebSocket 重新建连" },
+    { "id": "db", "type": "database", "label": "Message Store (DB)", "x": 390, "y": 45, "description": "范围检索 offset > 102" },
+    { "id": "kafka", "type": "queue", "label": "Kafka 实时流", "x": 390, "y": 195, "description": "新消息 offset >= 106" }
   ],
   "edges": [
     { "id": "e_catchup", "source": "client", "target": "web", "label": "1. 携带 since_offset=102" },

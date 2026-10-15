@@ -79,7 +79,7 @@ function SystemNodeComponent({ data }: NodeProps<Node<CustomNodeData>>) {
   return (
     <div
       className={cn(
-        'relative flex items-center gap-2.5 rounded-lg border bg-card px-3.5 py-2.5 shadow-sm transition-all duration-300',
+        'relative flex items-center gap-2.5 rounded-lg border bg-card px-3.5 py-2.5 shadow-sm transition-all duration-300 min-w-[135px] max-w-[240px]',
         isActive
           ? 'border-primary ring-2 ring-primary/30 ring-offset-1 ring-offset-background'
           : 'border-border-subtle hover:border-border',
@@ -97,12 +97,17 @@ function SystemNodeComponent({ data }: NodeProps<Node<CustomNodeData>>) {
         <Icon className="size-4" aria-hidden />
       </div>
 
-      <div className="flex flex-col text-left">
-        <span className="text-xs font-semibold tracking-tight text-foreground">
+      <div className="flex flex-col text-left overflow-hidden">
+        <span className="text-xs font-semibold tracking-tight text-foreground whitespace-nowrap">
           {data.label}
         </span>
         {data.description && (
-          <span className="text-[10px] text-muted-foreground">{data.description}</span>
+          <span
+            className="text-[10px] text-muted-foreground whitespace-nowrap leading-tight mt-0.5"
+            title={data.description}
+          >
+            {data.description}
+          </span>
         )}
       </div>
 
@@ -195,6 +200,10 @@ export function SystemFlow({
         source: e.source,
         target: e.target,
         label: e.label,
+        labelStyle: { fill: 'var(--color-foreground)', fontSize: 11, fontWeight: 500 },
+        labelBgStyle: { fill: 'var(--color-card)', fillOpacity: 0.98 },
+        labelBgPadding: [6, 3] as [number, number],
+        labelBgBorderRadius: 4,
         animated: isEdgeActive || e.animated,
         className: isEdgeActive ? 'stroke-primary stroke-2' : 'stroke-border',
         style: isEdgeActive
@@ -275,6 +284,7 @@ export function SystemFlow({
           edges={flowEdges}
           nodeTypes={nodeTypes}
           fitView
+          fitViewOptions={{ padding: 0.25, minZoom: 0.65, maxZoom: 1.15 }}
           panOnScroll={false}
           zoomOnScroll={false}
           preventScrolling={false}
