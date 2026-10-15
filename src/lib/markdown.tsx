@@ -8,6 +8,7 @@ import type { Components } from 'react-markdown'
 import { remarkCallouts } from '@/lib/remark-callouts'
 import { remarkMermaid } from '@/lib/remark-mermaid'
 import { remarkCodeDemo } from '@/lib/remark-code-demo'
+import { remarkVideo } from '@/lib/remark-video'
 import { remarkDirectiveFallback } from '@/lib/remark-directive-fallback'
 import { rehypeKeepCssVars } from '@/lib/rehype-css-vars'
 import { rehypeHeadingIds } from '@/lib/rehype-heading-ids'
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { CodeBlock } from '@/components/reading/code-block'
 import { CodeDemo, type CodeDemoProps } from '@/components/reading/code-demo'
 import { MermaidDiagram, type MermaidDiagramProps } from '@/components/reading/mermaid-diagram'
+import { VideoPlayer, type VideoPlayerProps } from '@/components/reading/video-player'
 import { MediaZoom } from '@/components/reading/media-zoom'
 import { HeadingWithAnchor } from '@/components/reading/heading-anchor'
 
@@ -125,6 +127,9 @@ const components = {
   'mermaid-diagram': ({ node: _node, ...rest }: MermaidDiagramProps & { node?: unknown }) => (
     <MermaidDiagram {...rest} />
   ),
+  video: ({ node: _node, ...rest }: VideoPlayerProps & { node?: unknown }) => (
+    <VideoPlayer {...rest} />
+  ),
   pre: ({ node: _node, 'data-hast-style': style, children, ...rest }: StyledProps<'pre'>) => {
     // 若子节点为已处理的 Mermaid 图表，直接返回，避免外层套多余的代码块外壳
     if (
@@ -151,6 +156,7 @@ export async function MarkdownRenderer({ children }: { children: string }) {
           remarkCallouts,
           remarkMermaid,
           remarkCodeDemo,
+          remarkVideo,
           remarkDirectiveFallback,
         ]}
         rehypePlugins={[

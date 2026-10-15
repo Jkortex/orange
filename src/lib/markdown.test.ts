@@ -68,6 +68,33 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('.card { color: red; }')
   })
 
+  it(':::video 指令转换为原生 video 播放器，透传 src/poster 与图注', async () => {
+    const md = [
+      ':::video',
+      'src: /media/posts/demo.mp4',
+      'poster: /media/posts/demo.jpg',
+      'title: 系统演示',
+      '端到端演示',
+      ':::',
+    ].join('\n')
+
+    const html = await renderToHtml(md)
+
+    expect(html).toContain('<video')
+    expect(html).toContain('controls')
+    expect(html).toContain('src="/media/posts/demo.mp4"')
+    expect(html).toContain('poster="/media/posts/demo.jpg"')
+    expect(html).toContain('aria-label="系统演示"')
+    expect(html).toContain('端到端演示')
+  })
+
+  it(':::video 缺少 src 时降级为纯文本，不产生空播放器', async () => {
+    const html = await renderToHtml(':::video\ntitle\n:::')
+
+    expect(html).not.toContain('<video')
+    expect(html).toContain(':::video')
+  })
+
   it('代码块构建时高亮（Shiki dual theme）', async () => {
     const html = await renderToHtml('```ts\nconst a = 1\n```')
 
