@@ -8,11 +8,19 @@ export type ChapterItem = {
   tags: string[]
 }
 
+export type ColumnStatus = 'completed' | 'updating' | 'planned'
+
 export type ColumnInfo = {
   id: string
   title: string
   subtitle: string
   badge: string
+  status: ColumnStatus
+  statusText: string
+  totalArticles: number
+  category: string
+  tags: string[]
+  updatedAt: string
   description: string
   highlights: { title: string; desc: string }[]
   phases: {
@@ -22,11 +30,28 @@ export type ColumnInfo = {
   }[]
 }
 
+export type PlannedColumn = {
+  id: string
+  title: string
+  subtitle: string
+  badge: string
+  statusText: string
+  description: string
+  estimatedChapters: number
+  tags: string[]
+}
+
 export const DISTRIBUTED_GO_COLUMN: ColumnInfo = {
   id: 'distributed-go',
   title: '《Go 云原生分布式系统实战》',
   subtitle: '从单机并发到微服务集群，覆盖现代 Go 分布式系统设计与工程落地全链路',
   badge: '精品专栏 · 17 篇全景实战',
+  status: 'completed',
+  statusText: '17 篇已完结',
+  totalArticles: 17,
+  category: 'distributed-systems',
+  tags: ['Go', '分布式系统', '微服务', 'Kafka', 'gRPC', '云原生'],
+  updatedAt: '2026-10-18',
   description:
     '深入剖析现代云原生环境下构建高弹性、高可用分布式系统的工程法则与设计模式。避开脱离实际的抽象理论，从 Go 运行时并发原语与背压开始，层层递进覆盖 HTTP 中间件链、跨服务 ES256+JWKS 鉴权、数据库零停机迁移、Context 超时预算收窄、Kafka 账本模型、gRPC 契约与三态断路器、分布式事务与 Saga 逆序补偿、OpenTelemetry 全链路追踪，直至端到端完整落地包含 7 大微服务的电商订单系统。',
   highlights: [
@@ -249,4 +274,39 @@ export const DISTRIBUTED_GO_COLUMN: ColumnInfo = {
       ],
     },
   ],
+}
+
+export const ALL_COLUMNS: ColumnInfo[] = [DISTRIBUTED_GO_COLUMN]
+
+export const PLANNED_COLUMNS: PlannedColumn[] = [
+  {
+    id: 'k8s-cloud-native',
+    title: '《Kubernetes 生产级微服务治理实战》',
+    subtitle: '构建高可靠、自愈编排与服务网格网格化生产集群',
+    badge: '筹备规划中',
+    statusText: '预计 12 篇',
+    description:
+      '系统化剖析生产集群搭建、Pod 资源 QoS 隔离、HPA/VPA 弹性伸缩、网络策略与 Istio 服务网格微服务治理全流程。',
+    estimatedChapters: 12,
+    tags: ['Kubernetes', '云原生', '微服务', '服务网格', 'DevOps'],
+  },
+  {
+    id: 'ddd-architecture',
+    title: '《AI 时代的领域驱动设计（DDD）落地演进》',
+    subtitle: '战略设计、聚合根限界上下文与事件风暴的现代代码实践',
+    badge: '筹备规划中',
+    statusText: '预计 10 篇',
+    description:
+      '从业务复杂性拆解出发，运用战术模式沉淀充血模型，结合 AI 辅助建模与事件驱动架构驱动业务核心系统演进。',
+    estimatedChapters: 10,
+    tags: ['DDD', '领域驱动设计', '架构设计', '事件驱动', '重构'],
+  },
+]
+
+export function getAllColumns(): ColumnInfo[] {
+  return ALL_COLUMNS
+}
+
+export function getColumn(id: string): ColumnInfo | undefined {
+  return ALL_COLUMNS.find((col) => col.id === id)
 }

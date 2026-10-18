@@ -1,136 +1,171 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { BookOpen, Layers, ArrowRight, CheckCircle2, Cpu, ShieldCheck, Terminal, Compass } from 'lucide-react'
+import {
+  BookOpen,
+  ArrowRight,
+  Layers,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Compass,
+} from 'lucide-react'
 import { PageHeader } from '@/components/listing/page-header'
-import { DISTRIBUTED_GO_COLUMN } from '@/lib/column-data'
+import { getAllColumns, PLANNED_COLUMNS } from '@/lib/column-data'
 
 export const metadata: Metadata = {
-  title: '专栏',
-  description: '体系化、实战导向的深度技术专栏与云原生实战指南。',
+  title: '专栏中心',
+  description: '体系化、实战导向的深度技术专栏与云原生架构进阶体系。',
 }
 
-const HIGHLIGHT_ICONS = [Cpu, Compass, ShieldCheck, Terminal]
-
 export default function ColumnsPage() {
-  const col = DISTRIBUTED_GO_COLUMN
+  const columns = getAllColumns()
 
   return (
     <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
       <PageHeader
-        title="专栏"
-        description="体系化、工程导向的深度技术专栏与知识进阶指南。"
+        title="专栏中心"
+        description="体系化、工程导向的深度技术专栏与知识进阶体系。"
         icon={<BookOpen aria-hidden />}
       />
 
-      {/* 专栏头图卡片 */}
-      <section className="mb-12 overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-xs sm:p-8">
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="chip bg-primary/15 font-medium text-primary">
-              {col.badge}
-            </span>
-            <span className="chip chip-subtle">全栈实践</span>
-            <span className="chip chip-subtle">Go 1.22+</span>
-          </div>
+      {/* 已发布精选专栏列表 */}
+      <section className="space-y-8">
+        <div className="flex items-center gap-2 border-b border-border pb-3">
+          <Layers className="size-5 text-primary" aria-hidden />
+          <h2 className="type-title">精选实战专栏</h2>
+          <span className="type-meta text-muted-foreground font-mono">
+            ({columns.length})
+          </span>
+        </div>
 
-          <h2 className="type-display tracking-tight text-foreground sm:text-3xl">
-            {col.title}
-          </h2>
+        <div className="grid grid-cols-1 gap-6">
+          {columns.map((col) => (
+            <article
+              key={col.id}
+              className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-xs transition-all duration-200 hover:border-primary/50 hover:shadow-md sm:p-8"
+            >
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="chip bg-primary/15 font-medium text-primary">
+                    {col.badge}
+                  </span>
+                  <span className="chip chip-subtle flex items-center gap-1 font-mono">
+                    <CheckCircle2 className="size-3 text-primary" aria-hidden />
+                    {col.statusText}
+                  </span>
+                  <span className="chip chip-subtle">全栈实践</span>
+                  <span className="chip chip-subtle font-mono">
+                    {col.updatedAt} 更新
+                  </span>
+                </div>
 
-          <p className="type-item font-medium text-muted-foreground">
-            {col.subtitle}
-          </p>
-
-          <p className="type-body text-muted-foreground">
-            {col.description}
-          </p>
-
-          {/* 核心亮点矩阵 */}
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {col.highlights.map((item, idx) => {
-              const Icon = HIGHLIGHT_ICONS[idx % HIGHLIGHT_ICONS.length]
-              return (
-                <div
-                  key={item.title}
-                  className="rounded-xl border border-border-subtle bg-muted/40 p-4 transition-colors hover:bg-muted/70"
-                >
-                  <div className="mb-2 flex items-center gap-2 font-medium text-foreground">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Icon className="size-3.5" aria-hidden />
-                    </span>
-                    <span className="type-meta font-semibold">{item.title}</span>
-                  </div>
-                  <p className="type-meta text-muted-foreground leading-relaxed">
-                    {item.desc}
+                <div className="space-y-1.5">
+                  <h3 className="type-display text-2xl tracking-tight text-foreground group-hover:text-primary transition-colors sm:text-3xl">
+                    <Link href={`/columns/${col.id}`}>
+                      {col.title}
+                    </Link>
+                  </h3>
+                  <p className="type-item font-medium text-muted-foreground">
+                    {col.subtitle}
                   </p>
                 </div>
-              )
-            })}
-          </div>
+
+                <p className="type-body line-clamp-3 text-muted-foreground leading-relaxed">
+                  {col.description}
+                </p>
+
+                {/* 专栏四大核心维度 */}
+                <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {col.highlights.map((h) => (
+                    <div
+                      key={h.title}
+                      className="rounded-lg border border-border-subtle bg-muted/30 p-2.5 transition-colors group-hover:bg-muted/50"
+                    >
+                      <div className="type-meta font-semibold text-foreground">
+                        {h.title}
+                      </div>
+                      <p className="type-meta line-clamp-2 text-muted-foreground">
+                        {h.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 标签 */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {col.tags.map((tag) => (
+                    <span key={tag} className="chip chip-subtle text-xs">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* 底部跳转入口 */}
+              <div className="mt-6 flex flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="type-meta text-muted-foreground font-mono">
+                  共 {col.phases.length} 个学习阶段 · 涵盖 {col.totalArticles} 篇核心工程实践
+                </div>
+
+                <Link
+                  href={`/columns/${col.id}`}
+                  className="inline-flex items-center gap-1.5 self-start rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground sm:self-auto"
+                >
+                  <span>查看专栏大纲与路线图</span>
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+                </Link>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
-      {/* 专栏进阶路线与完整目录 */}
-      <div className="space-y-12">
-        <div className="flex items-center gap-3 border-b border-border pb-4">
-          <Layers className="size-5 text-primary" aria-hidden />
-          <h3 className="type-title">专栏全景路线图与目录（共 17 篇）</h3>
+      {/* 筹备规划中专栏（预留扩展） */}
+      <section className="mt-16 space-y-6">
+        <div className="flex items-center gap-2 border-b border-border pb-3">
+          <Sparkles className="size-5 text-muted-foreground" aria-hidden />
+          <h2 className="type-title text-muted-foreground">更多专栏筹备中</h2>
+          <span className="type-meta text-muted-foreground font-mono">
+            ({PLANNED_COLUMNS.length})
+          </span>
         </div>
 
-        {col.phases.map((phase, pIndex) => (
-          <section key={phase.name} className="space-y-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <h4 className="type-item flex items-center gap-2 font-semibold text-foreground">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">
-                  {pIndex + 1}
-                </span>
-                {phase.name}
-              </h4>
-              <p className="type-meta text-muted-foreground">
-                {phase.description}
-              </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {PLANNED_COLUMNS.map((p) => (
+            <div
+              key={p.id}
+              className="flex flex-col justify-between rounded-xl border border-dashed border-border bg-card/60 p-5"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="chip chip-subtle font-mono text-xs">
+                    <Clock className="size-3" aria-hidden />
+                    {p.badge}
+                  </span>
+                  <span className="type-meta font-mono text-muted-foreground">
+                    {p.statusText}
+                  </span>
+                </div>
+
+                <h3 className="type-item font-semibold text-foreground">
+                  {p.title}
+                </h3>
+                <p className="type-meta text-muted-foreground leading-relaxed">
+                  {p.description}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 pt-4">
+                {p.tags.map((tag) => (
+                  <span key={tag} className="chip chip-subtle text-xs">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              {phase.chapters.map((ch) => (
-                <Link
-                  key={ch.slug}
-                  href={`/posts/${ch.slug}`}
-                  className="group relative flex flex-col justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-all duration-150 hover:border-primary/50 hover:bg-muted/30 sm:flex-row sm:items-center sm:p-5"
-                >
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="chip font-mono text-xs font-semibold text-primary">
-                        {ch.chapterNumber}
-                      </span>
-                      <span className="type-item font-medium transition-colors group-hover:text-primary">
-                        {ch.title}
-                      </span>
-                    </div>
-
-                    <p className="type-meta line-clamp-2 text-muted-foreground leading-relaxed">
-                      {ch.description}
-                    </p>
-
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {ch.tags.map((tag) => (
-                        <span key={tag} className="chip chip-subtle text-xs">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-1 font-mono text-xs font-medium text-muted-foreground transition-colors group-hover:text-primary sm:self-center">
-                    <span>阅读本篇</span>
-                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

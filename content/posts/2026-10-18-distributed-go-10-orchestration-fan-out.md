@@ -11,7 +11,7 @@ tags:
   - 微服务
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
+> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns/distributed-go)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
 
 三个独立微服务。一次前端页面渲染。为了拼装出最终的响应，你需要获取**用户画像（User Profile）**、**历史订单（Order History）**以及**推荐商品（Product Recommendations）**。
 
@@ -688,6 +688,7 @@ g.Go(func() (err error) {
 ---
 
 > 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns)
+> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
+> - 专栏广场：[浏览全部技术专栏](/columns)
 > - 上一篇：[Go 分布式系统实战（九）：服务间 RPC：gRPC、Protobuf 契约与断路器容错](/posts/2026-10-18-distributed-go-09-grpc-circuit-breaker)
 > - 下一篇：[Go 分布式系统实战（十一）：分布式一致性实战：幂等键、乐观锁与 Saga 逆序补偿](/posts/2026-10-18-distributed-go-11-consistency-in-practice)

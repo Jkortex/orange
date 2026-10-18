@@ -11,7 +11,7 @@ tags:
   - 安全架构
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
+> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns/distributed-go)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
 
 每一个跨越服务边界的请求都来自陌生人。
 
@@ -1044,6 +1044,7 @@ func (c *JWKSClient) GetPublicKey(ctx context.Context) (*ecdsa.PublicKey, error)
 ---
 
 > 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns)
+> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
+> - 专栏广场：[浏览全部技术专栏](/columns)
 > - 上一篇：[Go 分布式系统实战（四）：HTTP 服务与中间件链路：Go 1.22 原生路由与核心中间件](/posts/2026-10-18-distributed-go-04-http-middleware)
 > - 下一篇：[Go 分布式系统实战（六）：数据库访问与平滑迁移：连接池调优与 Expand-Contract 模式](/posts/2026-10-18-distributed-go-06-database-migrations)

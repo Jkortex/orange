@@ -11,7 +11,7 @@ tags:
   - 集成测试
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
+> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns/distributed-go)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
 
 ## 1. 分布式系统的测试金字塔 (The Testing Pyramid for Distributed Systems)
 
@@ -884,6 +884,7 @@ func AssertEventually(t *testing.T, condition func() bool, timeout time.Duration
 ---
 
 > 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns)
+> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
+> - 专栏广场：[浏览全部技术专栏](/columns)
 > - 上一篇：[Go 分布式系统实战（十二）：可观测性：结构化日志、Prometheus 指标与 OTel 追踪](/posts/2026-10-18-distributed-go-12-observability)
 > - 下一篇：[Go 分布式系统实战（十四）：配置与密钥管理：12-Factor 原则与原子指针动态热重载](/posts/2026-10-18-distributed-go-14-config-and-secrets)

@@ -11,7 +11,7 @@ tags:
   - Docker
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
+> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns/distributed-go)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
 
 前 14 章中，你已经掌握了构建分布式系统的各种核心模式。本章我们将面对一个空的代码仓库。
 
@@ -1217,6 +1217,7 @@ consumerLagMetric.WithLabelValues(groupID, topic).Set(float64(lag))
 ---
 
 > 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns)
+> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
+> - 专栏广场：[浏览全部技术专栏](/columns)
 > - 上一篇：[Go 分布式系统实战（十四）：配置与密钥管理：12-Factor 原则与原子指针动态热重载](/posts/2026-10-18-distributed-go-14-config-and-secrets)
 > - 下一篇：[Go 分布式系统实战（十六）：附录全景：并发速查、存储抽象与运维 CLI 工具链](/posts/2026-10-18-distributed-go-16-appendices)

@@ -11,7 +11,7 @@ tags:
   - 微服务
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
+> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns/distributed-go)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
 
 ## 1. 为什么内部通信选择 gRPC（Why gRPC for Internal Communication）
 
@@ -896,6 +896,7 @@ client := inventoryv1.NewInventoryServiceClient(conn)
 ---
 
 > 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns)
+> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
+> - 专栏广场：[浏览全部技术专栏](/columns)
 > - 上一篇：[Go 分布式系统实战（八）：深入消息队列：Kafka 账本模型、背压控制与消费者组](/posts/2026-10-18-distributed-go-08-kafka-queues)
 > - 下一篇：[Go 分布式系统实战（十）：并行编排与扇出调用：errgroup 并发控制与优雅降级](/posts/2026-10-18-distributed-go-10-orchestration-fan-out)

@@ -11,7 +11,7 @@ tags:
   - 12-Factor
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
+> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns/distributed-go)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
 
 十二个服务。十二个配置文件。一个错误的数据库密码。究竟是哪个服务崩溃了？
 
@@ -944,6 +944,7 @@ func main() {
 ---
 
 > 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns)
+> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
+> - 专栏广场：[浏览全部技术专栏](/columns)
 > - 上一篇：[Go 分布式系统实战（十三）：分布式系统测试：测试金字塔、Testcontainers 与混沌注入](/posts/2026-10-18-distributed-go-13-testing-distributed-systems)
 > - 下一篇：[Go 分布式系统实战（十五）：终极实战：OrderFlow 电商订单微服务系统端到端落地](/posts/2026-10-18-distributed-go-15-capstone-complete-system)

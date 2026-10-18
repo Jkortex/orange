@@ -9,6 +9,7 @@ import {
 } from '@/lib/content'
 import { listSkillAttachments, skillFileHref } from '@/lib/skill-routes'
 import { getSiteUrl, joinSiteUrl } from '@/lib/site-url'
+import { getAllColumns } from '@/lib/column-data'
 
 export const dynamic = 'force-static'
 
@@ -48,6 +49,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
   ]
+
+  // 专栏详情
+  for (const col of getAllColumns()) {
+    routes.push({
+      url: joinSiteUrl(siteUrl, `/columns/${col.id}`),
+      lastModified: generatedAt,
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    })
+  }
 
   // 内容条目（所有拥有详情路由的集合）
   for (const entry of getAllEntries()) {
