@@ -24,6 +24,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
+      url: joinSiteUrl(siteUrl, '/columns'),
+      lastModified: generatedAt,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
       url: joinSiteUrl(siteUrl, '/life'),
       lastModified: generatedAt,
       changeFrequency: 'weekly',

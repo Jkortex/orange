@@ -10,6 +10,7 @@ export type NavItem = {
 
 export const defaultNavItems: NavItem[] = [
   { href: '/', label: '文章' },
+  { href: '/columns', label: '专栏' },
   { href: '/life', label: '生活' },
   { href: '/music', label: '音乐' },
   { href: '/skills', label: '技能' },

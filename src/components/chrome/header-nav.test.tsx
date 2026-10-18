@@ -19,9 +19,19 @@ describe('HeaderNav 顶部导航组件', () => {
     render(<HeaderNav />)
 
     expect(screen.getByRole('link', { name: '文章' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '专栏' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '生活' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '音乐' })).toBeTruthy()
     expect(screen.getByRole('link', { name: '技能' })).toBeTruthy()
+  })
+
+  it('访问 /columns 时，「专栏」高亮并带有 aria-current="page"', () => {
+    currentPath = '/columns'
+    render(<HeaderNav />)
+
+    const columns = screen.getByRole('link', { name: '专栏' })
+    expect(columns.getAttribute('aria-current')).toBe('page')
+    expect(columns.className).toContain('text-primary')
   })
 
   it('访问根路径 / 时，「文章」高亮并带有 aria-current="page"', () => {
@@ -80,7 +90,7 @@ describe('HeaderNav 行内布局契约', () => {
   it('导航项不参与压缩（压缩会把文字挤变形）', () => {
     render(<HeaderNav />)
 
-    for (const name of ['文章', '生活', '音乐', '技能']) {
+    for (const name of ['文章', '专栏', '生活', '音乐', '技能']) {
       expect(screen.getByRole('link', { name }).className).toContain('shrink-0')
     }
   })

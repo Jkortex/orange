@@ -3,16 +3,16 @@
 import { useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Menu, Music, Newspaper, NotebookPen, Wrench, X, type LucideIcon } from 'lucide-react'
+import { BookOpen, Home, Menu, Music, Newspaper, NotebookPen, Wrench, X, type LucideIcon } from 'lucide-react'
 import { defaultNavItems, type NavItem } from '@/components/chrome/header-nav'
 import { iconButtonClass } from '@/components/primitives/icon-button'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
 /*
  * 移动端栏目菜单（经典汉堡 + 侧滑抽屉）：
- * - 顶栏在移动端保持单行：品牌 + 菜单 + 搜索 + 主题；4 个栏目收进抽屉，逐行列出、各占一行。
+ * - 顶栏在移动端保持单行：品牌 + 菜单 + 搜索 + 主题；栏目收进抽屉，逐行列出、各占一行。
  * - sm 起由顶栏行内导航接管，抽屉触发器隐藏。
- * - 图标沿用各集合的图标（文章=Newspaper（现为根路径 /）/ life=NotebookPen / music=Music / skills=Wrench），
+ * - 图标沿用各集合的图标（文章=Newspaper / 专栏=BookOpen / life=NotebookPen / music=Music / skills=Wrench），
  *   菜单里图标只是辅助，栏目名始终是可见文本。
  * - 搜索全站只保留顶栏那一个入口，抽屉里不重复放。
  * - 焦点陷阱、Esc、遮罩点击、滚动锁全部由 Sheet（Radix Dialog）负责，本组件只管内容与关闭时机。
@@ -20,6 +20,7 @@ import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 
 const SECTION_ICONS: Record<string, LucideIcon> = {
   '/': Newspaper,
+  '/columns': BookOpen,
   '/life': NotebookPen,
   '/music': Music,
   '/skills': Wrench,

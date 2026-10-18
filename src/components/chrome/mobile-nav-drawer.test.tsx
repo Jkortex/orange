@@ -34,7 +34,7 @@ describe('MobileNavDrawer 顶栏菜单', () => {
   it('打开后逐行列出全部栏目（每项独占一行，不再挤在一行里）', async () => {
     await openDrawer()
 
-    for (const name of ['文章', '生活', '音乐', '技能']) {
+    for (const name of ['文章', '专栏', '生活', '音乐', '技能']) {
       expect(screen.getByRole('link', { name })).toBeTruthy()
     }
     // 竖排列表：每一项都是块级行，行高足够点按

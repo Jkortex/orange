@@ -49,6 +49,7 @@ describe('sitemap 技能包文件页', () => {
 
     expect(urls()).toEqual([
       'https://orange-cnc.pages.dev',
+      'https://orange-cnc.pages.dev/columns',
       'https://orange-cnc.pages.dev/life',
       'https://orange-cnc.pages.dev/music',
       'https://orange-cnc.pages.dev/skills',
