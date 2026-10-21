@@ -3,6 +3,7 @@ title: Go 分布式系统实战（十六）：附录全景：并发速查、存�
 date: 2026-10-18T00:16:00Z
 description: 汇总 Go 并发核心原语速查手册、文件与对象存储抽象（S3 与本地目录穿越防护）、基于 Cobra 与 Bubbletea 的运维 CLI 工具链及核心术语表。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 并发速查

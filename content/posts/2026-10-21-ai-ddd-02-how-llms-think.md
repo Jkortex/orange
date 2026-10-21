@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（二）：大语言模型到底如何“
 date: 2026-10-21T02:00:00Z
 description: "深入剖析分词机制、统计预测、上下文窗口与涌现推理及其认知盲区，揭示精准的语言与结构化指令如何弥补模型内在局限，大幅提升领域建模的准确性。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "大语言模型"
   - "分词"

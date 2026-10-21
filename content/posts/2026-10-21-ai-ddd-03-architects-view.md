@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（三）：架构师视角：与 AI 系�
 date: 2026-10-21T03:00:00Z
 description: "把 AI 重新定义为在显式概念边界内协作的推理伙伴，将架构思维应用于对话、信息流、共享词汇、约束与职责划分之中。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "架构设计"
   - "提示词工程"

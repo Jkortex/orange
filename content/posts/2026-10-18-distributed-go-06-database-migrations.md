@@ -3,6 +3,7 @@ title: Go 分布式系统实战（六）：数据库访问与平滑迁移：连�
 date: 2026-10-18T00:06:00Z
 description: 坚守一服务一库隔离原则，调优 pgx 连接池与 PgBouncer 架构，通过仓储模式、sqlc 类型安全生成与 Expand-Contract 模式实现零停机数据库迁移。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - PostgreSQL

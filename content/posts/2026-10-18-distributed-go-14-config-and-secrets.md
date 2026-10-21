@@ -3,6 +3,7 @@ title: Go 分布式系统实战（十四）：配置与密钥管理：12-Factor 
 date: 2026-10-18T00:14:00Z
 description: 践行云原生 12-Factor 配置原则，区分 ConfigMap 与 Secret，实现敏感信息脱敏日志，并通过 atomic.Pointer 与 SIGHUP 信号完成动态热重载。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 配置管理

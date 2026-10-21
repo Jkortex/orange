@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（九）：从护栏到专家：为 DDD �
 date: 2026-10-21T09:00:00Z
 description: "亲手打造专精于事件风暴、故事叙述、命令与事件编写及上下文映射的专业智能体，用契约与交接划定认知边界，让通用语言保证各专家之间的一致性。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "智能体"
   - "事件风暴"

@@ -3,6 +3,7 @@ title: Go 分布式系统实战（一）：为什么需要分布式？协同的�
 date: 2026-10-18T00:01:00Z
 description: 深入分析单机并发物理极限与单点故障，解析分布式系统的网络延迟、部分失败以及 CAP 定理在实际工程中的权衡与代价。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 分布式系统

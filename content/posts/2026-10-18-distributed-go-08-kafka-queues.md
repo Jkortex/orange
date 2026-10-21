@@ -3,6 +3,7 @@ title: Go 分布式系统实战（八）：深入消息队列：Kafka 账本模�
 date: 2026-10-18T00:08:00Z
 description: 对比 NATS 内存邮箱与 Kafka 分布式持久化账本，基于 franz-go 纯 Go 客户端实现显式背压、增量协同重平衡与死信队列（DLQ）。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - Kafka

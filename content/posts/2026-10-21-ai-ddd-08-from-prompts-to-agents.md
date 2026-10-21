@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（八）：从提示词到智能体：构
 date: 2026-10-21T08:00:00Z
 description: "将工作流从单一提示词升级为具备清晰认知边界的专家智能体团队，用规范沉淀领域知识，并借助守卫智能体设立不可逾越的认知边界。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "智能体"
   - "多智能体"

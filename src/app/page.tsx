@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Newspaper } from 'lucide-react'
-import { getCollection } from '@/lib/content'
+import { getArticleEntries } from '@/lib/content'
 import { PostsExplorer, type PostItem } from '@/components/listing/posts-explorer'
 import { PageHeader } from '@/components/listing/page-header'
 
@@ -8,8 +8,9 @@ export const metadata: Metadata = { title: '文章' }
 
 // 站点根 = 文章列表：左侧分类列表（构建期由内容聚合）+ 右侧条目列表，默认「全部」= 按日期倒序。
 // 数据构建期内嵌进客户端组件，切换分类纯客户端过滤，不发内容请求（AGENTS.md 内容与渲染纪律）
+// 专栏文章（frontmatter 声明 column）不进文章列表，只在专栏页与直达链接出现
 export default function PostsPage() {
-  const posts: PostItem[] = getCollection('posts').map((entry) => ({
+  const posts: PostItem[] = getArticleEntries().map((entry) => ({
     slug: entry.slug,
     title: entry.data.title,
     date: entry.data.date.toISOString(),

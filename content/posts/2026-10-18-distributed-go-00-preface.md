@@ -3,6 +3,7 @@ title: Go 分布式系统实战（导读）：云原生架构演进与全景概�
 date: 2026-10-18T00:00:00Z
 description: 探讨云原生分布式架构的设计哲学、从单机到微服务的工程鸿沟，以及本专栏技术选型与权衡（slog、pgx、原生路由与 franz-go）。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 分布式系统

@@ -3,6 +3,7 @@ title: Go 分布式系统实战（九）：服务间 RPC：gRPC、Protobuf 契�
 date: 2026-10-18T00:09:00Z
 description: 解析 gRPC 高性能二进制契约，结合 buf 工具链、双重 API 模式（管理面 vs 消费面），实现指数退避重试与三态断路器状态机。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - gRPC

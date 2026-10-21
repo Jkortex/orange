@@ -27,7 +27,16 @@ const baseSchema = z.object({
     .optional(),
 })
 
-export const postSchema = baseSchema
+export const postSchema = baseSchema.extend({
+  /**
+   * 所属专栏 id（如 ai-ddd）：专栏文章只出现在专栏页与直达链接，
+   * 不进文章列表（首页列表与分类聚合都排除专栏文章）
+   */
+  column: z
+    .string()
+    .regex(/^[\w-]+$/, 'column 须为英文 slug（字母/数字/连字符/下划线），如 ai-ddd')
+    .optional(),
+})
 export const lifeSchema = baseSchema.extend({
   location: z.string().optional(),
   weather: z.string().optional(),
@@ -108,7 +117,7 @@ export type ContentManifest = {
 }
 
 const MANIFEST_PATH = path.join(process.cwd(), '.generated', 'content-manifest.json')
-const MANIFEST_VERSION = 3
+const MANIFEST_VERSION = 4
 let loadedManifest: ContentManifest | null = null
 
 function loadManifestFromDisk(): ContentManifest | null {
@@ -366,7 +375,20 @@ export function getAllEntries(options?: GetOptions): CollectionEntry<CollectionT
 
 export type CategorySummary = { name: string; count: number }
 
-/** 聚合全类型已用分类（构建时统计，无硬编码清单）；按名称排序保证输出稳定 */
+/**
+ * 是否专栏文章：frontmatter 声明了 column 的条目。
+ * 专栏文章有独立的入口（专栏页），不进入文章列表（首页列表 / 分类聚合 / RSS）。
+ */
+export function isColumnEntry(entry: { data: object }): boolean {
+  return Boolean((entry.data as { column?: string | undefined }).column)
+}
+
+/** 文章列表条目（排除专栏文章）；专栏文章只在专栏页与直达链接出现 */
+export function getArticleEntries(options?: GetOptions): CollectionEntry<'posts'>[] {
+  return getCollection('posts', options).filter((entry) => !isColumnEntry(entry))
+}
+
+/** 聚合全类型已用分类（构建时统计，无硬编码清单）；按名称排序保证输出稳定；专栏文章不计入 */
 export function getCategories(options?: GetOptions): CategorySummary[] {
   if (!options?.contentDir && !options?.skipManifest) {
     const manifest = loadManifestFromDisk()
@@ -375,10 +397,13 @@ export function getCategories(options?: GetOptions): CategorySummary[] {
     }
   }
 
-  return countByCategory(getAllEntries(options), (entry) => entry.data.category)
+  return countByCategory(
+    getAllEntries(options).filter((entry) => !isColumnEntry(entry)),
+    (entry) => entry.data.category,
+  )
 }
 
-/** 指定分类的全类型条目（日期倒序） */
+/** 指定分类的全类型条目（日期倒序）；专栏文章不计入分类页 */
 export function getEntriesByCategory(
   name: string,
   options?: GetOptions,
@@ -390,7 +415,9 @@ export function getEntriesByCategory(
     }
   }
 
-  return getAllEntries(options).filter((entry) => entry.data.category === name)
+  return getAllEntries(options).filter(
+    (entry) => entry.data.category === name && !isColumnEntry(entry),
+  )
 }
 
 /** 标签聚合：指定集合（有详情路由的类型，见 content-model §6）的去重标签，按名称排序 */
@@ -585,7 +612,8 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
   const allEntries = getAllEntries(opts)
 
   const { categories, entriesByCategory } = groupByCategory(
-    allEntries,
+    // 专栏文章不进文章列表，分类聚合同样排除
+    allEntries.filter((entry) => !isColumnEntry(entry)),
     (entry) => entry.data.category,
   )
 

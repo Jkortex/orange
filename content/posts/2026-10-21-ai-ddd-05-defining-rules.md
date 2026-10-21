@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（五）：定义规则：教会模型运
 date: 2026-10-21T05:00:00Z
 description: "构建提示词规则手册，以三层架构明确词汇定义、结构规范、预期输出与评估准则，并借助智能体、技能与 MCP 服务器三大容器为 DDD 推理装上护栏。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "提示词工程"
   - "DDD"

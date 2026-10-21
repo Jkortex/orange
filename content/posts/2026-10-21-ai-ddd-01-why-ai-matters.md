@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（一）：为何 AI 对当今的领域�
 date: 2026-10-21T01:00:00Z
 description: "剖析领域复杂度攀升、认知过载与传统建模实践的瓶颈，明确 AI 是认知放大器而非全自动替代品，并给出架构师日常工作流的改造路径。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "DDD"
   - "领域驱动设计"

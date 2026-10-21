@@ -3,6 +3,7 @@ title: Go 分布式系统实战（四）：HTTP 服务与中间件链路：Go 1.
 date: 2026-10-18T00:04:00Z
 description: 基于 Go 1.22 net/http 增强路由构建洋葱模型中间件链，实现 Panic 恢复、Request ID 透传、slog 日志、连接排空与探针契约。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - HTTP

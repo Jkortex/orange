@@ -14,6 +14,7 @@ vi.mock('@/lib/content', () => ({
   getAllEntries: vi.fn(() => []),
   getAllTags: vi.fn(() => []),
   getCategories: vi.fn(() => []),
+  getCollection: vi.fn(() => []),
   getSkillPackage: vi.fn(),
   listSkillSlugs: vi.fn(() => []),
   TAGGED_TYPES: ['posts', 'life', 'music', 'skills'],

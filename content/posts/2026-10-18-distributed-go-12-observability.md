@@ -3,6 +3,7 @@ title: Go 分布式系统实战（十二）：可观测性：结构化日志、P
 date: 2026-10-18T00:12:00Z
 description: 构建现代可观测性三大支柱：log/slog 结构化日志、Prometheus 避免高基数指标埋点，以及基于 OpenTelemetry 的跨进程全链路追踪闭环。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 可观测性

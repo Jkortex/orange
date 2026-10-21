@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（四）：从领域探索到 AI 协作"
 date: 2026-10-21T04:00:00Z
 description: "以事件风暴与领域故事叙述为桥梁，将发散式的业务探索转化为结构化上下文，识别并精炼核心领域事件，在参与者与模型之间建立一致的语言基准。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "事件风暴"
   - "领域探索"

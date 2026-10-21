@@ -3,6 +3,7 @@ title: Go 分布式系统实战（二）：并发即微缩分布式系统：Goro
 date: 2026-10-18T00:02:00Z
 description: 揭示 Go 运行时并发原语与分布式概念的镜像关系，详解 Goroutine 生命周期、有界通道背压、select 超时及生产级 WorkerPool 与优雅关机。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 并发编程

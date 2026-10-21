@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（十）：编排器：构建协调智能
 date: 2026-10-21T10:00:00Z
 description: "把专家智能体之间的任务交接转化为可执行控制平面，涵盖资格检查、类型化消息、合法状态转换、人工审批关卡、持久化与重放，驱动完整的 BrewUp 闭环。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "编排器"
   - "智能体"

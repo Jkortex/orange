@@ -3,6 +3,7 @@ title: Go 分布式系统实战（五）：跨服务认证与 JWT 鉴权：无�
 date: 2026-10-18T00:05:00Z
 description: 剖析分布式鉴权架构演进，采用 ES256 非对称算法、JWKS 公钥分发实现零停机密钥轮换，结合 Hub-and-Spoke 代理与 Scope 鉴权。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 认证鉴权

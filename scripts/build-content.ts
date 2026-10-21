@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildContentManifest } from '../src/lib/content.ts'
+import { assertColumnsConsistent } from '../src/lib/column-data.ts'
 
 const targetDir = path.join(process.cwd(), '.generated')
 const targetFile = path.join(targetDir, 'content-manifest.json')
@@ -11,6 +12,9 @@ const startTime = performance.now()
 if (!fs.existsSync(targetDir)) {
   fs.mkdirSync(targetDir, { recursive: true })
 }
+
+// 专栏目录与专栏文章必须一一对应（专栏文章不进文章列表，失配即死链/孤儿文章）
+assertColumnsConsistent()
 
 const manifest = buildContentManifest({ skipManifest: true })
 const tempFile = `${targetFile}.${process.pid}.tmp`

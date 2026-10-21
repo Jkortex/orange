@@ -3,6 +3,7 @@ title: Go 分布式系统实战（十）：并行编排与扇出调用：errgrou
 date: 2026-10-18T00:10:00Z
 description: 打破串行调用延迟瓶颈，使用 errgroup 实施扇出并发请求与 SetLimit 背压控制，实现快速失败与非核心依赖显式降级（BestEffort）。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 并发编排

@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllEntries, getAllTags, getCategories, getCollection, getDraft, getDrafts, getEntriesByCategory, getEntriesByTag, getEntry, getSkillEntries, getSkillPackage, isDraftsEnabled, listSkillSlugs } from '@/lib/content'
+import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllEntries, getAllTags, getArticleEntries, getCategories, getCollection, getDraft, getDrafts, getEntriesByCategory, getEntriesByTag, getEntry, getSkillEntries, getSkillPackage, isDraftsEnabled, listSkillSlugs } from '@/lib/content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
@@ -474,6 +474,58 @@ describe('分类聚合：category 由内容声明，构建时聚合，零代码�
     writeFixture('posts/2026-09-04-a.md', '---\ntitle: X\ndate: 2026-09-04\ncategory: 设计模式\n---\n')
 
     expect(() => getCollection('posts', { contentDir })).toThrowError(/category/)
+  })
+})
+
+describe('专栏文章：声明 column 的条目不进文章列表', () => {
+  const POST_PLAIN = '---\ntitle: 普通文章\ndate: 2026-09-04\ncategory: css\n---\n正文'
+  const POST_COLUMN = '---\ntitle: 专栏文章\ndate: 2026-09-05\ncategory: ddd\ncolumn: ai-ddd\n---\n正文'
+
+  it('getArticleEntries 排除专栏文章，普通文章保留', () => {
+    writeFixture('posts/2026-09-04-a.md', POST_PLAIN)
+    writeFixture('posts/2026-09-05-b.md', POST_COLUMN)
+
+    const entries = getArticleEntries({ contentDir })
+    expect(entries.map((entry) => entry.slug)).toEqual(['2026-09-04-a'])
+  })
+
+  it('getCategories 不统计专栏文章，只由专栏构成的分类不出现', () => {
+    writeFixture('posts/2026-09-04-a.md', POST_PLAIN)
+    writeFixture('posts/2026-09-05-b.md', POST_COLUMN)
+
+    expect(getCategories({ contentDir })).toEqual([{ name: 'css', count: 1 }])
+  })
+
+  it('getEntriesByCategory 不返回专栏文章', () => {
+    writeFixture('posts/2026-09-04-a.md', POST_PLAIN)
+    writeFixture('posts/2026-09-05-b.md', POST_COLUMN)
+
+    expect(getEntriesByCategory('ddd', { contentDir })).toEqual([])
+    expect(getEntriesByCategory('css', { contentDir }).map((entry) => entry.slug)).toEqual([
+      '2026-09-04-a',
+    ])
+  })
+
+  it('manifest 内的分类聚合同样排除专栏文章', () => {
+    writeFixture('posts/2026-09-04-a.md', POST_PLAIN)
+    writeFixture('posts/2026-09-05-b.md', POST_COLUMN)
+
+    const manifest = buildContentManifest({ contentDir })
+    expect(manifest.categories).toEqual([{ name: 'css', count: 1 }])
+    // 只由专栏文章构成的分类不会在聚合里出现
+    expect(manifest.entriesByCategory.ddd).toBeUndefined()
+    expect(manifest.entriesByCategory.css).toHaveLength(1)
+    // 专栏文章本身仍在集合里（详情页与专栏页要用）
+    expect(manifest.collections.posts).toHaveLength(2)
+  })
+
+  it('column 含非法字符（中文）时校验报错，错误信息含字段名', () => {
+    writeFixture(
+      'posts/2026-09-05-b.md',
+      '---\ntitle: X\ndate: 2026-09-05\ncolumn: AI 增强\n---\n',
+    )
+
+    expect(() => getCollection('posts', { contentDir })).toThrowError(/column/)
   })
 })
 

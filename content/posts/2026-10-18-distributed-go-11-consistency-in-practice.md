@@ -3,6 +3,7 @@ title: Go 分布式系统实战（十一）：分布式一致性实战：幂等�
 date: 2026-10-18T00:11:00Z
 description: 应对跨网络双写困境与最终一致性需求，构建幂等键校验中间件、乐观锁版本号并发控制、Saga 编排器逆序补偿与事务发件箱模式。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 分布式事务

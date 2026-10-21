@@ -3,6 +3,7 @@ title: Go 分布式系统实战（三）：两个服务一条队列：HTTP 同�
 date: 2026-10-18T00:03:00Z
 description: 对比 HTTP 同步阻塞与消息队列异步解耦的延迟与容灾，基于 NATS Core 落地发布/订阅与队列工作组，实现故障隔离与水平扩容。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 消息队列

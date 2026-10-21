@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（六）：迭代精化：构建限界上
 date: 2026-10-21T06:00:00Z
 description: "把反馈闭环应用于事件、命令、聚合与策略的设计，引入 CQRS 明确模型推理中的职责分离，逐步为 BrewUp 案例构建高内聚、自洽的限界上下文。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "限界上下文"
   - "迭代精炼"

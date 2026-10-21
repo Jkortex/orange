@@ -1,3 +1,5 @@
+import { getCollection } from './content.ts'
+
 export type ChapterItem = {
   order: number
   chapterNumber: string
@@ -477,4 +479,43 @@ export function getAllColumns(): ColumnInfo[] {
 
 export function getColumn(id: string): ColumnInfo | undefined {
   return ALL_COLUMNS.find((col) => col.id === id)
+}
+
+/**
+ * 构建期守卫：专栏目录与专栏文章必须一一对应。
+ * 专栏文章不进文章列表，只靠专栏页暴露入口，一旦失配就会变成死链或孤儿文章，
+ * 因此在构建时直接失败，而不是等到读者点击才发现。
+ */
+export function assertColumnsConsistent(): void {
+  // skipManifest：构建期清单尚未生成（或版本不兼容），这里必须直读 content/
+  const posts = getCollection('posts', { skipManifest: true })
+  const postSlugs = new Set(posts.map((post) => post.slug))
+  const columnIds = new Set(ALL_COLUMNS.map((col) => col.id))
+
+  for (const col of ALL_COLUMNS) {
+    for (const phase of col.phases) {
+      for (const chapter of phase.chapters) {
+        if (!postSlugs.has(chapter.slug)) {
+          throw new Error(
+            `专栏「${col.title}」的章节 ${chapter.slug} 缺少对应文章文件（content/posts/${chapter.slug}.md）`,
+          )
+        }
+      }
+    }
+  }
+
+  for (const post of posts) {
+    const columnId = post.data.column
+    if (!columnId) continue
+    if (!columnIds.has(columnId)) {
+      throw new Error(`文章 ${post.slug} 声明的专栏「${columnId}」不存在`)
+    }
+    const col = ALL_COLUMNS.find((c) => c.id === columnId)!
+    const listed = col.phases.some((phase) =>
+      phase.chapters.some((chapter) => chapter.slug === post.slug),
+    )
+    if (!listed) {
+      throw new Error(`文章 ${post.slug} 声明的专栏「${columnId}」目录中缺少该篇`)
+    }
+  }
 }

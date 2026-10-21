@@ -3,6 +3,7 @@ title: Go 分布式系统实战（七）：Context 贯穿全链路：超时预�
 date: 2026-10-18T00:07:00Z
 description: 深入探讨 Context 树传播机制，解决客户端断开导致的后台空转，剖析超时预算递减收窄策略与 6 大反模式规避法则。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - Context

@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（七）：作为领域载体的提示词
 date: 2026-10-21T07:00:00Z
 description: "让提示词承载并沉淀领域知识，使其从随用随弃的查询升级为活文档，跨工作流复用规则与示例，并把 AI 输出当作团队理解的一面镜子。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "提示词工程"
   - "领域知识"

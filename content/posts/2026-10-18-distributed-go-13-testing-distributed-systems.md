@@ -3,6 +3,7 @@ title: Go 分布式系统实战（十三）：分布式系统测试：测试金�
 date: 2026-10-18T00:13:00Z
 description: 搭建生产级测试金字塔，利用 Testcontainers 启动真实基础设施、结合 -race 检测、手写 Fake 故障注入、混沌测试与协程泄露排查。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 自动化测试

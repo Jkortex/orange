@@ -3,6 +3,7 @@ title: Go 分布式系统实战（十五）：终极实战：OrderFlow 电商订
 date: 2026-10-18T00:15:00Z
 description: 将全专栏核心模式融会贯通，落地包含 7 个微服务组件的 OrderFlow 电商全系统，涵盖 Mini-Saga 补偿、自适应服务发现与生产环境加固。
 category: distributed-systems
+column: distributed-go
 tags:
   - Go
   - 微服务

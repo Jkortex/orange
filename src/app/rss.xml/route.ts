@@ -1,4 +1,4 @@
-import { getAllEntries } from '@/lib/content'
+import { getAllEntries, isColumnEntry } from '@/lib/content'
 import { getSiteUrl, joinSiteUrl } from '@/lib/site-url'
 
 // RSS 全文输出：静态 Route Handler，构建时预渲染为 rss.xml（output: 'export' 兼容）
@@ -23,9 +23,9 @@ function cdata(value: string) {
 
 export function GET() {
   const siteUrl = getSiteUrl()
-  // 聚合文章与技能包
+  // 聚合文章与技能包；专栏文章不进文章列表，也不进订阅源
   const entries = getAllEntries().filter(
-    (e) => e.collection === 'posts' || e.collection === 'skills',
+    (e) => (e.collection === 'posts' || e.collection === 'skills') && !isColumnEntry(e),
   )
 
   const items = entries

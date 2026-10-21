@@ -3,6 +3,7 @@ title: "AI 增强的领域驱动设计（十一）：受治理的自主性：在
 date: 2026-10-21T11:00:00Z
 description: "区分确定性边界冲突与语义偏离，在不扩大自主性的前提下纠正漂移，并让证据、不确定性与人工验收在多智能体工作流中始终保持透明可见。"
 category: domain-driven-design
+column: ai-ddd
 tags:
   - "受治理的自主性"
   - "智能体"
