@@ -22,6 +22,8 @@ export type ColumnInfo = {
   tags: string[]
   updatedAt: string
   description: string
+  /** 专栏定位标签（列表页与详情页的 chip），缺省为「全栈实践」 */
+  focus?: string
   highlights: { title: string; desc: string }[]
   phases: {
     name: string
@@ -276,7 +278,184 @@ export const DISTRIBUTED_GO_COLUMN: ColumnInfo = {
   ],
 }
 
-export const ALL_COLUMNS: ColumnInfo[] = [DISTRIBUTED_GO_COLUMN]
+export const AI_DDD_COLUMN: ColumnInfo = {
+  id: 'ai-ddd',
+  title: '《AI 增强的领域驱动设计》',
+  subtitle: '用大语言模型、结构化提示词与多智能体工作流，把领域建模升级为可执行的控制平面',
+  badge: '精品专栏 · 12 篇全景实战',
+  status: 'completed',
+  statusText: '12 篇已完结',
+  totalArticles: 12,
+  category: 'domain-driven-design',
+  tags: ['DDD', '领域驱动设计', '大语言模型', '多智能体', '提示词工程', '架构设计'],
+  updatedAt: '2026-10-21',
+  focus: '领域建模',
+  description:
+    '一套把 AI 纳入领域设计推理闭环的完整方法论。先建立大语言模型的心智模型：分词、统计预测与上下文窗口的运作机制，解释精准语言为何能解锁理解力；再以事件风暴衔接人类业务洞察，沉淀提示词规则手册，用反馈闭环精炼事件、命令与聚合，最终收敛出高内聚的限界上下文；最后把提示词升级为专家智能体，用编排器、类型化消息、合法状态转换与人工关卡搭建可执行控制平面，并让知识出处、不确定性与概念漂移在受治理的自主性中始终可见。',
+  highlights: [
+    {
+      title: '心智模型与认知负荷',
+      desc: '分词、统计预测、上下文窗口与涌现推理的运作机制，及其对领域建模精确性的决定性影响。',
+    },
+    {
+      title: '领域探索与规则手册',
+      desc: '以事件风暴与故事叙述衔接人类洞察，用可复用的提示词规则手册教会模型按 DDD 的方式思考。',
+    },
+    {
+      title: '限界上下文与领域载体',
+      desc: '以反馈闭环精炼事件、命令与聚合，把领域知识固化进提示词这一持久载体，形成活文档。',
+    },
+    {
+      title: '智能体编排与治理',
+      desc: '专家智能体契约、编排器控制平面与漂移纠正，让 AI 的自主性、证据链与人工验收始终可审查。',
+    },
+  ],
+  phases: [
+    {
+      name: '阶段一：AI 简要回顾与大语言模型的工作原理',
+      description:
+        '建立对现代 AI 与大语言模型能力与局限的准确心智模型，并自信地运用它们辅助架构设计工作。',
+      chapters: [
+        {
+          order: 0,
+          chapterNumber: '导读',
+          slug: '2026-10-21-ai-ddd-00-guide',
+          title: 'AI 增强的领域驱动设计（导读）：为什么需要 AI 辅助的领域建模，以及如何使用本专栏',
+          description:
+            '说明 AI 进入领域建模的三个动因，给出三大阶段的学习路线、贯穿全专栏的 BrewUp 示例系统、动手实验约定与统一术语说明。',
+          phase: '阶段一：AI 简要回顾与大语言模型的工作原理',
+          tags: ['DDD', '领域驱动设计', '大语言模型', '学习指南'],
+        },
+        {
+          order: 1,
+          chapterNumber: '第 01 篇',
+          slug: '2026-10-21-ai-ddd-01-why-ai-matters',
+          title: 'AI 增强的领域驱动设计（一）：为何 AI 对当今的领域驱动设计至关重要',
+          description:
+            '剖析领域复杂度攀升、认知过载与传统建模实践的瓶颈，明确 AI 是认知放大器而非全自动替代品，并给出架构师日常工作流的改造路径。',
+          phase: '阶段一：AI 简要回顾与大语言模型的工作原理',
+          tags: ['DDD', '领域驱动设计', '认知负荷', '架构设计'],
+        },
+        {
+          order: 2,
+          chapterNumber: '第 02 篇',
+          slug: '2026-10-21-ai-ddd-02-how-llms-think',
+          title: 'AI 增强的领域驱动设计（二）：大语言模型到底如何“思考”，以及为何精准性能够解锁理解力',
+          description:
+            '深入剖析分词机制、统计预测、上下文窗口与涌现推理及其认知盲区，揭示精准的语言与结构化指令如何弥补模型内在局限。',
+          phase: '阶段一：AI 简要回顾与大语言模型的工作原理',
+          tags: ['大语言模型', '分词', '上下文窗口', '提示词工程'],
+        },
+        {
+          order: 3,
+          chapterNumber: '第 03 篇',
+          slug: '2026-10-21-ai-ddd-03-architects-view',
+          title: 'AI 增强的领域驱动设计（三）：架构师视角：与 AI 系统协同推理',
+          description:
+            '把 AI 重新定义为在显式概念边界内协作的推理伙伴，将架构思维应用于对话、信息流、共享词汇、约束与职责划分之中。',
+          phase: '阶段一：AI 简要回顾与大语言模型的工作原理',
+          tags: ['架构设计', '提示词工程', '上下文工程', 'DDD'],
+        },
+      ],
+    },
+    {
+      name: '阶段二：通过简单规则与提示词将 AI 应用于 DDD',
+      description:
+        '借助规则、提示词与迭代精炼开展领域建模，产出自洽连贯的事件、命令、聚合与限界上下文。',
+      chapters: [
+        {
+          order: 4,
+          chapterNumber: '第 04 篇',
+          slug: '2026-10-21-ai-ddd-04-domain-exploration',
+          title: 'AI 增强的领域驱动设计（四）：从领域探索到 AI 协作',
+          description:
+            '以事件风暴与领域故事叙述为桥梁，将发散式的业务探索转化为结构化上下文，识别并精炼核心领域事件，建立一致的语言基准。',
+          phase: '阶段二：通过简单规则与提示词将 AI 应用于 DDD',
+          tags: ['事件风暴', '领域探索', '通用语言', 'DDD'],
+        },
+        {
+          order: 5,
+          chapterNumber: '第 05 篇',
+          slug: '2026-10-21-ai-ddd-05-defining-rules',
+          title: 'AI 增强的领域驱动设计（五）：定义规则：教会模型运用 DDD 进行思考',
+          description:
+            '构建提示词规则手册，以三层架构明确词汇定义、结构规范、预期输出与评估准则，并借智能体、技能与 MCP 服务器为 DDD 推理装上护栏。',
+          phase: '阶段二：通过简单规则与提示词将 AI 应用于 DDD',
+          tags: ['提示词工程', 'DDD', '规则手册', '护栏'],
+        },
+        {
+          order: 6,
+          chapterNumber: '第 06 篇',
+          slug: '2026-10-21-ai-ddd-06-iterative-refinement',
+          title: 'AI 增强的领域驱动设计（六）：迭代精化：构建限界上下文',
+          description:
+            '把反馈闭环应用于事件、命令、聚合与策略的设计，引入 CQRS 明确职责分离，逐步为 BrewUp 案例构建高内聚、自洽的限界上下文。',
+          phase: '阶段二：通过简单规则与提示词将 AI 应用于 DDD',
+          tags: ['限界上下文', '迭代精炼', 'CQRS', '聚合设计'],
+        },
+        {
+          order: 7,
+          chapterNumber: '第 07 篇',
+          slug: '2026-10-21-ai-ddd-07-prompt-as-domain-carrier',
+          title: 'AI 增强的领域驱动设计（七）：作为领域载体的提示词',
+          description:
+            '让提示词承载并沉淀领域知识，使其从随用随弃的查询升级为活文档，跨工作流复用规则与示例，并把 AI 输出当作团队理解的一面镜子。',
+          phase: '阶段二：通过简单规则与提示词将 AI 应用于 DDD',
+          tags: ['提示词工程', '领域知识', '活文档', 'DDD'],
+        },
+      ],
+    },
+    {
+      name: '阶段三：构建智能体以简化交互',
+      description:
+        '从单一提示词进阶到专业智能体与编排器，构建可扩展且稳定一致的 AI 辅助领域建模工作流。',
+      chapters: [
+        {
+          order: 8,
+          chapterNumber: '第 08 篇',
+          slug: '2026-10-21-ai-ddd-08-from-prompts-to-agents',
+          title: 'AI 增强的领域驱动设计（八）：从提示词到智能体：构建 AI 协作结构',
+          description:
+            '将工作流从单一提示词升级为具备清晰认知边界的专家智能体团队，用规范沉淀领域知识，并借助守卫智能体设立不可逾越的认知边界。',
+          phase: '阶段三：构建智能体以简化交互',
+          tags: ['智能体', '多智能体', '规范驱动', '认知边界'],
+        },
+        {
+          order: 9,
+          chapterNumber: '第 09 篇',
+          slug: '2026-10-21-ai-ddd-09-guardrails-to-specialists',
+          title: 'AI 增强的领域驱动设计（九）：从护栏到专家：为 DDD 设计智能体',
+          description:
+            '亲手打造专精于事件风暴、故事叙述、命令与事件编写及上下文映射的专业智能体，用契约与交接划定认知边界，让通用语言保证专家之间的一致性。',
+          phase: '阶段三：构建智能体以简化交互',
+          tags: ['智能体', '事件风暴', '契约与交接', '领域建模'],
+        },
+        {
+          order: 10,
+          chapterNumber: '第 10 篇',
+          slug: '2026-10-21-ai-ddd-10-the-orchestrator',
+          title: 'AI 增强的领域驱动设计（十）：编排器：构建协调智能体',
+          description:
+            '把专家智能体之间的任务交接转化为可执行控制平面，涵盖资格检查、类型化消息、合法状态转换、人工审批关卡、持久化与重放。',
+          phase: '阶段三：构建智能体以简化交互',
+          tags: ['编排器', '智能体', '状态机', '人工关卡'],
+        },
+        {
+          order: 11,
+          chapterNumber: '第 11 篇',
+          slug: '2026-10-21-ai-ddd-11-governed-autonomy',
+          title: 'AI 增强的领域驱动设计（十一）：受治理的自主性：在智能体之间平衡自主与对齐',
+          description:
+            '区分确定性边界冲突与语义偏离，在不扩大自主性的前提下纠正漂移，并让证据、不确定性与人工验收始终保持透明可见。',
+          phase: '阶段三：构建智能体以简化交互',
+          tags: ['受治理的自主性', '智能体', '概念漂移', '可观测性'],
+        },
+      ],
+    },
+  ],
+}
+
+export const ALL_COLUMNS: ColumnInfo[] = [DISTRIBUTED_GO_COLUMN, AI_DDD_COLUMN]
 
 export const PLANNED_COLUMNS: PlannedColumn[] = [
   {
@@ -289,17 +468,6 @@ export const PLANNED_COLUMNS: PlannedColumn[] = [
       '系统化剖析生产集群搭建、Pod 资源 QoS 隔离、HPA/VPA 弹性伸缩、网络策略与 Istio 服务网格微服务治理全流程。',
     estimatedChapters: 12,
     tags: ['Kubernetes', '云原生', '微服务', '服务网格', 'DevOps'],
-  },
-  {
-    id: 'ddd-architecture',
-    title: '《AI 时代的领域驱动设计（DDD）落地演进》',
-    subtitle: '战略设计、聚合根限界上下文与事件风暴的现代代码实践',
-    badge: '筹备规划中',
-    statusText: '预计 10 篇',
-    description:
-      '从业务复杂性拆解出发，运用战术模式沉淀充血模型，结合 AI 辅助建模与事件驱动架构驱动业务核心系统演进。',
-    estimatedChapters: 10,
-    tags: ['DDD', '领域驱动设计', '架构设计', '事件驱动', '重构'],
   },
 ]
 

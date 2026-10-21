@@ -53,7 +53,7 @@ export default function ColumnsPage() {
                     <CheckCircle2 className="size-3 text-primary" aria-hidden />
                     {col.statusText}
                   </span>
-                  <span className="chip chip-subtle">全栈实践</span>
+                  <span className="chip chip-subtle">{col.focus ?? '全栈实践'}</span>
                   <span className="chip chip-subtle font-mono">
                     {col.updatedAt} 更新
                   </span>

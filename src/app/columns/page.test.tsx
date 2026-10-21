@@ -27,6 +27,14 @@ describe('ColumnsPage 专栏中心', () => {
     }
   })
 
+  it('按专栏渲染定位标签', () => {
+    render(<ColumnsPage />)
+
+    for (const col of ALL_COLUMNS) {
+      expect(screen.getByText(col.focus ?? '全栈实践')).toBeTruthy()
+    }
+  })
+
   it('渲染筹备规划中专栏板块', () => {
     render(<ColumnsPage />)
 

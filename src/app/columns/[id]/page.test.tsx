@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import ColumnDetailPage, { generateStaticParams, generateMetadata } from './page'
-import { DISTRIBUTED_GO_COLUMN, getAllColumns } from '@/lib/column-data'
+import { AI_DDD_COLUMN, DISTRIBUTED_GO_COLUMN, getAllColumns } from '@/lib/column-data'
 
 afterEach(() => {
   cleanup()
@@ -57,5 +57,38 @@ describe('ColumnDetailPage 专栏详情与路线图页', () => {
     await expect(
       ColumnDetailPage({ params: Promise.resolve({ id: 'non-existent-column' }) }),
     ).rejects.toThrow()
+  })
+})
+
+describe('ColumnDetailPage AI 增强的领域驱动设计专栏', () => {
+  it('generateMetadata 正确生成新专栏元信息', async () => {
+    const meta = await generateMetadata({ params: Promise.resolve({ id: 'ai-ddd' }) })
+    expect(meta.title).toBe(AI_DDD_COLUMN.title)
+    expect(meta.description).toBe(AI_DDD_COLUMN.description)
+  })
+
+  it('渲染全部 12 篇章节链接且指向对应文章路径', async () => {
+    const el = await ColumnDetailPage({ params: Promise.resolve({ id: 'ai-ddd' }) })
+    render(el)
+
+    const allChapters = AI_DDD_COLUMN.phases.flatMap((p) => p.chapters)
+    expect(allChapters).toHaveLength(12)
+    expect(AI_DDD_COLUMN.totalArticles).toBe(12)
+
+    for (const chapter of allChapters) {
+      const link = screen.getByRole('link', { name: new RegExp(chapter.title.replace(/[()（）]/g, '\\$&')) })
+      expect(link.getAttribute('href')).toBe(`/posts/${chapter.slug}`)
+    }
+  })
+
+  it('渲染 3 大阶段的进阶路线图与专栏定位标签', async () => {
+    const el = await ColumnDetailPage({ params: Promise.resolve({ id: 'ai-ddd' }) })
+    render(el)
+
+    for (const phase of AI_DDD_COLUMN.phases) {
+      expect(screen.getByText(new RegExp(phase.name))).toBeTruthy()
+      expect(screen.getByText(phase.description)).toBeTruthy()
+    }
+    expect(screen.getByText(AI_DDD_COLUMN.focus!)).toBeTruthy()
   })
 })

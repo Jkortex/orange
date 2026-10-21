@@ -60,7 +60,7 @@ export default async function ColumnDetailPage({ params }: Params) {
               {col.badge}
             </span>
             <span className="chip chip-subtle">{col.statusText}</span>
-            <span className="chip chip-subtle">全栈实践</span>
+            <span className="chip chip-subtle">{col.focus ?? '全栈实践'}</span>
             {col.tags.slice(0, 3).map((tag) => (
               <span key={tag} className="chip chip-subtle">
                 {tag}
