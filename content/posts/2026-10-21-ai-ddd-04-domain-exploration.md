@@ -86,6 +86,8 @@ required business conditions have been satisfied.
 
 *图 4.1* 展示了源自 BrewUp 订购流程的一个简化片段。`CreateSalesOrder` 命令触发了 `SalesOrderCreated` 事件，随后该事件用于更新销售读模型（Sales Read Model）并为销售 UI（Sales UI）提供支持。图中显示的外部系统代表该流程中的另一个参与者。
 
+![图 4.1 – 来自 BrewUp ERP 的事件风暴示例](/media/posts/ai-ddd/fig-4-1.png)
+
 *图 4.1 – 来自 BrewUp ERP 的事件风暴示例*
 
 通过将探索成果转化为明确的事件、时序和词汇，你可以将部分认知负担从个人记忆转移到可复用的上下文中。架构师因而可以少花精力去死记硬背每张便签，而把更多注意力聚焦在更高维度的关注点上：
@@ -121,6 +123,8 @@ required business conditions have been satisfied.
 - 确认是否构成了对客户的履约承诺？
 
 这些问题揭示了孤立的事件名称可能掩盖的知识。*图 4.2* 展示了与 *图 4.1* 相同的流程，但此时是从参与者的视角展开观察。图中展现了一系列活动中的各个参与方，包括用户、销售系统、外部系统、销售订单、交互产生的事件、读模型以及销售 UI。
+
+![图 4.2 – 采用领域故事叙述的同一流程示例](/media/posts/ai-ddd/fig-4-2.png)
 
 *图 4.2 – 采用领域故事叙述的同一流程示例*
 
