@@ -457,7 +457,291 @@ export const AI_DDD_COLUMN: ColumnInfo = {
   ],
 }
 
-export const ALL_COLUMNS: ColumnInfo[] = [DISTRIBUTED_GO_COLUMN, AI_DDD_COLUMN]
+export const SPRING_BOOT_ANGULAR_COLUMN: ColumnInfo = {
+  id: 'spring-boot-angular',
+  title: '《Spring Boot 4 & Angular 22 全栈微服务实战》',
+  subtitle: '从 Java 26 微服务架构、响应式状态治理到容器化生产部署的全链路工程实践',
+  badge: '精品专栏 · 22 篇全栈实战',
+  status: 'completed',
+  statusText: '22 篇已完结',
+  totalArticles: 22,
+  category: 'fullstack',
+  tags: ['Spring Boot', 'Angular', 'Java', 'TypeScript', '微服务', '全栈开发'],
+  updatedAt: '2026-10-23',
+  focus: '微服务全栈',
+  description:
+    '系统化剖析现代企业级全栈微服务架构设计与落地法则。贯穿在线书店业务案例，深度覆盖 Java 26 模式匹配与结构化并发、Spring Boot 4.1.0 多范式持久化（PostgreSQL & MongoDB）、Eureka 服务发现与 Spring Cloud Gateway 动态网关、OpenAPI 契约驱动与分布式可观测性、Keycloak + JWT 集中鉴权、Spring WebFlux 响应式流与 SSE 实时通知；前端全面拥抱 Angular 22 纯 Standalone 架构、Signals 响应式系统、NgRx SignalStore 状态治理、复杂响应式表单、Angular 现代 SSR 水合优化与多阶段容器化一键部署。',
+  highlights: [
+    {
+      title: '现代化全栈架构基石',
+      desc: 'Java 26 语言特性与 Spring Boot 4.1.0 最佳实践，Angular 22 独立组件与无 Zone.js（Zoneless）变更检测。',
+    },
+    {
+      title: '多范式持久化与微服务治理',
+      desc: 'PostgreSQL 强事务关系模型与 MongoDB 灵活文档模型并行，Eureka 动态发现与 Spring Cloud Gateway 响应式网关。',
+    },
+    {
+      title: '安全鉴权与实时响应式流',
+      desc: 'Keycloak 集中式身份认证与无状态 JWT 验签传播，Project Reactor 非阻塞流与 SSE 服务端实时推送。',
+    },
+    {
+      title: '前端状态治理与生产级交付',
+      desc: 'NgRx SignalStore 事件驱动状态管理，按路由差异化 SSR 与增量水合，Docker Compose 全栈一键编排。',
+    },
+  ],
+  phases: [
+    {
+      name: '阶段一：全栈架构基石与 AI 提效',
+      description: '掌握全栈技术选型与架构全景，规范微服务工程骨架与 AI 研发工作流。',
+      chapters: [
+        {
+          order: 0,
+          chapterNumber: '导读',
+          slug: '2026-10-23-spring-boot-angular-00-guide',
+          title: 'Spring Boot & Angular 全栈实战（导读）：现代微服务与响应式前端全景路线图',
+          description:
+            '全景解析现代企业级全栈应用架构体系，剖析 Java 26、Spring Boot 4 与 Angular 22 的技术演进、实战案例拆解与学习路线图。',
+          phase: '阶段一：全栈架构基石与 AI 提效',
+          tags: ['Spring Boot', 'Angular', 'Java', 'TypeScript', '微服务', '架构设计'],
+        },
+        {
+          order: 1,
+          chapterNumber: '第 01 篇',
+          slug: '2026-10-23-spring-boot-angular-01-the-big-picture',
+          title: 'Spring Boot & Angular 全栈实战（一）：技术全景、演进脉络与架构蓝图',
+          description:
+            '全面梳理 Spring Boot 4.1.0 与 Angular 22 的核心技术演进，剖析 Java 26 新特性、Signals 细粒度响应式系统与微服务书店案例系统架构。',
+          phase: '阶段一：全栈架构基石与 AI 提效',
+          tags: ['Spring Boot', 'Angular', 'Java', 'TypeScript', '微服务', '架构设计'],
+        },
+        {
+          order: 2,
+          chapterNumber: '第 02 篇',
+          slug: '2026-10-23-spring-boot-angular-02-microservices-getting-started',
+          title: 'Spring Boot & Angular 全栈实战（二）：微服务核心架构与业务领域拆解',
+          description:
+            '深入微服务架构设计原则，剖析按业务能力拆分服务、分层架构设计与领域对象规范，从零搭建 Spring Boot 4 微服务基础工程骨架。',
+          phase: '阶段一：全栈架构基石与 AI 提效',
+          tags: ['Spring Boot', '微服务', '架构设计', 'Java'],
+        },
+        {
+          order: 3,
+          chapterNumber: '第 03 篇',
+          slug: '2026-10-23-spring-boot-angular-03-ai-development-assistant',
+          title: 'Spring Boot & Angular 全栈实战（三）：工程级 AI 辅助研发工作流与规则指令集',
+          description:
+            '探索大模型在全栈微服务研发中的工程化落地，配置专属 copilot-instructions 规范指令集，建立可信可验的代码生成与重构工作流。',
+          phase: '阶段一：全栈架构基石与 AI 提效',
+          tags: ['AI辅助开发', 'Spring Boot', 'GitHub Copilot', '工程提效'],
+        },
+      ],
+    },
+    {
+      name: '阶段二：Spring Boot 微服务后端架构',
+      description: '落地多范式持久化、企业级 RESTful API、统一网关、可观测性、安全鉴权与响应式编程。',
+      chapters: [
+        {
+          order: 4,
+          chapterNumber: '第 04 篇',
+          slug: '2026-10-23-spring-boot-angular-04-databases-repositories-spring-data',
+          title: 'Spring Boot & Angular 全栈实战（四）：Spring Data 多范式持久化（PostgreSQL 与 MongoDB）',
+          description:
+            '结合关系型数据库 PostgreSQL 与 NoSQL 文档数据库 MongoDB，实战 Spring Data JPA 与 Spring Data MongoDB 的实体建模、Repository 设计与多范式持久化架构。',
+          phase: '阶段二：Spring Boot 微服务后端架构',
+          tags: ['Spring Boot', 'Spring Data', 'PostgreSQL', 'MongoDB', '持久化'],
+        },
+        {
+          order: 5,
+          chapterNumber: '第 05 篇',
+          slug: '2026-10-23-spring-boot-angular-05-application-services-apis',
+          title: 'Spring Boot & Angular 全栈实战（五）：应用服务层与企业级 RESTful API 实战',
+          description:
+            '深入 Spring Boot 服务分层设计，构建具备 DTO 转换、参数校验、全局异常治理与分页能力的生产级 REST API。',
+          phase: '阶段二：Spring Boot 微服务后端架构',
+          tags: ['Spring Boot', 'REST API', 'DTO', '数据校验', '异常处理'],
+        },
+        {
+          order: 6,
+          chapterNumber: '第 06 篇',
+          slug: '2026-10-23-spring-boot-angular-06-service-discovery-api-gateway',
+          title: 'Spring Boot & Angular 全栈实战（六）：Spring Cloud 服务发现与统一 API 网关',
+          description:
+            '基于 Eureka 构建微服务动态注册与健康感知，实战 Spring Cloud Gateway 的动态路由编排、过滤器链路与跨域治理。',
+          phase: '阶段二：Spring Boot 微服务后端架构',
+          tags: ['Spring Cloud', '微服务网关', '服务发现', 'Eureka', 'API Gateway'],
+        },
+        {
+          order: 7,
+          chapterNumber: '第 07 篇',
+          slug: '2026-10-23-spring-boot-angular-07-openapi-observability',
+          title: 'Spring Boot & Angular 全栈实战（七）：OpenAPI 规范驱动与全链路可观测性落地',
+          description:
+            '结合 SpringDoc 自动化生成 OpenAPI 规范与 Swagger 交互界面，落地基于 Actuator、Prometheus 与分布式链路追踪的可观测体系。',
+          phase: '阶段二：Spring Boot 微服务后端架构',
+          tags: ['OpenAPI', '可观测性', 'Spring Boot', 'Actuator', '链路追踪'],
+        },
+        {
+          order: 8,
+          chapterNumber: '第 08 篇',
+          slug: '2026-10-23-spring-boot-angular-08-spring-security-jwt',
+          title: 'Spring Boot & Angular 全栈实战（八）：基于 Spring Security 与 JWT 的微服务安全鉴权',
+          description:
+            '深入微服务安全边界，落地 OAuth2 与 Keycloak 集成、无状态 JWT 签发与跨微服务 Token 传播验证体系。',
+          phase: '阶段二：Spring Boot 微服务后端架构',
+          tags: ['Spring Security', 'JWT', 'Keycloak', '微服务安全', 'OAuth2'],
+        },
+        {
+          order: 9,
+          chapterNumber: '第 09 篇',
+          slug: '2026-10-23-spring-boot-angular-09-reactive-webflux',
+          title: 'Spring Boot & Angular 全栈实战（九）：Spring WebFlux 响应式流与 SSE 实时消息推送',
+          description:
+            '探索 Reactor 非阻塞反应式编程模型，构建 Server-Sent Events (SSE) 实时通道，实现图书上新与库存变动的流式推送。',
+          phase: '阶段二：Spring Boot 微服务后端架构',
+          tags: ['WebFlux', '响应式编程', 'SSE', 'Reactor', '实时通信'],
+        },
+        {
+          order: 10,
+          chapterNumber: '第 10 篇',
+          slug: '2026-10-23-spring-boot-angular-10-building-packaging-backend',
+          title: 'Spring Boot & Angular 全栈实战（十）：后端多微服务容器化构建与 Docker Compose 统一编排',
+          description:
+            '基于分层 JAR 与多阶段 Dockerfile 构建轻量化后端微服务容器镜像，利用 Docker Compose 编排数据库、网关与微服务全栈集群。',
+          phase: '阶段二：Spring Boot 微服务后端架构',
+          tags: ['Docker', 'Docker Compose', '容器化', 'Spring Boot', '生产部署'],
+        },
+      ],
+    },
+    {
+      name: '阶段三：Angular 现代前端与响应式治理',
+      description: '掌握 Standalone 组件、响应式表单、Signals 与 SignalStore 状态流、客户端鉴权、SSR 与 SSE 集成。',
+      chapters: [
+        {
+          order: 11,
+          chapterNumber: '第 11 篇',
+          slug: '2026-10-23-spring-boot-angular-11-angular-project-architecture',
+          title: 'Spring Boot & Angular 全栈实战（十一）：Angular 22 现代脚手架与独立组件架构',
+          description:
+            '深入 Angular 22 现代工程体系，落地纯 Standalone 架构、基于 Signals 的输入输出、Smart/Dumb 组件分层与 Vitest 现代测试框架。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'Standalone', 'TypeScript', '前端架构', 'Vitest'],
+        },
+        {
+          order: 12,
+          chapterNumber: '第 12 篇',
+          slug: '2026-10-23-spring-boot-angular-12-ai-assisted-frontend',
+          title: 'Spring Boot & Angular 全栈实战（十二）：前端 AI 辅助开发规范与指令调优',
+          description:
+            '建立前端 AI 研发规范库，配置针对 Angular Material、Reactive Forms 与 Vitest 测试的专属 instruction 文件，实现可控可复用的代码生成。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['AI辅助开发', 'Angular', 'GitHub Copilot', '前端工程化'],
+        },
+        {
+          order: 13,
+          chapterNumber: '第 13 篇',
+          slug: '2026-10-23-spring-boot-angular-13-understanding-angular-forms',
+          title: 'Spring Boot & Angular 全栈实战（十三）：深入理解 Angular 响应式表单设计哲学',
+          description:
+            '对比模板驱动表单与响应式表单，剖析 FormGroup、FormControl 与 FormArray 的模型不可变性，解析同步与异步校验器的运行机制。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'Reactive Forms', '响应式表单', '前端表单'],
+        },
+        {
+          order: 14,
+          chapterNumber: '第 14 篇',
+          slug: '2026-10-23-spring-boot-angular-14-implementing-reactive-forms',
+          title: 'Spring Boot & Angular 全栈实战（十四）：实战复杂响应式表单与跨字段校验',
+          description:
+            '结合 Angular Material 实战注册、登录、作者与图书四大表单，落地密码一致性跨字段校验、动态错误提示与 AI 辅助生成表单流。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular Material', '响应式表单', '跨字段校验', '实战开发'],
+        },
+        {
+          order: 15,
+          chapterNumber: '第 15 篇',
+          slug: '2026-10-23-spring-boot-angular-15-signals-and-stores',
+          title: 'Spring Boot & Angular 全栈实战（十五）：利用 Signals 与 NgRx SignalStore 治理应用状态',
+          description:
+            '告别复杂样板代码，使用轻量级 NgRx SignalStore 搭配 Events 插件，以 AuthStore 为例落地清晰、类型安全且事件驱动的状态流。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'Signals', 'NgRx', 'SignalStore', '状态管理'],
+        },
+        {
+          order: 16,
+          chapterNumber: '第 16 篇',
+          slug: '2026-10-23-spring-boot-angular-16-authentication-in-angular',
+          title: 'Spring Boot & Angular 全栈实战（十六）：Angular 客户端鉴权、拦截器与路由守卫',
+          description:
+            '前端完整对接后端认证微服务，实现基于 HTTP Interceptor 的 JWT 自动装配、无感 Token 刷新、路由守卫与受保护的个人中心页面。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'JWT', '拦截器', '路由守卫', '前端安全'],
+        },
+        {
+          order: 17,
+          chapterNumber: '第 17 篇',
+          slug: '2026-10-23-spring-boot-angular-17-crud-state-management',
+          title: 'Spring Boot & Angular 全栈实战（十七）：状态管理驱动的完整 CRUD 交互闭环',
+          description:
+            '结合 AuthorStore 与 BookStore，实战分页列表、动态防抖检索、模态框创建/编辑与级联下拉关联的生产级 CRUD 完整流程。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'CRUD', 'SignalStore', '分页检索', '业务实战'],
+        },
+        {
+          order: 18,
+          chapterNumber: '第 18 篇',
+          slug: '2026-10-23-spring-boot-angular-18-server-side-rendering',
+          title: 'Spring Boot & Angular 全栈实战（十八）：Angular 现代服务端渲染（SSR）与水合优化',
+          description:
+            '配置 RenderMode 细粒度路由渲染策略，结合 AngularNodeAppEngine、isPlatformBrowser 平台守卫与增量水合技术，实现高 SEO 与极速首屏加载。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'SSR', '水合', 'SEO', '服务端渲染'],
+        },
+        {
+          order: 19,
+          chapterNumber: '第 19 篇',
+          slug: '2026-10-23-spring-boot-angular-19-real-time-data-angular',
+          title: 'Spring Boot & Angular 全栈实战（十九）：SSE 实时数据流与 RxJS 响应式集成',
+          description:
+            '在 Angular 客户端基于 RxJS 封装 EventSource 连接，消费后端 Server-Sent Events 流，实现新书实时推送、自创建事件去重与列表自动刷新。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'SSE', 'RxJS', '实时通信', 'EventSource'],
+        },
+        {
+          order: 20,
+          chapterNumber: '第 20 篇',
+          slug: '2026-10-23-spring-boot-angular-20-building-deploying-frontend',
+          title: 'Spring Boot & Angular 全栈实战（二十）：前端生产级构建与 Node SSR 容器化打包',
+          description:
+            '实战 Angular 生产级构建优化，编写多阶段 Node.js Dockerfile 容器化 SSR 服务，配置反向代理打通前后端通信契约。',
+          phase: '阶段三：Angular 现代前端与响应式治理',
+          tags: ['Angular', 'Docker', '容器化', 'SSR', '生产构建'],
+        },
+      ],
+    },
+    {
+      name: '阶段四：端到端联调与生产交付',
+      description: '全链路打通前端 SSR 代理与微服务集群，编排容器化一键部署并验证生产环境高可用。',
+      chapters: [
+        {
+          order: 21,
+          chapterNumber: '第 21 篇',
+          slug: '2026-10-23-spring-boot-angular-21-connecting-frontend-backend-production',
+          title: 'Spring Boot & Angular 全栈实战（二十一）：端到端联调、网络代理与生产级编排',
+          description:
+            '汇聚全栈成果，利用 Docker Compose 统筹编排 PostgreSQL、MongoDB、Keycloak、Eureka、网关、业务微服务与 Angular 前端，实现生产级一键交付。',
+          phase: '阶段四：端到端联调与生产交付',
+          tags: ['全栈实战', 'Docker Compose', '生产交付', '端到端联调', '微服务架构'],
+        },
+      ],
+    },
+  ],
+}
+
+export const ALL_COLUMNS: ColumnInfo[] = [
+  DISTRIBUTED_GO_COLUMN,
+  AI_DDD_COLUMN,
+  SPRING_BOOT_ANGULAR_COLUMN,
+]
 
 export const PLANNED_COLUMNS: PlannedColumn[] = [
   {
