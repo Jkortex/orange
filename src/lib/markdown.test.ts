@@ -18,6 +18,22 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('<p>段落文本</p>')
   })
 
+  /*
+   * CommonMark 判定定界符的「左右侧翼」时按标点/字母分类，而中文全角标点（）、""：都被
+   * 算作标点：`**领域驱动设计（DDD）**这样` 的收尾 ** 前是标点、后是汉字，既不是右侧翼
+   * 也不是左侧翼，于是星号原样漏进正文。中文译稿里这类写法成片出现，必须在解析层修。
+   */
+  it('中文全角标点紧邻加粗标记时仍然渲染', async () => {
+    const html = await renderToHtml(
+      '**领域驱动设计（DDD）**这样\n\n**“可理解性的认知边界”**：它们\n\n**智能体（Agent）**承载',
+    )
+
+    expect(html).toContain('<strong>领域驱动设计（DDD）</strong>这样')
+    expect(html).toContain('<strong>“可理解性的认知边界”</strong>：它们')
+    expect(html).toContain('<strong>智能体（Agent）</strong>承载')
+    expect(html).not.toContain('**')
+  })
+
   it('支持 GFM：删除线与表格', async () => {
     const html = await renderToHtml('~~删除~~\n\n| a | b |\n| - | - |\n| 1 | 2 |')
 

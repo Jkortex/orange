@@ -2,6 +2,7 @@ import type { ComponentProps, CSSProperties } from 'react'
 import { createElement, isValidElement } from 'react'
 import { MarkdownAsync } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkCjkFriendly from 'remark-cjk-friendly'
 import remarkDirective from 'remark-directive'
 import rehypePrettyCode from 'rehype-pretty-code'
 import type { Components } from 'react-markdown'
@@ -156,6 +157,9 @@ export async function MarkdownRenderer({ children }: { children: string }) {
     <div className="prose max-w-none w-full">
       <MarkdownAsync
         remarkPlugins={[
+          // 必须排在 GFM 之前：它给 micromark 注册中日韩友好的定界符判定，
+          // 修掉 `**…（DDD）**这样` 这类全角标点收尾的加粗不生效（见 markdown.test.ts）
+          remarkCjkFriendly,
           remarkGfm,
           remarkDirective,
           remarkCallouts,
