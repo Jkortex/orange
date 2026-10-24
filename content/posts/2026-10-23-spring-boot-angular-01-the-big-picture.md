@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（一）：技术全景、演进脉络与架构蓝图
 date: 2026-10-23T00:01:00Z
-description: 全面梳理 Spring Boot 4.1.0 与 Angular 22 的核心技术演进，剖析 Java 26 新特性、Signals 细粒度响应式系统与微服务书店案例系统架构。
+description: 双栏独立滚动对照：梳理 Spring Boot 4.1.0 与 Angular 22 核心技术演进，剖析 Java 26 结构化并发、Signals 细粒度响应式系统与微服务书店系统架构。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -13,247 +13,235 @@ tags:
   - 架构设计
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Spring Boot 4 & Angular 22 全栈微服务实战》](/columns/spring-boot-angular)。全专栏共 22 篇，深度覆盖 Java 26 微服务拆分、Spring Cloud 网关与安全鉴权、Angular 22 Signals 状态治理以及端到端容器化交付的全链路工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与系统拓扑；**右栏**为全栈微服务体系演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动互不干扰。
 
-在当今企业级 Web 架构开发中，**Spring Boot** 与 **Angular** 代表了服务端 Java 生态与前端 TypeScript 生态中极具代表性的工业级组合。
+## 1. 架构选型与决策矩阵
 
-Spring Boot 通过高度内聚的“约定优于配置”机制，消除了繁琐的底层样板代码，让开发者专注于业务领域逻辑；而 Angular 则凭借全功能开箱即用（Batteries-Included）的工程体系、严格的强类型约束和可预测的响应式机制，成为交付高复杂度单页应用（SPA）的标准底座。
+| 技术维度 | 选型方案 | 替代方案 | 决策依据 |
+| :--- | :--- | :--- | :--- |
+| **运行时基线** | Java 26 + Spring Boot 4.1.0 | Java 17 / 21 | 原生虚拟线程调度、结构化并发、模式匹配语法收敛 |
+| **持久化分层** | PostgreSQL (关系型) + MongoDB (文档型) | 单一 MySQL 关系库 | 图书库存强一致性事务与用户画像灵活 schema 解耦 |
+| **网关与路由** | Spring Cloud Gateway + Eureka | Nginx 静态网关 | 动态服务发现、JWT 校验过滤链与声明式路由断言 |
+| **实时通信** | Spring WebFlux + SSE (长连接) | 传统 WebSocket | 服务端向客户端单向低开销事件广播 |
+| **前端底座** | Angular 22 (Standalone + Signals) | React 19 / Vue 3 | 强类型工程体系、无 Zone 细粒度 DOM 局部更新 |
 
-本文作为实战系列的开篇，将全面剖析 **Java 26**、**Spring Boot 4.1.0** 以及 **Angular 22** 的最新技术演化，理清现代全栈开发的核心工具链，并深入剖析我们将贯穿构建的实战核心系统——**在线微服务书店系统（Bookstore Platform）**。
+## 2. Java 26 结构化并发生产范式
 
----
+微服务聚合场景中，传统 `CompletableFuture` 在异常捕获与取消传导方面存在上下文丢失风险。Java 26 引入结构化并发，将多服务并发请求约束在明确的作用域单元内：
 
-## 1. 为什么选择 Spring Boot 作为微服务核心？
+```java
+package com.bookstore.gateway.service;
 
-**Spring Boot** 是由 VMware 维护的开源轻量级微服务框架，旨在大幅简化基于 Java 虚拟机（JVM）的应用开发。它建立在成熟的 Spring Framework 之上，核心是通过**自动装配（Autoconfiguration）**大幅降低样板代码。
+import java.util.concurrent.StructuredTaskScope;
+import org.springframework.stereotype.Service;
 
-### 1.1 Spring Boot 的核心工程优势
+@Service
+public class OrderAggregationService {
 
-- **自动配置（Autoconfiguration）**：根据引入的依赖库及配置文件，自动推理并装配运行时所需的 Bean 与中间件，极大减少手工配置带来的隐患。
-- **开箱即用的启动器（Spring Starters）**：提供预先打包好的依赖坐标集合（如 `spring-boot-starter-web`、`spring-boot-starter-data-jpa`），依赖版本协同由 parent pom 统一锁定。
-- **内嵌容器支持（Embedded Servers）**：内嵌 Tomcat、Jetty 或 Undertow，应用可直接打包为独立的自包含 JAR 文件执行，无需外部部署应用服务器。
-- **生产就绪特性（Production-Ready Features）**：内置 Spring Boot Actuator，原生暴露健康检查（Health Check）、应用指标度量（Metrics）与审计追踪能力。
+    private final UserServiceClient userClient;
+    private final InventoryServiceClient inventoryClient;
+    private final PricingServiceClient pricingClient;
 
-### 1.2 从传统 Spring 到 Spring Boot
+    public OrderAggregationService(
+            UserServiceClient userClient,
+            InventoryServiceClient inventoryClient,
+            PricingServiceClient pricingClient) {
+        this.userClient = userClient;
+        this.inventoryClient = inventoryClient;
+        this.pricingClient = pricingClient;
+    }
 
-在传统 Spring 体系中，需要手动配置大量 XML 或 Java Config 来管理 Servlet 上下文和数据源。而在 Spring Boot 中，仅需声明父 POM 并引入 Starter 即可：
+    public OrderDetailAggregate fetchOrderDetail(String orderId) {
+        try (var scope = StructuredTaskScope.open()) {
+            var userTask = scope.fork(() -> userClient.findById(orderId));
+            var inventoryTask = scope.fork(() -> inventoryClient.findByOrderId(orderId));
+            var priceTask = scope.fork(() -> pricingClient.calculate(orderId));
 
-```xml
-<parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.1.0</version>
-    <relativePath />
-</parent>
+            // 同步等待所有并发子分支汇合
+            scope.join();
 
-<properties>
-    <java.version>26</java.version>
-    <spring-cloud.version>2025.1.2</spring-cloud.version>
-</properties>
-
-<dependencies>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-</dependencies>
-```
-
----
-
-## 2. 拥抱现代 Java：Java 26 与 Spring Boot 4.1.0 演进
-
-Spring Boot 4.1.0 要求运行基线不低于 Java 17，并在生产环境中完美兼容 **Java 26**。以下是全栈实战中最关键的技术升级点：
-
-### 2.1 Java 26 关键语言特性
-
-1. **模式匹配增强（Pattern Matching Syntax）**：
-   合并类型检查与向下类型转换，彻底避免冗余类型强转：
-   ```java
-   if (obj instanceof Book book && book.price() != null) {
-       System.out.println(book.title());
-   }
-   ```
-   `obj instanceof Book book` 在判定类型的同时就地完成了 `book` 变量绑定，配合短路逻辑直接消除空指针风险。
-
-2. **结构化并发（Structured Concurrency）**：
-   将跨线程运行的多个子任务绑定为单一生死周期的结构化单元，极大简化了多服务扇出聚合调用时的异常处理与取消传导：
-   ```java
-   try (var scope = StructuredTaskScope.open()) {
-       var user = scope.fork(() -> fetchUser());
-       var inventory = scope.fork(() -> fetchInventory());
-       scope.join(); // 同步等待并发分支汇合
-       return new Response(user.get(), inventory.get());
-   }
-   ```
-   这在服务层需要并发聚合库存、用户与价格等多个微服务数据时，不仅性能优异，而且具备极佳的线程上下文安全性。
-
-3. **模块导入声明（Module Import Declarations）**：Java 26 正式定稿了模块导入语法，在大型领域驱动项目中可进一步提升代码组织的整洁度。
-
-### 2.2 Spring Boot 4.1 核心更新
-
-- **全面支持 Java 26**：平滑运行于 Java 26 之上，兼容虚拟线程（Virtual Threads）及最新的并发原语；
-- **Spring Data 多数据源增强**：强化了 PostgreSQL（关系型）与 MongoDB（文档型）在微服务中的多范式持久化结合；
-- **Spring Cloud Gateway 整合**：针对响应式网关路由、请求过滤与限流熔断提供了更简明直观的声明式配置；
-- **增强型 Actuator 可观测体系**：原生对接 Micrometer、OpenTelemetry 与 Prometheus，端到端度量更轻量透明。
-
----
-
-## 3. Angular 现代化底座与架构优势
-
-Angular 由 Google 打造与维护，专为复杂企业级单页应用（SPA）设计。它以强类型语言 TypeScript 为核心，集成了路由导航、响应式表单、依赖注入、测试套件与 SSR 解决方案。
-
-### 3.1 核心基石：深入 TypeScript 强类型体系
-
-TypeScript 是 JavaScript 的严格超集，为前端工程化提供了不可或缺的类型安全底座：
-
-![](/media/posts/spring-boot-angular/img-08888.png)
-*图 1.1：TypeScript 超集结构示意*
-
-在大型全栈工程中，TypeScript 的优势尤为突出：
-- **编译期静态检查与类型推导**：在代码编写阶段即时捕获错误，告别运行时崩溃。
-- **高级类型建模能力**：联合类型（Union Types）、交叉类型（Intersection Types）以及实用类型工具（如 `Partial<T>`、`Pick<T, K>`、`Omit<T, K>`），能够精确映射后端 RESTful API 契约和表单交互数据。
-- **默认严格模式（Strict Mode）**：项目默认开启 `"strict": true`，强制消灭隐式 `any` 与潜在空指针陷阱。
-- **现代化语言特性**：可选链（`user?.address?.city`）与空值合并运算符（`value ?? 'default'`）让数据管道操作清爽安全。
-
-### 3.2 工程指挥中心：Angular CLI 现代化工作流
-
-Angular CLI 为大型团队提供了统一标准的工程生命周期治理能力：
-
-```bash
-# 全局安装 CLI
-npm install -g @angular/cli
-
-# 初始化项目（默认采用 Standalone 独立组件架构）
-ng new bookstore-frontend
-```
-
-在工程内部，可以通过 CLI 快速生成符合架构规范的各类工程构建块：
-
-```bash
-ng generate component dashboard
-ng generate service auth
-ng generate directive highlight
-ng generate guard auth
-ng generate resolver user
-```
-
-Angular 22 CLI 的核心特性：
-- **纯 Standalone 架构**：默认完全剔除传统的 `NgModule`，组件之间直接按需导入依赖；
-- **现代化测试框架**：开箱即用 Vitest 代替老旧的 Karma，测试运行速度提升数倍；
-- **现代化构建器**：基于 Vite/esbuild 驱动编译流程，热重载（HMR）与打包效率大幅跃升；
-- **默认开启无 Zone 变更检测（Zoneless）**：彻底解耦 `Zone.js`，实现微观级按需刷新。
-
----
-
-## 4. 状态治理与性能飞跃：Signals 与 @defer
-
-### 4.1 基于 Signals 的细粒度响应式系统
-
-Signals 是 Angular 现代反应式模型的核心原语。相比于 RxJS 的异步事件流，Signals 提供了更直观、同步且可预测的状态追踪：
-
-```typescript
-import { signal, computed, effect } from '@angular/core';
-
-// 定义基础状态信号
-const counter = signal(0);
-
-// 衍生计算状态（自动建立依赖树）
-const doubleCounter = computed(() => counter() * 2);
-
-// 状态变更副作用
-effect(() => {
-  console.log('计数器状态变化:', counter());
-});
-
-// 更新状态
-counter.set(1);
-counter.update(n => n + 1);
-```
-
-Signals 的三大核心特性：
-- **同步读写**：通过 `counter()` 即可同步读取最新值，通过 `set` 或 `update` 精确变更；
-- **细粒度依赖追踪**：Angular 能精确感知模板中具体哪一个节点依赖了该 Signal，变更时只更新该 DOM 节点，无需遍历组件树；
-- **全面适配 Zoneless 与 SSR**：在无 Zone.js 干扰的环境下依然能够精确触发微任务更新，与现代服务端渲染完美契合。
-
-### 4.2 视图延迟加载控制：@defer 语法块
-
-Angular 的 `@defer` 声明式语法允许将非关键路径视图的加载时机推迟至浏览器空闲或满足特定触发条件时进行，显著优化核心 Web 性能指标（LCP、TTI、CWV）：
-
-```html
-@defer (on viewport; on timer(1s)) {
-  <app-heavy-chart />
-} @placeholder (minimum 500ms) {
-  <p>图表组件加载中...</p>
-} @loading {
-  <p>正在获取资源...</p>
-} @error {
-  <p>图表加载失败，请重试</p>
+            return new OrderDetailAggregate(
+                userTask.get(),
+                inventoryTask.get(),
+                priceTask.get()
+            );
+        } // 退出作用域时自动取消未完成分支并释放线程资源
+    }
 }
 ```
 
-#### `@defer` 支持的触发器策略
+## 3. Angular 22 Signals 状态响应式闭环
 
-| 触发器 (Trigger) | 机制说明 |
+Angular 22 默认采用 Zoneless 架构。状态变更直接通过 Signals 依赖图传导至具体 DOM 节点，无需遍历组件树：
+
+```typescript
+import { Component, signal, computed, effect } from '@angular/core';
+
+@Component({
+  selector: 'app-book-cart',
+  standalone: true,
+  template: `
+    <div class="cart-box border p-4 rounded-xl">
+      <p class="text-sm">单价: {{ price() }} 元 | 数量: {{ quantity() }} 本</p>
+      <p class="text-base font-bold text-primary">总计: {{ totalPrice() }} 元</p>
+      <div class="mt-3 flex gap-2">
+        <button (click)="increment()" class="px-3 py-1 bg-primary text-white rounded">增加数量</button>
+        <button (click)="reset()" class="px-3 py-1 bg-muted text-foreground rounded">重置</button>
+      </div>
+    </div>
+  `
+})
+export class BookCartComponent {
+  readonly price = signal(89.00);
+  readonly quantity = signal(1);
+
+  // 依赖图自动追踪：仅在 price 或 quantity 变更时重新求值
+  readonly totalPrice = computed(() => this.price() * this.quantity());
+
+  constructor() {
+    effect(() => {
+      console.log(`[审计追踪] 购物车总额更新为: ${this.totalPrice()}`);
+    });
+  }
+
+  increment(): void {
+    this.quantity.update(q => q + 1);
+  }
+
+  reset(): void {
+    this.quantity.set(1);
+  }
+}
+```
+
+## 4. 微服务书店系统拓扑图
+
+```text
+[ 浏览器客户端：Angular 22 SPA (Zoneless + Signals + SSR) ]
+                           │
+             HTTPS / REST  │  Server-Sent Events (SSE)
+                           ▼
+           [ API 网关：Spring Cloud Gateway ]
+           (JWT 统一鉴权 / 动态路由 / 速率限制)
+                           │
+       ┌───────────────────┼───────────────────┐
+       ▼                   ▼                   ▼
+[ 用户服务: User ]   [ 库存服务: Inventory ]  [ 实时事件: Event ]
+   (Spring Boot)       (Spring Boot)        (Spring WebFlux)
+         │                   │                     │
+         ▼                   ▼                     ▼
+    [ MongoDB ]        [ PostgreSQL ]        [ Redis Pub/Sub ]
+```
+
+## 5. 架构避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
 | :--- | :--- |
-| `idle` | 浏览器处于空闲状态（requestIdleCallback）时加载（默认） |
-| `viewport` | 占位区域或指定元素滚动进入可视视口时触发加载 |
-| `interaction` | 用户与目标区域发生交互操作（点击、触摸）时触发 |
-| `hover` | 用户指针悬停在指定区域上方时预先触发加载 |
-| `immediate` | 初始页面渲染完成后立即异步发起加载 |
-| `timer(duration)` | 经过指定的延时后触发加载（例如 `timer(1s)`） |
+| 在跨服务聚合调用中继续使用无作用域限制的裸线程或共享线程池。 | 使用 Java 26 结构化并发（StructuredTaskScope），将并发子任务绑定为单一生死周期。 |
+| 在 Angular 组件中混用全局 Zone.js 脏检查与 Signals。 | 开启无 Zone（Zoneless）检测模式，通过细粒度 Signals 精确触发局部 DOM 刷新。 |
+| 为所有微服务采用统一类型的单体数据库。 | 按业务领域边界采用多范式存储：用户文档存储与库存关系存储解耦。 |
+| 在前端单页应用中直接请求下游各个微服务端口。 | 统一由 Spring Cloud Gateway 反向代理，聚合 JWT 鉴权与 CORS 跨域策略。 |
 
----
+<!-- split -->
 
-## 5. Angular 22 前沿特性盘点
+# 原著完整参考：技术全景、演进脉络与架构蓝图
 
-![](/media/posts/spring-boot-angular/img-08889.png)
-*图 1.2：Chrome DevTools 原生支持 Angular 运行时性能剖析*
+在现代企业级 Web 架构开发中，**Spring Boot** 与 **Angular** 分别代表了服务端 Java 生态与前端 TypeScript 生态中成熟的工程化组合。
 
-- **Signal-first 全面响应式**：`signal()`、`computed()`、`effect()`、`linkedSignal()`、`toSignal()`、`input()` 与 `model()` 形成完整闭环；
-- **默认 OnPush 策略**：所有新建组件均默认采用 `OnPush`，配合 Signals 杜绝多余的脏检查周期；
-- **稳定的 Resource API**：`resource()` 与 `httpResource()` 将异步数据获取与 Signals 深度结合；
-- **Chrome DevTools 深度整合**：可在 Performance 面板中直接观测组件渲染开销、变更检测耗时与事件影响。
+Spring Boot 通过内聚的“约定优于配置”机制，消除了底层繁杂的样板代码，使开发者能够专注于核心业务逻辑；而 Angular 则凭借全功能开箱即用的工程体系、严格的强类型约束和可预测的响应式机制，成为交付高复杂度单页应用（SPA）的稳健基座。
 
----
+本文梳理 **Java 26**、**Spring Boot 4.1.0** 以及 **Angular 22** 的最新技术演化，理清现代全栈开发的核心工具链，并深入剖析贯穿整个实战系列的在线微服务书店系统（Bookstore Platform）。
 
-## 6. 实战案例全景：在线书店系统架构蓝图
+:::en
+> **Original**: Spring Boot and Angular represent industry-standard foundations for modern full-stack development, combining robust backend services with structured, reactive frontend engineering.
 
-为了让全栈知识体系落到实处，专栏将围绕一个具备真实复杂度的**现代微服务在线书店（Bookstore Application）**进行端到端构建。
+**📌 核心术语与语境解析**：
+- **Convention over Configuration**：*约定优于配置*。Spring Boot 核心理念，通过确定性的默认约定消除冗余的显式 XML/Java 配置。
+- **Reactive Model**：*反应式/响应式模型*。前端基于状态依赖流转自动驱动视图更新的数据流模式。
+:::
 
-![](/media/posts/spring-boot-angular/img-08891.png)
-*图 1.3：微服务书店系统功能需求全景*
+## 1. 为什么选择 Spring Boot 作为微服务核心？
 
-### 6.1 系统核心业务领域划分
+Spring Boot 建立在成熟的 Spring Framework 之上，核心机制是通过**自动装配（Autoconfiguration）**大幅降低样板代码。
 
-1. **用户与安全微服务（User Microservice）**：
-   - 领域模型基于 MongoDB 文档数据库构建；
-   - 负责用户注册、登录、鉴权和个人资料维护；
-   - 整合 Keycloak 与 Spring Security，统一签发与校验 JWT。
+自动配置能够根据引入的依赖库及配置文件，自动推理并装配运行时所需的 Bean 与中间件；预置的启动器（Starters）统一锁定协同依赖版本；内嵌容器支持将应用打包为自包含的可执行 JAR 文件；而 Actuator 则原生提供生产级监控与度量能力。
 
-2. **图书与库存微服务（Inventory Microservice）**：
-   - 领域模型基于 PostgreSQL 关系型数据库构建；
-   - 负责图书元数据（ISBN、分类、价格、作者）及库存容量管控；
-   - 暴露标准的分页查询与数据增删改 RESTful API。
+:::en
+> **Original**: Spring Boot simplifies Spring applications by using opinionated defaults and autoconfiguration, allowing developers to create stand-alone, production-grade applications with minimal setup.
 
-3. **动态 API 网关（Spring Cloud Gateway）**：
-   - 整个系统的统一对外反向代理网关；
-   - 整合 Eureka 服务注册中心，实现下游微服务的动态负载均衡与安全路由。
+**📌 核心术语与语境解析**：
+- **Autoconfiguration**：*自动装配*。依据类路径依赖与条件注解（`@ConditionalOnClass` 等）动态激活组件的机制。
+- **Opinionated Defaults**：*具备主见的默认配置*。框架预置的推荐配置方案，兼顾通用性与开发效率。
+:::
 
-4. **实时事件推送服务（Spring WebFlux + SSE）**：
-   - 监听图书上架与价格变更事件；
-   - 通过 Server-Sent Events（SSE）长连接向前端实时广播消息。
+## 2. 拥抱现代 Java：Java 26 与 Spring Boot 4.1.0 演进
 
-5. **Angular 22 现代单页前端**：
-   - **架构分层**：基于 Smart / Dumb 组件架构拆分视图；
-   - **表单交互**：采用 Reactive Forms 与 Angular Material 构筑强校验表单；
-   - **状态治理**：基于 NgRx SignalStore 集中治理身份认证状态与图书列表缓存；
-   - **服务端渲染**：结合 SSR 与水合机制提升首页首屏加载效率。
+Spring Boot 4.1.0 在生产环境中全面兼容 **Java 26**。本次演进的核心升级聚焦于并发模型与类型系统的现代化：
 
----
+首先是**模式匹配增强**，它合并了类型检查与向下类型转换，彻底避免了冗余的强制转型；其次是**结构化并发（Structured Concurrency）**，它将跨线程运行的多个子任务绑定为单一生死周期的结构化单元，极大简化了多服务扇出聚合调用时的异常处理与取消传导；最后是定稿的**模块导入声明**，进一步提升了大型工程的代码组织整洁度。
 
-## 7. 结语与后续进阶
+:::en
+> **Original**: Structured Concurrency treats groups of related tasks running in different threads as a single unit of work, streamlining error handling, cancellation, and observability.
 
-通过本篇的梳理，我们对现代 Java 26、Spring Boot 4.1.0 与 Angular 22 的技术进化有了清晰的技术认知，同时明确了整个微服务书店系统的架构边界与职责拆解。
+**📌 核心术语与语境解析**：
+- **Structured Concurrency**：*结构化并发*。将并发子任务生命周期严格限定在词法作用域内，彻底消除孤儿线程与资源泄漏隐患。
+- **Virtual Threads**：*虚拟线程*。由 JVM 调度的轻量级线程，显著提升高并发 I/O 密集型应用的吞吐量。
+:::
 
-在接下来的 **第 02 篇** 中，我们将正式开启后端微服务之旅，从领域建模、分层工程结构到脚手架初始化，亲手搭建起微服务书店的第一个业务微服务！
+## 3. Angular 现代化底座与架构优势
+
+Angular 专为复杂企业级单页应用（SPA）设计。它以强类型语言 TypeScript 为核心，集成了路由导航、响应式表单、依赖注入、测试套件与服务端渲染方案。
+
+TypeScript 作为 JavaScript 的强类型超集，通过编译期静态类型推导、联合类型与交叉类型建模，以及严格模式检查，为大型前端项目提供了高度可靠的代码质量保障。Angular 22 CLI 则默认采用纯 Standalone 架构，解耦传统的 `NgModule`，并原生支持无 Zone（Zoneless）变更检测机制。
+
+:::en
+> **Original**: TypeScript provides static typing, advanced type inference, and modern tooling, making large-scale frontend development maintainable and resilient to runtime errors.
+
+**📌 核心术语与语境解析**：
+- **Standalone Components**：*独立组件*。消除 NgModule 包装层，直接声明自身依赖项的现代化 Angular 组件架构。
+- **Zoneless Change Detection**：*无 Zone 变更检测*。彻底解耦 zone.js，仅依据 Signals 状态变更精准通知渲染流水线。
+:::
+
+## 4. 状态治理与性能优化：Signals 与 @defer
+
+### 4.1 基于 Signals 的细粒度响应式系统
+
+Signals 是 Angular 现代反应式模型的核心原语。相比于 RxJS 的异步流模型，Signals 提供了更直观、同步且可预测的状态追踪：
+
+通过 `signal()` 定义基础状态，通过 `computed()` 自动建立状态衍生依赖树，并通过 `effect()` 执行状态副作用。Angular 能精确感知模板中具体哪一个 DOM 节点依赖了目标 Signal，状态变更时仅触发局部更新，无需全树漫游。
+
+:::en
+> **Original**: Signals represent fine-grained reactive primitives that track dependencies automatically, ensuring optimal template updates without unnecessary component checks.
+
+**📌 核心术语与语境解析**：
+- **Fine-grained Reactivity**：*细粒度响应式*。数据变更能够精确定位到具体的属性或文本节点，实现最小开销的 DOM 变更。
+- **Computed Signal**：*计算信号*。具备惰性求值与结果缓存特性的派生状态。
+:::
+
+### 4.2 视图延迟加载控制：@defer 语法块
+
+Angular 的 `@defer` 声明式语法允许将非关键路径视图的加载时机推迟至浏览器空闲或满足特定触发条件时进行，显著优化核心 Web 性能指标（LCP、TTI、CWV）。
+
+通过组合 `idle`、`viewport`、`interaction` 与 `hover` 等丰富触发器，系统可以在保证首屏秒开的前提下，按需加载较重的次要视图模块。
+
+:::en
+> **Original**: Deferred loading blocks (`@defer`) allow templates to load dependencies lazily based on viewport visibility, user interactions, or browser idle periods.
+
+**📌 核心术语与语境解析**：
+- **Deferred Loading**：*延迟加载*。将非关键资源的下载与解析推迟到必要时机，以降低首屏负载。
+- **Core Web Vitals**：*核心 Web 指标*。衡量页面加载性能、交互响应度与视觉稳定性的行业标准。
+:::
+
+## 5. 实战案例全景：在线书店系统架构蓝图
+
+为了让全栈知识体系落到实处，专栏围绕具备真实复杂度的**现代微服务在线书店（Bookstore Application）**展开构建。
+
+系统按限界上下文清晰划分为五大模块：用户微服务采用 MongoDB 存储用户画像并整合 Keycloak/JWT 鉴权；图书库存微服务采用 PostgreSQL 关系型存储保障事务一致性；Spring Cloud Gateway 作为统一的 API 网关提供动态路由与安全过滤；实时事件服务基于 Spring WebFlux 与 Server-Sent Events（SSE）向前端广播图书动态；前端由 Angular 22 单页应用呈现，依托 Signals 状态图与服务端渲染实现流畅交互体验。
+
+:::en
+> **Original**: A microservices architecture partitions business capabilities into independently deployable units, each owning its own data store and domain boundaries.
+
+**📌 核心术语与语境解析**：
+- **Domain Boundaries**：*领域边界*。微服务职责划分的准绳，每个微服务独占自身的数据存储与业务逻辑。
+- **API Gateway Pattern**：*API 网关模式*。微服务架构的统一流量入口，集中处理认证鉴权、流量整形与路由转发。
+:::

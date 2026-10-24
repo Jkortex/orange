@@ -437,7 +437,22 @@ html.dark code[data-theme] span[style*='--shiki'] {
 .prose p {
   line-height: 1.85;
   letter-spacing: 0.01em;
+  text-indent: 2em;
 }
+
+/* 媒体、引用块、提示卡片、列表项、表格及交互组件段落取消首行缩进 */
+.prose p:has(img),
+.prose p:has(button),
+.prose p:has(svg),
+.prose blockquote p,
+.prose [data-callout] p,
+.prose .not-prose p,
+.prose li p,
+.prose table p,
+.en-disclosure p {
+  text-indent: 0;
+}
+
 
 /* 正文图片：圆角边框微阴影，caption 居中弱化 */
 .prose img {

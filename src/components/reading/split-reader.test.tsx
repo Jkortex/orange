@@ -49,4 +49,28 @@ describe('SplitReader 双栏独立滚动组件', () => {
     // 切换后包含右栏内容
     expect(screen.getAllByText('右栏原著参考内容').length).toBeGreaterThan(0)
   })
+
+  it('点击全篇展开英文按钮可切换详情展开状态', () => {
+    render(
+      <div>
+        <details className="en-disclosure">
+          <summary>段落 1 英文</summary>
+          <div>Original 1</div>
+        </details>
+        <SplitReader
+          leftNode={<div>左栏</div>}
+          rightNode={<div>右栏</div>}
+        />
+      </div>,
+    )
+
+    const toggleBtn = screen.getByRole('button', { name: /全篇展开英文/ })
+    fireEvent.click(toggleBtn)
+
+    const details = document.querySelector('details.en-disclosure') as HTMLDetailsElement
+    expect(details.open).toBe(true)
+
+    expect(screen.getByRole('button', { name: /折叠全篇英文/ })).toBeDefined()
+  })
 })
+

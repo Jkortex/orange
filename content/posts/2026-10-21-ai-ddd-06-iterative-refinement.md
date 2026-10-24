@@ -159,7 +159,8 @@ Checklist:
   2. 检查是否有外部输入被错误当成了内部事件。
   3. 检查是否有属于其他上下文的命令。
   4. 检查是否有提议中的概念被草率晋升为 confirmed。
-  5. 检查是否有策略凭空捏造缺失的业务规则。
+  5. 检查是否有策略无依据虚构缺失的业务规则。
+
   6. 检查是否有未决问题在未经确认的情况下被悄悄移除。
 
 Strict Constraints:
@@ -206,9 +207,18 @@ Output Format:
 
 ## 通过反馈循环引导模型
 
-AI 生成的首个模型之所以有价值，恰恰在于它错得很直观：它的破绽为团队提供了切实可见的切入点，供人们审视与质疑。直观显现的错误听起来似乎有悖常理，特别是在强调规则与约束之后，但这恰恰是核心所在。你之所以使用 AI，并非因为它的第一版输出足够可靠；而是因为它能迅速将一种看似合理的领域理解具象化、外显化。一旦这种理解变得清晰可见，你便可以审视它、批判它，并将暴露出的一项项错误转化为更加精准严密的规则。这种审视，正是迭代精化的真正起点。
+AI 生成的首个模型之所以有价值，恰恰在于它直观地暴露了设计缺陷：其破绽为团队提供了切实可见的审查基准。直观显现的错误听起来似乎有悖常理，特别是在强调规则与约束之后，但这恰恰是核心所在。团队之所以借助 AI，并非因为它的第一版输出足够可靠；而是因为它能迅速将一种看似合理的领域理解具象化、外显化。一旦这种理解清晰呈现，团队便可以审视它、评估它，并将暴露出的一项项错误转化为更加精准严密的规则。这种审视，正是迭代精化的真正起点。
+
+:::en
+> **Original**: The first AI-generated model is useful because it is wrong in a visible way: its errors give the team something concrete to inspect and challenge. You do not use AI because the first output is reliable; you use it because it can quickly externalize a plausible interpretation of the domain. Once that interpretation is visible, you can inspect it, criticize it, and transform its errors into sharper rules.
+
+**📌 核心术语与语境解析**：
+- **Wrong in a visible way**：*以具象可视的方式暴露缺陷*。初版生成物虽不完善，但能迅速将模糊的领域理解外显化，提供审查靶标。
+- **Plausible interpretation**：*看似合理的解读*。大模型基于概率生成的“假性自洽”推演，必须由领域专家介入核验。
+:::
 
 为了直观体会这一循环的实际运转，不妨审视作者在要求 AI 助手对 Order Management 上下文进行建模后，AI 给出的第一版草案：
+
 
 ```yaml
 context: Order Management
@@ -252,11 +262,29 @@ Order Management 只拥有 Order 聚合。Order Management 不拥有 `Payment`�
 
 第一类错误通常可以通过词汇标准化来解决；第二类错误则必须依赖显式规则予以纠正。如果不建立起硬性规则，模型在后续的交互中极可能会重蹈覆辙，哪怕它换上了更优美贴切的名称和更有说服力的论述。
 
+:::en
+> **Original**: These ownership violations are not cosmetic adjustments; they change the meaning of the bounded context. If you simply rename Payment to PaymentInfo, you have not fixed the model. You have only hidden the error behind softer names... A naming error means the model used the wrong word for a concept that does belong here; an ownership error means it placed the concept in the wrong bounded context altogether.
+
+**📌 核心术语与语境解析**：
+- **Ownership Violations**：*归属权违规*。概念被错误归入不属于自身的限界上下文，破坏了状态管理边界。
+- **Cosmetic Adjustments**：*修饰性调整*。仅通过重命名掩盖领域归属权错误，无法解决职责错配问题。
+- **Naming Error vs. Ownership Error**：*命名失误 vs. 归属权错误*。前者通过术语归一化修正；后者必须通过硬性边界规则裁决。
+:::
+
 单轮迭代包含六个步骤：生成、审查、纠偏、将纠偏沉淀为规则、重新运行，以及对比评估。
 
 审查步骤由人类依据领域知识、归属权与边界做出审慎判断；纠偏步骤据此产出模型的改进版本。紧接着是最关键的一步：纠偏措施必须转化为可复用的规则。唯有如此，当你再次运行模型时，才能将新输出与之前的成果进行对比并验证其进步。
 
-如果没有“规则晋升（Promotion）”这一步，你将陷入无休止的手动纠偏泥潭。而有了它，每一次修正都能显著改良推理环境。下面给出一个实用的提示词，将这种纪律贯彻到 BrewUp Order Management 草案的精化中：
+如果没有“规则晋升（Promotion）”这一步，你将陷入无休止的手动纠偏循环。而有了它，每一次修正都能显著改良推理环境。下面给出一个实用的提示词，将这种纪律贯彻到 BrewUp Order Management 草案的精化中：
+
+:::en
+> **Original**: The generation step gives you a visible draft. The critique step applies human judgment against domain knowledge, ownership, and boundaries, while the correction step produces a better version of the model. The important move comes next: the correction must become a reusable rule. Without that promotion step, you will keep correcting the same failure manually. With it, every correction improves the reasoning environment.
+
+**📌 核心术语与语境解析**：
+- **Promotion to a Rule**：*将纠偏晋升为规则*。每一次人工纠错都必须被提取为版本化约束，防止同类错误在后续交互中重现。
+- **Reasoning Environment**：*推理环境*。由 Agent、Rulebook 与 MCP 共同搭建的约束空间，通过迭代持续收敛。
+:::
+
 
 ```yaml
 Context:
@@ -266,7 +294,8 @@ Known rules:
 - Order Management 仅拥有 Order 聚合。
 - Payment 和 Stock 是外部概念。
 - 由其他限界上下文产生的事件必须标记为 external_inputs。
-- 如果归属权不明确，请添加一个未决问题（open question），而不是凭空捏造规则。
+- 如果归属权不明确，请添加一个未决问题（open question），而不是无依据虚构规则。
+
 
 Task:
 请审查下方的模型草案。
@@ -327,6 +356,14 @@ new_rules:
 
 这份输出将 Order 保留为 Order Management 拥有的唯一聚合，把 `PaymentAuthorized` 和 `StockReserved` 归入 `external_inputs`，并坚决剔除了暗示越权的条目。具体的失误演化为了可复用的建模约束。
 
+:::en
+> **Original**: In practice, explicit role classification reduces semantic drift because it narrows the probability space available to the model. CQRS provides the command/query separation; the additional DDD categories preserve ownership, reaction, and event semantics. Once an element has been classified by the model as an external input, the model is less likely to reinterpret it later as an internally owned event.
+
+**📌 核心术语与语境解析**：
+- **Role Classification**：*显式角色分类*。通过 Command、Internal Event、External Input 等角色契约，防止跨限界概念在流转中发生语义滑移。
+- **Semantic Drift**：*语义漂移*。大模型在没有严格角色区分时，随着生成步骤推进，逐步偏离原始架构契约的退化过程。
+:::
+
 ## 在 AI 推理中引入 CQRS 与角色分离
 
 归属权精化解决了概念隶属于哪个上下文的问题，但尚未界定概念在上下文内部的角色性质。
@@ -350,6 +387,14 @@ Classify the following elements according to their role:
 显式的角色分类能显著遏制语义漂移。一旦某个元素被模型归类为外部输入，后续交互中模型将其曲解为内部事件的概率大幅降低。一旦查询与命令明确切割，模型也极少再围绕只读操作编造出副作用。
 
 引入 CQRS 是为了分离“语义”，而非分离“技术实现”。
+
+:::en
+> **Original**: At this stage, CQRS is about protecting conceptual integrity rather than handlers, buses, or distributed architecture... Here, *CQRS is introduced to help you separate meanings, not technologies*.
+
+**📌 核心术语与语境解析**：
+- **Separate Meanings, Not Technologies**：*分离业务语义而非技术实现*。在 AI 辅助建模阶段，CQRS 首先作为澄清职责边界的心智模型，而非事件驱动的技术套件。
+- **Conceptual Integrity**：*概念完整性与自洽度*。确保状态变更（Command）与状态视图（Query）在推演空间内互不干扰。
+:::
 
 ## 精化事件、命令与聚合
 
@@ -399,6 +444,14 @@ required_external_inputs:
 
 业务流程本身并未简化：支付、库存、物流、过期和取消依然客观存在。变得更加清晰的是归属权。
 
+:::en
+> **Original**: LLMs are prone to bundling concepts that frequently co-occur in business workflows... You refined the Order aggregate by separating collaboration from ownership. Concepts can participate in the same business flow without belonging to the same consistency boundary. The Order aggregate can react to external facts, but it must not own the processes that produce them.
+
+**📌 核心术语与语境解析**：
+- **Co-occurrence Drift**：*共现偏差*。模型容易因某些名词频繁在同一步骤中出现，就误将其绑定到同一个聚合根内。
+- **Collaboration vs. Ownership**：*业务协作 vs. 语义所有权*。协同流转不等于所有权归属；聚合根仅对其内部不变量负责。
+:::
+
 ## 通过迭代达成上下文自洽性
 
 当一个限界上下文的语言、职责、规则与边界在反复的迭代中能够相互印证、彼此强化时，它便具备了自洽性。
@@ -408,3 +461,13 @@ required_external_inputs:
 团队通过维护一份**上下文快照（Context Snapshot）**，精准记录历经精化考验而沉淀下来的决策、必须保持稳固的关键区分，以及依然处于开放状态的未决问题。在实践中，快照是作为受版本控制的文档与其所描述的限界上下文保存在一起的，作为后续任何 AI 会话的第一手资料。
 
 当反复的迭代不再引发重大的结构性剧变，并且残留的不确定性已被显式暴露而非深藏于隐性假设之中时，限界上下文便达到了足够自洽的标准。
+
+:::en
+> **Original**: A bounded context is coherent when its language, responsibilities, rules, and boundaries support each other across iterations... Open questions are part of coherence: they keep uncertainty visible until the team can decide. A context snapshot turns iterative refinement into accumulated domain knowledge by preserving confirmed concepts, proposed concepts, ownership boundaries, and unresolved questions.
+
+**📌 核心术语与语境解析**：
+- **Contextual Coherence**：*上下文自洽性*。语言、边界与规则在多轮推演中形成闭环，不再产生结构性矛盾。
+- **Context Snapshot**：*限界上下文快照*。代码化记录已确认事实、提议项与未决问题的架构状态档案。
+- **Visible Uncertainty**：*显式不确定性*。用 `open_questions` 留白保留真实业务未知，防止模型以概率臆测掩盖歧义。
+:::
+
