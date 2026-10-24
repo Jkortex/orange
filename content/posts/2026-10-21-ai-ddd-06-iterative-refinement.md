@@ -12,8 +12,7 @@ tags:
   - "DDD"
 ---
 
-> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。
-> 📦 **配套工程资产**：本篇核心沉淀的上下文快照规格与怀疑式审计提示词已收录于技能包：[获取 DDD 规则与精化技能包](/skills/ddd-context-refiner)。
+> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。正文内嵌开箱即用的「上下文快照规格」与「怀疑式审计提示词」工程模版。
 
 ---
 
@@ -154,4 +153,40 @@ open_questions:
 
 ---
 
-> 🛠️ **动手实践**：本章配套的快照规格模版与审计提示词已发布至技能中心，可前往 [DDD 限界上下文规则与精化技能包](/skills/ddd-context-refiner) 查阅并下载。
+## 八、 开箱即用工程模版：怀疑式自洽性审计提示词
+
+在每次更新完限界上下文快照后，你可以直接将以下提示词发送给 AI 助手，对其进行“找茬式”自洽性审查：
+
+```yaml
+# 怀疑式自洽性审计提示词 (Skeptical Coherence Audit Prompt)
+Context:
+  我们正在审查当前的 <BoundedContextName> 限界上下文快照。
+  快照定义内容见上方附带的 YAML。
+
+Task:
+  以严格审慎、怀疑的态度评估该快照的“上下文自洽性（Contextual Coherence）”。
+
+Checklist (逐项严格核验):
+  1. 归属权矛盾：是否存在与该上下文所有权声明冲突的聚合或命令？
+  2. 外部输入混淆：是否有外部产生的领域事实被错误当成了内部聚合抛出的事件？
+  3. 越权命令：是否存在属于其他协作上下文的命令？
+  4. 草率晋升：是否存在缺乏领域证据支撑、却被擅自标记为 confirmed 的 proposed 概念？
+  5. 擅自脑补策略：是否存在凭空捏造缺失业务规则的 policy？
+  6. 偷抹未决问题：是否有未决问题在未经领域专家确认的情况下被悄悄移除？
+  7. 角色与命名漂移：命令、事件与外部输入的命名是否与通用语言词汇表产生偏离？
+
+Strict Constraints:
+  - 严禁擅自解决 open_questions！未决问题必须原样保留。
+  - 除非有快照事实的直接支持，严禁擅自添加新的领域规则。
+  - 模型扮演审计员，而非补全生成器。
+
+Output Format:
+  assessment: <"coherent_with_open_questions" | "inconsistent">
+  detected_inconsistencies:
+    - issue: <问题描述>
+      severity: <"critical" | "warning">
+  recommended_corrections: []
+  rules_to_add: []
+  open_questions_to_preserve: []
+```
+
