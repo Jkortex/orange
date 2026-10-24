@@ -124,7 +124,7 @@ output:
 在上一章中，我们借助事件风暴（EventStorming）和领域叙事（Domain Storytelling）将领域知识显式外化，并沉淀了团队在全书后续内容中将持续沿用的词汇表。我们以一条实践原则收尾：“发现（Discover）、精炼（Refine）、命名（Name）、强化（Reinforce）”这一演进序列所构建的语言，其稳定性足以在与 AI 助手的多次对话中建立信任。然而，稳定的词汇并不等同于严谨自律的推理（Disciplined Reasoning）。本章将通过引入**规则手册（Rulebook）**来弥合这一差距。
 
 :::en
-> **Original**: Stable vocabulary, however, is not the same as **disciplined reasoning**. This chapter closes that distance by introducing a **rulebook**.
+> **Original**: In the previous chapter, we used EventStorming and Domain Storytelling to externalize domain knowledge and to stabilize the vocabulary the team will use for the rest of the book. We ended on a working principle: the sequence Discover, Refine, Name, Reinforce produces language stable enough to be trusted across conversations with an AI assistant. Stable vocabulary, however, is not the same as disciplined reasoning. This chapter closes that distance by introducing a rulebook.
 
 **📌 核心术语与语境解析**：
 - **Disciplined Reasoning**：*受纪律约束的推理*。特指模型不凭预训练概率直觉自由发散、而是在团队划定的架构刚性轨道内推演。
@@ -136,7 +136,7 @@ output:
 这些约束之所以不可或缺，是因为即便大语言模型（LLM）手握清晰的词汇表，依然可能会擅自扩大业务范围、无依据虚构聚合，并模糊上下文边界。这样的大模型同样可能生成看似行云流水、实则偏离实际设计的输出。这种漂移（Drift）根源于大语言模型的工作机制：它沿着提示词所暗示的方向去填补概率上的空白。而规则手册则提前规定了模型应当如何处理这些空白。
 
 :::en
-> **Original**: Its effectiveness depends on **specificity** rather than length or cleverness. The rulebook plays the role that bounded contexts play in Domain-Driven Design: it protects meaning, preserves intent, and makes output dependable over time... This drift follows from how an LLM operates: it fills **probabilistic gaps** in the direction suggested by the prompt.
+> **Original**: A rulebook is a small, explicit set of constraints that govern how the model reasons inside one bounded context. The team writes it once, versions it alongside the code, and reuses it in every session that follows. In practice, it is a file that lives in the repository next to the code: a Markdown instruction file or a short YAML fragment, edited and reviewed like any other source file. Its effectiveness depends on specificity rather than length or cleverness. The rulebook plays the role that bounded contexts play in Domain-Driven Design: it protects meaning, preserves intent, and makes output dependable over time. Those constraints are necessary because an LLM with a clear glossary in hand can still widen scope, invent aggregates, and blur context boundaries. Such an LLM can also produce fluent output that drifts away from the actual design. This drift follows from how an LLM operates: it fills probabilistic gaps in the direction suggested by the prompt. A rulebook defines in advance how the model should handle those gaps.
 
 **📌 核心术语与语境解析**：
 - **Specificity** [ˌspesɪˈfɪsəti]：*具体精确度/特异性*。规则的生命力在于与具体的单一限界上下文强绑定；泛泛而谈的常识（如“实体具有唯一标识”）无法约束采样空间。
@@ -146,11 +146,12 @@ output:
 故事始于 BrewUp 案例中一个切实的真实时刻：团队猛然发觉，AI 助手完全可以生成表面上极具 DDD 规范的输出，背地里却存在隐秘的错误（Silently Wrong）。顺着这一线索，本章将展示少量恰到好处的规则如何有效规避此类失误，以及如何将这些规则打包到可复用的容器中——即智能体（Agents）、技能（Skills）与 MCP 服务器（MCP Servers）——从而使其在一次又一次的会话中持续发挥效力。
 
 :::en
-> **Original**: The team realized that an AI assistant could produce DDD-shaped output and still be **silently wrong**.
+> **Original**: You begin with a concrete BrewUp moment, when the team realized that an AI assistant could produce DDD-shaped output and still be silently wrong. From there, the chapter shows how a small number of well-placed rules can prevent that kind of failure, and how those rules can be packaged into reusable containers, namely agents, skills, and MCP servers, so that they keep working session after session.
 
 **📌 核心术语与语境解析**：
 - **Silently Wrong**：*隐性错误*。大模型最具欺骗性的失效模式——代码语法完全正确、名词听起来极其符合 DDD，但在业务不变量和所有权边界上犯下致命错误。
 :::
+
 
 
 在本章中，你将学到：
@@ -179,12 +180,13 @@ output:
 正是在那个瞬间，团队决定不再单纯编写提示词，而是开始编写规则。两者在文本表现上可能颇为相似，但回答的却是截然不同的问题：提示词要求模型“做什么”，而规则则约束模型“如何推演”。当模型给出的错误答案看起来“无比正确”时，这种区别就显得尤为关键。无论怎样重新措辞提示词，都无法阻拦无依据生成的 `Charge` 聚合，因为此前从未有人明确告知助手：`Charge` 是被严令禁用的。
 
 :::en
-> **Original**: A prompt asks the model to do something. A rule constrains how it can reason. The distinction matters most when the model is wrong in a way that reads as right. No rephrasing of the prompt would have caught the invented Charge aggregate, because nobody had ever told the assistant that Charge was forbidden.
+> **Original**: That moment is when the team stopped writing prompts and started writing rules. The two look similar on the page, but they answer different questions. A prompt asks the model to do something. A rule constrains how it can reason. The distinction matters most when the model is wrong in a way that reads as right. No rephrasing of the prompt would have caught the invented Charge aggregate, because nobody had ever told the assistant that Charge was forbidden.
 
 **📌 核心术语与语境解析**：
 - **Prompt vs. Rule**：提示词驱动行为生成（What to do），规则定义推演边界（How to reason）。
 - **Reads as right**：*假性正确/表面通顺*。大模型最具欺骗性的特征，生成文本在语法和逻辑上无懈可击，却完全违背领域未言明的硬性规则。
 :::
+
 
 这些规则无需复杂冗长即可发挥实效。一组简短且界定清晰的约束，通常就足以引导模型展开符合领域一致性的推理。真正的挑战在于“甄选”：找出能够迫使模型以领域驱动设计方式思考的最小规则集。
 
@@ -210,12 +212,13 @@ Tactical Design Patterns
 这种检查清单看起来或许令人安心，但实际上几乎无法提供任何有效的约束。其中的每一行内容，不过是在重述助手早已在预训练数据中吸收过的通用常识。“*Apply DDD consistently*（始终如一地应用 DDD）”根本不是一条约束，而是一句美好的祈福祈愿。“*Entities have a unique identity*（实体具有唯一标识）”也是模型无需任何帮助就能倒背如流的公理定义。这份文件并没有收窄助手在你项目中可能生成的内容空间，因为它根本没有提及任何关于你项目的具体信息。无论是否加载该文件，模型的行为都毫无二致。篇幅长短并不是问题的症结所在——即使列出一份三倍长的检查清单，对模型的约束力依然微乎其微。因为它所缺失的是至关重要的具体精确度（Specificity）：即特定限界上下文独有的词汇表、不变量以及模型边界。
 
 :::en
-> **Original**: 'Apply DDD consistently' is not a constraint; it is a benediction. 'Entities have a unique identity' is a definition the model can recite without help. The file does not narrow what the assistant can produce in your project, because it does not say anything about your project... because what is missing is **specificity**: the vocabulary, the invariants, and the boundaries of one bounded context.
+> **Original**: This kind of checklist may look reassuring, but it provides little practical constraint. Each line restates something the assistant has already absorbed from training data. '*Apply DDD consistently*' is not a constraint; it is a benediction. *Entities have a unique identity* is a definition the model can recite without help. The file does not narrow what the assistant can produce in your project, because it does not say anything about your project. The model behaves the same way whether the file is loaded or not. Length is not the problem. A checklist three times longer would constrain the model just as little, because what is missing is specificity: the vocabulary, the invariants, and the boundaries of one bounded context.
 
 **📌 核心术语与语境解析**：
 - **Benediction** [ˌbenɪˈdɪkʃn]：*祈福/祝词*。“始终遵守 DDD 规范”是典型的无约束效力的废话型提示，无法降低生成熵。
 - **Specificity** [ˌspesɪˈfɪsəti]：*专属性与精确度*。规则生效的核心前提是与特定限界上下文（如支付、履约）深度绑定。
 :::
+
 
 一份真正有价值的规则手册，必须植根于单一限界上下文的具体特征。下面展示了将这一理念应用于 BrewUp 支付上下文的实例，团队将通过代价高昂的线上生产 Bug 所换来的惨痛教训，全部凝练编码进了规则之中：
 
@@ -241,12 +244,13 @@ PaymentCaptured, PaymentRefunded.
 该片段中的每一行内容，都在实实在在地收拢助手可能生成的空间。模型绝不可能无依据创建 `Charge` 聚合，因为早在模型首次犯错的那一天，`Charge` 就已被列入禁用名单；模型绝不可能提议在支付环节进行货币转换，因为业务不变量明令禁止；模型也绝不可能针对仍处于授权状态的支付发起退款，因为本章开篇提及的那套错误的退款逻辑，如今已被正式沉淀为一条刚性规则。这份文件虽然更加短小精悍，其约束却无比具体精准。这正是泛化检查清单与领域规则手册之间的本质区别。
 
 :::en
-> **Original**: Every line in this fragment narrows what the assistant can produce... The file is shorter, but its constraints are more specific. That is the difference between a generic checklist and a domain rulebook.
+> **Original**: Every line in this fragment narrows what the assistant can produce. The file cannot invent a Charge aggregate, because Charge went on the forbidden list the day the model invented it. The file cannot propose currency conversion at payment time, because the invariant forbids it. The file cannot emit a refund against a still-authorized payment, because the refund flow that opened this chapter is now written down as a rule. The file is shorter, but its constraints are more specific. That is the difference between a generic checklist and a domain rulebook.
 
 **📌 核心术语与语境解析**：
 - **Narrow the space**：*收拢生成空间*。通过刚性否定规则剪裁大模型的可能分支，使其推演轨迹严格落在领域安全区内。
 - **Domain Rulebook**：*领域规则手册*。以代码化形式管理的不变量、禁用词与事件命名规范集合。
 :::
+
 
 ### 规则从何而来
 
@@ -255,13 +259,14 @@ PaymentCaptured, PaymentRefunded.
 第一个来源是**团队已经遭遇过的实际问题**。`forbidden_synonyms: Charge, Transaction, OrderPayment` 这份禁用名词列表，记录的全都是曾经在不恰当场合出现过的词汇，而非凭空猜测模型可能会捏造什么。`Charge` 之所以赫然在列，正是因为本章开篇的那次建模会话。规则中的各项不变量同样具有完全相同的出处溯源（Provenance）：每一条都是某人通过付出高昂代价的实际故障总结得出、并记录在案以确保无人重蹈覆辙的真知。这份列表同时也是对一种合理质疑的绝佳回应——有人认为禁用同义词是在“自证其无”，穷举永远没有尽头。事实上，根本没有人需要提前枚举世间所有的错误名词；列表只需记录那些已经让团队产生过实际故障与返工成本的词汇即可，这使其天然保持有限，且新增速度会逐渐衰减。
 
 :::en
-> **Original**: The first source is the problems the team has already encountered... The invariants have the same **provenance**: each one is a rule someone learned through costly experience and wrote down so that nobody has to learn it twice. The list is also the answer to a fair objection – that banning synonyms means proving a negative, and you can never finish. Nobody is enumerating every wrong name in advance; the list only records the ones that have already cost something, which makes it finite and shrinking.
+> **Original**: The first source is the problems the team has already encountered. `forbidden_synonyms`: Charge, Transaction, `OrderPayment` is a list of names that had already turned up where they did not belong, rather than a guess about what a model might invent. Charge is there because of the modeling session that opens this chapter. The invariants have the same provenance: each one is a rule someone learned through costly experience and wrote down so that nobody has to learn it twice. The list is also the answer to a fair objection – that banning synonyms means proving a negative, and you can never finish. Nobody is enumerating every wrong name in advance; the list only records the ones that have already cost something, which makes it finite and shrinking.
 
 **📌 核心术语与语境解析**：
 - **Provenance** [ˈprɒvənəns]：*出处溯源/起源凭据*。规则并非凭空构想，必须有线上真实 Bug 或设计研讨作为起源依据。
 - **Invariants**：*业务不变量*。业务生命周期中任何合法状态转换都绝不可违背的刚性真理。
 - **Proving a negative**：*自证其无*。对禁用词穷举不可能性的逻辑反驳——工程上只需记录已产生故障的已知项。
 :::
+
 
 第二个来源是**团队业已维护的词汇表**。上一章的结尾包含一个专门的“词汇排他块（Vocabulary Exclusions Block）”——例如“*切勿使用 Order received 作为 Order submitted 的同义词*”；“*当领域事实仅仅是授权时，切勿使用 Payment completed*”——这些是在工作坊中正式研讨确立的，而非源于后期的试错摸索。这个排他块本身就是一份现成的禁用同义词清单；团队只需将其搬入规则手册中即可，完全无需另行构思。在词汇表中，只要有人费心去区分两个在常规流畅文笔下容易混用的词汇，就意味着一条规则正呼之欲出。
 
@@ -270,12 +275,13 @@ PaymentCaptured, PaymentRefunded.
 在此之后，规则将通过循环演进不断沉淀积累：将现有的规则手册提供给模型，以人类专家的领域判断力审视其返回的结果，并将每一次修正提炼为一条崭新的规则，以确保下一次能够直接拦截同类错误。本章最后一节将带领大家在订单管理（Order Management）的两次迭代中完整体验这一闭环。这正是成熟规则手册的主要成因：当一个团队经历过几次这样的循环后，他们便不再纠结于“到底该写哪些规则”，而是能够敏锐地识别并提炼出规则。
 
 :::en
-> **Original**: The rule that comes out of an open question is rarely a fact. It is usually an **instruction to stop**: if ownership is unclear, add an open question instead of inventing a rule. After that, rules accumulate by running the loop: give the model the current rulebook, read what comes back with domain judgment, and **promote each correction into a rule** that catches the same mistake next time.
+> **Original**: The third source is the questions the workshops could not close. *Chapter 4* left several open – who owns a Stock reservation, which conditions must be satisfied before an Order can be confirmed – and every one of them is a gap the model will otherwise fill with something plausible. The rule that comes out of an open question is rarely a fact. It is usually an instruction to stop: if ownership is unclear, add an open question instead of inventing a rule. After that, rules accumulate by running the loop. Give the model the current rulebook, read what comes back with domain judgment, and promote each correction into a rule that catches the same mistake next time. The last section of this chapter follows that loop through two iterations of Order Management. It is where most of a mature rulebook comes from: a team who has run it a few times stops asking which rules to write and starts recognizing them.
 
 **📌 核心术语与语境解析**：
 - **Instruction to stop**：*中断推演指令*。防止模型在遇到事实信息缺失时凭借概率倾向自行填充，强制转为悬置待决项。
 - **Promote correction into a rule**：*将纠偏晋升为规则*。将代码审查与对话中发现的单次偶发错误，固化为全局版本化护栏。
 :::
+
 
 
 洞悉规则从何而来只是完成了一半的工作，另一半则是清晰地界定你所编写的规则属于何种类别。前面展示的支付代码片段实际上承担了三项截然不同的职责：它规定了模型可以如何命名事物、这些事物被允许如何运转，以及最终给出的答案必须呈现怎样的格式形态。
@@ -292,12 +298,13 @@ PaymentCaptured, PaymentRefunded.
 第三层是**输出结构层**。要求模型以 YAML 或 JSON 表达其结果，能够强迫它围绕具有明确业务内涵的分类组织答案，而非任由其自由发散抒写散文。命令、事件、聚合、策略（Policies）以及上下文边界得以变得清晰可见、便于评审且可重复利用。支付规则手册中的 `events` 块便是这一层极具代表性的微缩体现：它并没有逐一罗列事件，而是严格规定了事件必须呈现的格式形态。
 
 :::en
-> **Original**: A rulebook is built from three layers, and they stack: **language**, **semantics**, and **output structure**. Each one is only as strong as the one beneath it... The language layer looks like a style rule and works like a guardrail... Without semantic rules, the model still produces fluent output, but it **flattens or distorts** the domain.
+> **Original**: A rulebook is built from three layers, and they stack: **language**, **semantics**, and **output structure**. Each one is only as strong as the one beneath it. The first layer is language. The model must use the Ubiquitous Language of the bounded context consistently and avoid drifting into generic technical vocabulary or invented synonyms. The language layer looks like a style rule and works like a guardrail. *Chapters 2 and 3* explained the mechanism: repeated terms reinforce each other through attention, and each reinforcement narrows the probability distribution the model samples from. Stable vocabulary therefore does real work – it shrinks the space the model can wander into. In the Payment rulebook, that layer is a single line: `forbidden_synonyms`: Charge, Transaction, `OrderPayment`. The second layer consists of semantic rules. These tell the model how domain concepts are allowed to behave. An event is something that has already happened, an aggregate protects its invariants through its root, and repositories belong to the domain contract even if their implementation lives elsewhere. Without them, the model still produces fluent output, but it flattens or distorts the domain. Payment carries one of these: refunds are issued only against captured payments, never against authorizations. That rule says nothing about naming. It constrains what the system is allowed to do. The third layer is output structure. Asking the model to express its result in YAML or JSON forces it to organize the answer around meaningful categories instead of free-form prose. Commands, events, aggregates, policies, and boundaries become visible, reviewable, and reusable. The events block in the Payment rulebook is the smallest possible version of this: it does not list the events; it dictates the form they must take.
 
 **📌 核心术语与语境解析**：
 - **Three-layer Stack**：*三层堆叠架构*。语言层（稳定词汇）→ 语义层（不变量与行为准则）→ 结构层（机器可评审的输出契约）。
 - **Flattens or distorts**：*压平或扭曲*。缺乏语义护栏时，模型倾向于将富领域模型退化为贫血的 CRUD 结构。
 :::
+
 
 以下是 BrewUp 订单管理（Order Management）的极简规则手册：
 
@@ -320,12 +327,13 @@ output:
 对照三层架构来审视，这份文件的职责划分清晰明了。词汇约束行对应**语言层**：严格限定为这三个词汇，其余任何术语均不被接纳。关于事件、命令与聚合的规则构成了**语义层**，因为它们管束的是领域概念必须如何运转，而非其名称叫什么。输出块则属于**结构层**，它的存在使得针对同一提示词的两次运行结果能够逐行进行精准比对。
 
 :::en
-> **Original**: Even this small set of constraints changes the interaction. The model is no longer free to improvise a generic solution: it has to operate inside a defined linguistic and structural boundary. The rulebook constrains where the model may reason instead of asking it to reason better.
+> **Original**: Even this small set of constraints changes the interaction. The model is no longer free to improvise a generic solution: it has to operate inside a defined linguistic and structural boundary. The rulebook constrains where the model may reason instead of asking it to reason better. The file is just as interesting for what it leaves out. The file lists Order, Payment, and Stock as the vocabulary of this context, and never says which of the three Order Management actually owns. That silence is deliberate, and we will come back to it at the end of the chapter, once we have a durable place to store the rules that emerge from critique.
 
 **📌 核心术语与语境解析**：
 - **Constrain where to reason**：*约束推理范畴*。规则手册的精髓不在于教授推理技巧，而在于圈定推理的边界围栏。
-- **Improvise a generic solution**：*即兴脑补通用方案*。大模型在没有上下文锚定时习惯性地输出泛化但无针对性的样板代码。
+- **Improvise a generic solution**：*即兴推测通用方案*。大模型在没有上下文锚定时习惯性地输出泛化但无针对性的样板代码。
 :::
+
 
 ## 智能体、技能与 MCP 服务器：DDD 护栏的三大容器
 
@@ -401,7 +409,7 @@ Return YAML with these fields only:
 ```
 
 :::en
-> **Original**: A skill is narrower: one procedure, invoked when it is needed and dormant otherwise... The value here is repeatability. A general instruction such as 'think in DDD' can produce a different answer each time it is invoked. A skill produces answers in the same output schema every time, so the team can compare one run with the last.
+> **Original**: Where an agent sets posture, a **skill** performs one job. It is a named procedure the model runs when the conditions for it are met and leaves dormant when it is not needed. In DDD workflows, this is where we encode procedures such as extracting domain events from a scenario, checking aggregate boundaries, reviewing terminology, or separating business facts from technical side effects. An assistant that has been told to think like a domain architect still has to be told how this team extracts events. That gap is what a skill fills. The value here is repeatability: a general instruction such as 'think in DDD' can produce a different answer each time it is invoked, whereas a skill produces answers in the same output schema every time, so the team can compare one run with the last.
 
 **📌 核心术语与语境解析**：
 - **Repeatability** [rɪˌpiːtəˈbɪləti]：*可重复性与可比性*。将复杂分析拆解为固定出入参规程，确保不同会话产出的制品格式完全自洽。
@@ -431,7 +439,7 @@ usage_rules:
 三大容器各司其职：**智能体锁定了模型“是谁”（Who），技能规范了模型“如何工作”（How），而 MCP 则锚定了模型“知道什么”（What）**。
 
 :::en
-> **Original**: Agents and skills both shape how the model reasons. MCP servers change the material it reasons over... By anchoring the conversation in real project material, MCP servers turn 'what does the glossary say?' from a question the model answers by inference into one it answers by lookup.
+> **Original**: Agents and skills both shape how the model reasons. **MCP servers** change the material it reasons over. The protocol, introduced by Anthropic in late 2024, is an open standard for connecting an assistant to sources outside its own conversation through a single uniform interface. An MCP server is one such source, exposed under rules the team writes: tools the assistant may call, documents it may read, project artifacts it may rely on. In DDD work, this matters as soon as the interaction depends on knowledge that should not be guessed from general training data: canonical glossaries, EventStorming exports, context maps, architecture decision records. By anchoring the conversation in real project material, MCP servers turn "*what does the glossary say?*" from a question the model answers by inference into one it answers by lookup.
 
 **📌 核心术语与语境解析**：
 - **Lookup vs. Inference**：*确定性查表 vs. 概率性推断*。通过标准协议（MCP）向模型注入真实项目资产，从根本上终结无根据推测。
@@ -456,12 +464,13 @@ usage_rules:
 ```
 
 :::en
-> **Original**: The model did not invent the names: Payment and Stock are both on the vocabulary line. It promoted terms the context merely refers to into aggregates the context owns... If Order Management treats them as its own, the model has silently collapsed bounded contexts. The language looks correct, but the ownership is wrong.
+> **Original**: Read against the context boundary, the draft has the problem the rulebook was supposed to prevent. `PaymentCompleted` is attributed to a Payment aggregate and `StockReserved` to a Stock aggregate, inside a file that is supposed to describe Order Management. The rulebook said not to introduce new aggregates, and two appeared. The model did not invent the names: Payment and Stock are both on the vocabulary line. It promoted terms the context merely refers to into aggregates the context owns. Payment belongs to the Payment context, and Stock to the warehouse responsibility *Chapter 4* identified; Order Management only hears about them. If Order Management treats them as its own, the model has silently collapsed bounded contexts. The language looks correct, but the ownership is wrong. This mistake is exactly the kind of mistake that a fluent LLM can hide unless the rulebook forces the distinction to become visible.
 
 **📌 核心术语与语境解析**：
 - **Collapsed bounded contexts**：*坍塌上下文边界*。跨上下文概念被模型误认为是本上下文的内聚聚合，造成所有权严重越界。
 - **Semantic Ownership**：*语义所有权*。限界上下文不仅约束词汇，更核心的是确定状态变更命令与领域事件的归属权。
 :::
+
 
 注入新规则后，模型输出蜕变为：
 

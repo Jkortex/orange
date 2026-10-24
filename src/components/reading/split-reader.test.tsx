@@ -72,5 +72,59 @@ describe('SplitReader 双栏独立滚动组件', () => {
 
     expect(screen.getByRole('button', { name: /折叠全篇英文/ })).toBeDefined()
   })
+
+  it('支持点击 7:3 / 5:5 / 3:7 快速切换双栏比例', () => {
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    const leftSection = screen.getByRole('region', { name: '左栏' })
+    const rightSection = screen.getByRole('region', { name: '右栏' })
+
+    // 默认 50% / 50%
+    expect(leftSection.style.width).toBe('50%')
+    expect(rightSection.style.width).toBe('50%')
+
+    // 点击 7:3
+    const ratio73Btn = screen.getByRole('button', { name: '7 : 3' })
+    fireEvent.click(ratio73Btn)
+    expect(leftSection.style.width).toBe('70%')
+    expect(rightSection.style.width).toBe('30%')
+
+    // 点击 3:7
+    const ratio37Btn = screen.getByRole('button', { name: '3 : 7' })
+    fireEvent.click(ratio37Btn)
+    expect(leftSection.style.width).toBe('30%')
+    expect(rightSection.style.width).toBe('70%')
+  })
+
+  it('支持使用键盘左右方向键在分割线上微调宽度比例', () => {
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    const leftSection = screen.getByRole('region', { name: '左栏' })
+    const separator = screen.getByRole('separator', { name: '拖拽调整左右栏宽度' })
+
+    // 向左调整 (50% - 5% = 45%)
+    fireEvent.keyDown(separator, { key: 'ArrowLeft' })
+    expect(leftSection.style.width).toBe('45%')
+
+    // 向右调整两次 (45% + 10% = 55%)
+    fireEvent.keyDown(separator, { key: 'ArrowRight' })
+    fireEvent.keyDown(separator, { key: 'ArrowRight' })
+    expect(leftSection.style.width).toBe('55%')
+  })
 })
+
 

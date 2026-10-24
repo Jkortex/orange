@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（十一）：受治理的自主性：在智能体之间平衡自主与对齐"
 date: 2026-10-21T11:00:00Z
-description: "区分确定性边界冲突与语义偏离，在不扩大自主性的前提下纠正漂移，并让证据、不确定性与人工验收在多智能体工作流中始终保持透明可见。"
+description: "双栏独立滚动工作台：区分确定性边界冲突与语义偏离，在不扩大自主性的前提下纠正概念漂移，构建三重权威对齐防御体系。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -12,7 +12,175 @@ tags:
   - "架构设计"
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。全专栏共 12 篇，覆盖大语言模型心智模型、事件风暴与 AI 协作、提示词规则手册、限界上下文精炼，以及专家智能体与编排器的完整工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
+
+# 核心实战精炼：受治理的自主性（Governed Autonomy）与防偏离控制
+
+## 1. 架构选型与决策矩阵
+
+下表对比了针对多智能体系统在自主性与对齐治理维度上的四种工程选型策略：
+
+| 架构维度 | 自由发散无约束 (Unbounded Autonomy) | 规则全死锁 (Zero-Autonomy Hardcoding) | 提示词防御微调 (Prompt-level Alignment) | **受治理的自主性框架 (Governed Autonomy Framework)** |
+| :--- | :--- | :--- | :--- | :--- |
+| **操作自由度** | 模型自由发挥，随意更替术语、合并概念 | 严格按模板匹配，丧失生成式建模价值 | 仅在系统提示词中告诫“请不要擅自做决定” | **以显式 `AutonomyPolicy` 契约声明工具、超时、术语与纠偏预算** |
+| **违规防范粒度** | 完全依靠最终人工肉眼比对排查 | 无法应对非结构化业务场景 | 容易在长上下文推演中被注意力机制稀释 | **双轨分治：机械性违规代码拦截，语义偏离显式标记上报** |
+| **机械违规拦截** | 违规渗透至下游引发级联异常 | 无法容忍正常业务词汇演进 | 消耗大量 Token 重复问答质询 | **确定性对齐守卫（Alignment Guard）毫秒级拦截，零 Token 损耗** |
+| **语义漂移纠偏** | 智能体无限反思重试，陷入幻觉深渊 | 任何异常直接中断崩溃 | 模型自我辩解并虚构更多证据强化错误 | **局部有界重试（Bounded Retries）+ 熔断机制 + 人工仲裁升级** |
+| **对齐上下文** | 各阶段独立依赖提示词记忆片段 | 硬编码上下文传递 | 上下文断层，未决问题隐式闭环 | **跨阶段累积的 `AlignmentContext`（目标、已采纳工件、未决集、禁项）** |
+
+## 2. 治理架构与分层防御拓扑图
+
+系统构筑了**三重权威边界**：确定性代码强制执行结构与策略不变量；专家智能体负责有界推演与方案解释；人类审查员享有最终的领域裁决权：
+
+```mermaid
+flowchart TD
+    Candidate["Specialist 产出候选工件 (Candidate)"] --> L1{"第 1 道防线: 协议状态机<br/>(ConversationProtocol)"}
+    L1 -->|消息非法/因果断裂| Block1["BLOCKED: 拒绝应用，状态保持不变"]
+    L1 -->|消息合法| L2{"第 2 道防线: 确定性对齐守卫<br/>(AlignmentGuard - 5 项硬性检查)"}
+    
+    L2 -->|机械性违规<br/>(类型错/未知证据/丢未决/禁令决策/禁用词)| Reject2["FAST REJECT: 立即驳回 (0 Token)<br/>检查纠偏预算 (MaxCorrectionAttempts)"]
+    Reject2 -->|预算内| Retry["退回 Specialist 局部有界纠偏 (Attempt++)"]
+    Reject2 -->|预算耗尽| StopBudget["STOPPED: correction-budget-exhausted"]
+    
+    L2 -->|机械检查通过| L3["第 3 道防线: 语义对齐审查器<br/>(ISemanticAlignmentReviewer)"]
+    L3 -->|检测到术语微调/策略推测| Mark["标记 SemanticDivergence 元数据<br/>(保留原始文本，附带偏离预警)"]
+    L3 -->|无明显偏离| Forward["透传至人工关卡"]
+    
+    Mark --> L4{"第 4 道防线: 人工关卡 (Human Gate)<br/>(领域权威最终裁决)"}
+    Forward --> L4
+    
+    L4 -->|GateAccepted| Accepted["StageIndex++，并入已采纳知识链"]
+    L4 -->|GateReferred| Referral["人工批注修改意见，退回 Specialist 修正"]
+    L4 -->|AuthorityRequired / Rejected| Stopped["STOPPED: 挂起等待外部业务权威介入"]
+```
+
+## 3. 治理自治核心框架规范
+
+### 3.1 专家自主性策略契约 (AutonomyPolicy)
+```csharp
+public sealed record AutonomyPolicy(
+    string Specialist,                 // 专家标识，如 "storyteller"
+    string OutputKind,                 // 允许产出的工件类型，如 "candidate-scenarios"
+    string[] AllowedEvidenceKinds,     // 允许阅读的证据类别，如 ["accepted-facts", "walkthrough"]
+    bool MayIntroduceNewTerms,         // 是否允许提议新术语（false 则直接判定为机械违规）
+    int MaxCorrectionAttempts,         // 最大纠偏重试预算（通常为 2，耗尽则终止工作流）
+    TimeSpan Timeout,                  // 单次推演超时阈值（如 2 分钟）
+    string[] AllowedTools              // 严格限定的沙箱工具子集（失败绝不动态提权）
+);
+```
+
+### 3.2 共享对齐上下文框架 (AlignmentContext)
+```csharp
+public sealed record AlignmentContext(
+    ArtifactEnvelope[] AcceptedArtifacts, // 截至当前阶段已被人工关卡采纳的全部工件
+    string WorkflowGoal,                  // 当前转换步骤的具体业务对齐目标
+    string[] ApprovedTerms,               // 当前受信任的通用语言词汇表白名单
+    string[] Unresolved,                  // 必须在候选工件中完整存续的未决问题 ID 集合（如 ["ES-17"]）
+    string[] ProhibitedDecisionTypes      // 契约严令剥夺的决策权限类型清单
+);
+```
+
+### 3.3 机械对齐五大确定性检查规范 (Alignment Guard Checks)
+
+| 问题代码 (`IssueCode`) | 判定逻辑 (Deterministic Basis) | 触发后果 |
+| :--- | :--- | :--- |
+| `wrong-artifact-kind` | `candidate.Kind != stage.CandidateKind` | 立即驳回，禁止非预期产物向下传递 |
+| `unknown-evidence` | `candidate.EvidenceRefs` 包含不在提供范围内的非法证据 ID | 立即驳回，斩断虚构幻觉链条 |
+| `dropped-unresolved` | `context.Unresolved` 与 `candidate.Unresolved` 求差集不为空 | **严重违规立即驳回，严禁悄然消弭业务分歧** |
+| `unapproved-term` | `MayIntroduceNewTerms == false` 且出现了未核准的术语 | 立即驳回，强制统一通用语言 |
+| `prohibited-decision` | `metadata.DecisionTypes` 命中了禁止决策类型集合 | **立即驳回，严禁越权决定补货或取消策略** |
+
+## 4. 生产级治理实现核心代码 (C# 范式)
+
+### 4.1 确定性对齐防护检查器
+```csharp
+public static AlignmentIssue[] Check(
+    ArtifactEnvelope candidate,
+    CandidateAlignmentMetadata metadata,
+    SpecialistStage stage,
+    AutonomyPolicy policy,
+    AlignmentContext context)
+{
+    var issues = new List<AlignmentIssue>();
+
+    // 1. 检查工件类型匹配
+    if (candidate.Kind != stage.CandidateKind)
+        issues.Add(new("wrong-artifact-kind", $"Expected {stage.CandidateKind}, got {candidate.Kind}."));
+
+    // 2. 检查证据引用越界
+    var knownEvidence = context.AcceptedArtifacts.SelectMany(a => a.EvidenceRefs).ToHashSet(StringComparer.Ordinal);
+    var unknownEvidence = candidate.EvidenceRefs.Where(id => !knownEvidence.Contains(id)).ToArray();
+    if (unknownEvidence.Length > 0)
+        issues.Add(new("unknown-evidence", $"Cited unknown evidence: {string.Join(", ", unknownEvidence)}"));
+
+    // 3. 检查未决问题丢弃（硬核防护，ES-17 绝不可丢）
+    var lostUnresolved = context.Unresolved.Except(candidate.Unresolved, StringComparer.Ordinal).ToArray();
+    if (lostUnresolved.Length > 0)
+        issues.Add(new("dropped-unresolved", $"Dropped required unresolved IDs: {string.Join(", ", lostUnresolved)}"));
+
+    // 4. 检查越权决策声明
+    var forbidden = metadata.DecisionTypes.Intersect(context.ProhibitedDecisionTypes, StringComparer.Ordinal).ToArray();
+    if (forbidden.Length > 0)
+        issues.Add(new("prohibited-decision", $"Claimed prohibited decisions: {string.Join(", ", forbidden)}"));
+
+    return [.. issues];
+}
+```
+
+### 4.2 受控有界纠偏主循环
+```csharp
+public async Task<SpecialistExecutionResult> RunWithGovernanceAsync(
+    SpecialistStage stage,
+    ArtifactEnvelope input,
+    int attempt,
+    AutonomyPolicy policy,
+    AlignmentContext context,
+    CancellationToken ct)
+{
+    // 刚性纠偏预算检查：防止无限重试造成 Token 爆炸与幻觉加深
+    if (attempt > policy.MaxCorrectionAttempts)
+    {
+        return SpecialistExecutionResult.Stop(
+            "correction-budget-exhausted",
+            $"Correction budget ({policy.MaxCorrectionAttempts}) exhausted for {policy.Specialist}.");
+    }
+
+    using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+    timeoutCts.CancelAfter(policy.Timeout);
+
+    // 调用沙箱内专家智能体（工具访问严格受限于 AllowedTools，失败绝不提权）
+    var candidate = await _runner.RunAsync(stage, input, attempt, timeoutCts.Token);
+
+    // 1. 机械层硬拦截
+    var issues = AlignmentGuard.Check(candidate, candidate.AlignmentMetadata!, stage, policy, context);
+    if (issues.Length > 0)
+    {
+        return SpecialistExecutionResult.NeedCorrection(
+            $"Mechanical alignment failed: {string.Join("; ", issues.Select(i => i.Detail))}");
+    }
+
+    // 2. 语义偏离侦测（仅暴露给人类，绝不擅自重写正文）
+    var divergences = await _semanticReviewer.ReviewAsync(candidate, context, timeoutCts.Token);
+    RecordAlignmentAssessment(candidate.WorkflowId, divergences);
+
+    // 3. 安全递交人工关卡
+    return SpecialistExecutionResult.AwaitingReview(candidate);
+}
+```
+
+## 5. 架构避坑清单 (Do's & Don'ts)
+
+| 场景维度 | 严禁做法 (Don't) | 推荐做法 (Do) |
+| :--- | :--- | :--- |
+| **违规排查手段** | 让大语言模型扮演 Linter 去检查格式、Schema、证据引用等结构性事实。 | **采用确定性代码防护网（Alignment Guard）**进行集合比较与正则校验，零 Token 损耗、零幻觉。 |
+| **自我修正循环** | 开启智能体无限自我反思与重试（容易陷入自我确证的偏执并放大虚构事实）。 | **设定硬性纠偏预算（如上限 2 次）与熔断机制**，预算耗尽立即停止并上报人类。 |
+| **术语漂移治理** | 强行在初稿阶段消灭所有新术语，或者把近似词（如 reserve 与 hold）自动等同。 | **暴露语义偏离（SemanticDivergence）**而不擅自裁决，交由人工关卡决定采纳还是打回。 |
+| **未决问题演变** | 允许智能体在修正时将口头做法（如 Nadia 的留出操作）悄悄总结为全局统一策略。 | **坚决保留业务分歧**：未决问题未获人类正式批准前必须在下游工件中原样存续。 |
+| **故障重试处置** | 智能体纠偏失败后，运维脚本或调度器自动为其解锁更多工具或扩大上下文权限。 | **失败绝不能成为提权的借口**：每次重试必须保持相同的工具、证据与权限边界。 |
+
+<!-- split -->
+
+# 原著完整参考：受治理的自主性：在智能体之间平衡自主与对齐
 
 *第 10 章*确立了谁可以采取行动、每个专家智能体可以消费哪些已验收的材料，以及何时必须由人工关卡介入。但这留下了一个悬而未决的问题：专家智能体在改变领域之前，究竟可以在多大程度上对已验收的证据链进行解释？
 
@@ -32,6 +200,13 @@ tags:
 ## 从协调走向决策权
 
 *第 10 章*中的编排循环让协调变得显式化：它决定了哪个专家智能体可以运行、该专家智能体可以消费哪些已验收的材料、何时需要**人工关卡**（Human Gate），以及哪些状态转换是合法的。但它依然没有定义专家智能体在其转换内部拥有多大的自由度。
+:::en
+> **Original**: The orchestration loop from *Chapter 10* made coordination explicit: it determines which specialist may run, which accepted material that specialist may consume, when a **human gate** is required, and which transitions are legal. It still does not define how much freedom a specialist has inside its transformation.
+
+**📌 核心术语与语境解析**：
+- **Coordination versus interpretive freedom**：*协调机制与解释自由度*。编排状态机管控了工件的流转秩序，但对专家模型在单项转换内能进行多大程度的归纳与抽象仍缺乏显式约束。
+:::
+
 
 Storyteller（故事讲述者）必须拥有将已验收事实转化为具体业务场景的自由。Command & Event Writer（命令与事件编写者）必须能够为证据链所支持的意图或结果选取精确的表述形式。Context Mapper（上下文映射者）必须能够提出输入中尚未明确划分的边界。如果缺乏这种自由，生成式专家智能体所能带来的价值将微乎其微。
 
@@ -44,6 +219,13 @@ Storyteller（故事讲述者）必须拥有将已验收事实转化为具体业
 ### 将自主性转化为策略
 
 当把**自主性**（Autonomy）视为契约而非模型本身的固有属性时，治理就会变得更加容易。每个专家智能体都已经拥有了一个有界的转换范围。策略所描述的，正是该边界内部的操作自由度。它明确指定了专家智能体可以产出哪类工件、可以审查哪些已验收的材料、是否允许引入新术语、可以使用哪些工具，以及工作流允许进行多少次纠偏尝试。
+:::en
+> **Original**: **Autonomy** is easier to govern when treated as a contract rather than as a property of the model. Each specialist already has a bounded transformation. The policy describes the operational freedom inside that boundary. It specifies which artifact the specialist may produce, which accepted material it may inspect, whether it may introduce terminology, which tools it may use, and how many correction attempts the workflow permits.
+
+**📌 核心术语与语境解析**：
+- **Autonomy as a contract** [ɔːˈtɒnəmi æz ə ˈkɒntrækt]：*将自主性视为契约*。自主性不是大语言模型的神秘拟人特性，而是工程上明确分配的操作权限边界（输出类型、工具集、超时与重试配额）。
+:::
+
 
 ```csharp
 public sealed record AutonomyPolicy(
@@ -78,6 +260,13 @@ Context Mapper 可以审查完整的已验收证据链，因为它的转换依�
 ### 定义共享对齐输入
 
 局部自主性依然依赖于一个共享的已验收知识框架。如果每个阶段对该框架的重构各不相同，那么编排器即便强制推行了一个流程上合法的流程，各个智能体在语义上也会逐渐分道扬镳。
+:::en
+> **Original**: Local autonomy still depends on a shared frame of accepted knowledge. If each stage reconstructs that frame differently, the orchestrator may enforce a procedurally valid workflow while the agents gradually diverge in meaning.
+
+**📌 核心术语与语境解析**：
+- **Shared frame of accepted knowledge**：*共享的已验收知识框架*。跨阶段累积的事实底座，防止各个智能体按各自的预训练记忆碎片自由推演导致语义分歧。
+:::
+
 
 共享对齐输入定义了每一次转换所继承的约束条件：已验收的工件、当前目标、经批准的语言、必须保持可见的未决问题，以及当前专家智能体无权做出的决策。
 
@@ -131,10 +320,24 @@ var storytellerAlignment=new AlignmentContext(
 ## 区分机械性违规与语义偏离
 
 由于对齐输入现已完全显式化，因此该框架的一部分可以通过代码进行检查。工件类型（Artifact Kind）、出处追溯（Provenance）、未决标识符（Unresolved Identifiers）以及声明的决策类型都是程序可以直接比对的事实。然而，一个新术语是否抹平了领域尚未解决的微妙差异，则不属于此类事实。因此，这两种失败需要不同的处理机制：前者可以通过预先声明的规则直接拒绝，而后者只能如实上报给授权人员。
+:::en
+> **Original**: The alignment inputs are now explicit, so part of the frame can be checked by code. Artifact kind, provenance, unresolved identifiers, and declared decision types are facts a program can compare. Whether a new term collapses a distinction the domain has not resolved is not such a fact. The two failures therefore need different machinery, because the first can be rejected by a declared rule and the second can only be reported to an authority.
+
+**📌 核心术语与语境解析**：
+- **Deterministic comparison vs authorized review**：*确定性比对与授权审查*。模式与字段检查属于确定性事实，由程序硬性拦截；语义层面的概念取舍属于主观业务裁决，必须交由领域权威。
+:::
+
 
 ### 强制执行机械对齐规则
 
 某些对齐失败根本不需要任何语义解释。如果 Storyteller 返回了错误的工件类型、引用了从未提供过的证据、遗漏了未决标识符，或者声称做出了其契约明确禁止的决策类型，此类违规并不需要模型去推理解释。这些行为公然违背了已声明的边界，确定性代码理应能够直接检测出来。
+:::en
+> **Original**: Some alignment failures do not require interpretation. If Storyteller returns the wrong artifact kind, cites evidence that was never supplied, drops an unresolved identifier, or claims a decision type that its contract explicitly forbids, the violation does not require model interpretation. These breaches violate declared boundaries, and deterministic code should detect them.
+
+**📌 核心术语与语境解析**：
+- **Mechanical alignment rules** [mɪˈkænɪkl əˈlaɪnmənt ruːlz]：*机械对齐规则*。无需大语言模型介入解读即可通过集合比对、正则表达式或 Schema 判定真伪的硬性防御层。
+:::
+
 
 对齐检查与对话协议保持分离。`ConversationProtocol` 决定一条消息是否合法；而**对齐守卫**（Alignment Guard）则决定该消息所携带的候选方案是否遵循当前转换的机械性约束。这两者有意存在一次重叠：*第 10 章*中已经拒绝接收遗漏了未决标识符的候选工件，但那是在人工关卡处、由审查员阅读完候选工件后才予以拒绝的。在生产环境中提前进行机械检查，意味着专家智能体绝不会将一份悄悄关闭了开放性问题的候选方案呈现在审查员面前。
 
@@ -197,8 +400,23 @@ var forbiddenDecisions= metadata.DecisionTypes
 ### 暴露语义偏离而不擅自解决
 
 假设 Storyteller 接收到了已验收的材料，其中 set aside（留出）、hold（保留）和 earmark（专款/专物专用）同时并存，但尚未被确立为同义词；随后它产出了一个自洽的场景，并且全程仅使用了 reserve（预留）一词。此时工件类型与证据引用完全有效，没有任何未决标识符凭空消失，但这个新术语很可能抹平了领域内部尚未达成一致的微妙差异。编排器根本无法判定这种抽象究竟是有益的提炼，还是造成了信息的损耗。
+:::en
+> **Original**: Suppose Storyteller receives accepted material in which set aside, hold, and earmark coexist without being established as synonyms and then produces a coherent scenario using only reserve. The artifact kind and evidence references are valid, and no unresolved identifier has disappeared, yet the new term might collapse a distinction the domain has not resolved. The orchestrator cannot tell whether that abstraction is useful or lossy.
+
+**📌 核心术语与语境解析**：
+- **Semantic divergence** [sɪˈmæntɪk daɪˈvɜːdʒəns]：*语义偏离*。工件在结构上完全合法，但措辞或时序悄然消弭了领域内尚未达成共识的关键概念边界。
+- **Lossy abstraction**：*有损抽象*。大模型自作主张将多个具备微妙差异的专业词汇合并为一个通用高频词，造成业务语义资产丢失。
+:::
+
 
 如果盲目拒绝每一个陌生的新术语，就会阻止专家智能体为通用语言的演进做出贡献。而如果自动用另一个术语进行替换，则等于擅自认定这些概念完全等价。
+:::en
+> **Original**: Rejecting every unfamiliar term would prevent specialists from contributing to the language. Automatically replacing one term with another would silently decide that the concepts are equivalent.
+
+**📌 核心术语与语境解析**：
+- **Evolution of ubiquitous language**：*通用语言的演进*。领域建模是动态生长的过程，严禁一刀切封死新术语提议，而是要建立“提议-标记偏离-人类核准”的演进路径。
+:::
+
 
 更安全的替代方案是将这种差异本身表示为一个可供审查的输出：
 
@@ -250,6 +468,13 @@ that the remaining quantity cannot be supplied.
 ```
 
 从机械结构上看，该候选方案完全合法。它具备预期的工件类型，仅引用了提供给 Storyteller 的证据，保留了 ES-17，未声明任何被禁止的决策类型，并且是在策略明确允许专家智能体提出新术语的前提下引入了 `reserve`。在这些检查中，没有任何一项要求守卫去推测 `reserve` 的具体含义。*第 9 章*已经指出过这种特定的捏造行为：预留 8 箱正是“擅自补充源数据中未曾提供的策略”的四种表现之一。
+:::en
+> **Original**: Mechanically, the candidate was legal. It had the expected artifact kind, cited only evidence provided to Storyteller, kept ES-17, declared no prohibited decision types, and used reserve under a policy that allowed the specialist to propose terms. None of those checks required the guard to speculate about what reserve meant. *Chapter 9* identified this particular invention: reserving eight was one of four ways to supply policy that the sources did not provide.
+
+**📌 核心术语与语境解析**：
+- **Mechanically legal** [mɪˈkænɪkli ˈliːɡl]：*机械层面合规*。形式完全正确、满足所有格式约束，但在深层业务语义上存在实质性虚构的典型高危状态。
+:::
+
 
 尽管通过了所有机械检查，该候选方案却篡改了证据链的本意。一种偶然观察到的行为被升格成了库存部门（Stock）的通用行为，而从*第 8 章*实现中借用来的新术语 reserve，使得 reserve 听起来比实际情况更加成熟确定。
 
@@ -283,6 +508,13 @@ reason: one observed short-quantity practice is expressed
 ```
 
 人工关卡将这些发现作为审查证据链接收，而不是作为新的领域事实。生产环境中的语义审查器本身可能是生成式模型；而本次受控运行使用的是确定性的 Markdown 适配器。无论是哪种情况，审查器都只负责报告偏离，绝不能代替其他专家智能体去修复候选方案。
+:::en
+> **Original**: The human gate receives those findings as review evidence, not as new domain facts. A semantic reviewer in production might be a generative model; the controlled run used a deterministic Markdown adapter. In either case, the reviewer's job is to surface divergence, not to fix the candidate on another specialist's behalf.
+
+**📌 核心术语与语境解析**：
+- **Surfacing divergence** [ˈsɜːfɪsɪŋ daɪˈvɜːdʒəns]：*显式暴露偏离*。审查工具的最高原则是“呈现疑点供人类定夺”，绝不擅自代替模型去改写候选工件。
+:::
+
 
 因此，编排循环在候选方案旁如实记录下这些偏离，并依然流转至 `AwaitingReview`（等待审查）状态。
 
@@ -336,6 +568,13 @@ not claim that set aside, hold, earmark, and reserve are interchangeable terms.
 ```
 
 因此，纠偏动作严格保持在产出候选方案的转换过程局部。Storyteller 修改了自己的场景；编排器、语义审查器和人工审查员各自恪守了自身的职责边界。
+:::en
+> **Original**: Correction therefore stayed local to the transformation that produced the candidate. Storyteller revised its own scenario; the orchestrator, the semantic reviewer, and the human reviewer stayed inside their boundaries.
+
+**📌 核心术语与语境解析**：
+- **Locality of correction** [ləʊˈkæləti əv kəˈrekʃn]：*纠偏的局部性*。谁引入了漂移，谁负责修改纠偏；严禁其他辅助组件越俎代庖直接篡改生成内容。
+:::
+
 
 一项针对性的测试证实了这一边界：
 
@@ -371,6 +610,13 @@ Assert.Contains(
 ### 约束纠偏尝试次数、时间与工具访问权限
 
 解释自由同样需要操作维度的限制。专家智能体固然可以探索多种不同的表述形式，但绝不能无休止地重试、在失败后擅自扩大工具访问权限，或者因无限制的模型调用而让工作流陷入死锁挂起。
+:::en
+> **Original**: Interpretive freedom also needs operational limits. A specialist might explore alternative formulations, but it must not retry indefinitely, expand its tool access after a failure, or leave the workflow hanging on an unbounded model call.
+
+**📌 核心术语与语境解析**：
+- **Operational limits** [ˌɒpəˈreɪʃənl ˈlɪmɪts]：*运维操作约束*。通过显式纠偏预算配额、调用超时和沙箱工具硬隔离，防范大模型无限递归与提权风险。
+:::
+
 
 这些限制在不干预领域含义判定的前提下对执行过程施加了约束。自主性策略中已经包含了这些限制：纠偏预算、超时与取消、工具访问权限，以及纠偏预算耗尽时的终态。
 
@@ -437,6 +683,13 @@ last-review-reason: preserved
 ### 在不放弃对齐的前提下测试自主性
 
 自主性测试并不会评判 Storyteller 是否产出了最优的场景，也不会判定 Context Mapper 是否找到了最佳的边界；那些属于建模评判。相反，测试旨在验证系统是否始终维护了让这些评判保持可审查性的基础条件。
+:::en
+> **Original**: Autonomy tests do not judge whether Storyteller produced the best scenario, or whether Context Mapper found the right boundaries; those are modeling judgments. Instead, the tests verify that the conditions under which those judgments remain inspectable are maintained.
+
+**📌 核心术语与语境解析**：
+- **Conditions of inspectability**：*可审查性前提条件*。测试不衡量艺术性的高低，而是验证不变量未被破坏、未决集合未被丢弃、出处引用链未断裂。
+:::
+
 
 一项针对性的守卫测试验证了**未决知识**（Unresolved Knowledge）绝不能凭空消失：
 
@@ -486,6 +739,13 @@ Assert.Contains("Stock reserves", candidate.Text);
 最后的断言对比了审查前后的文件内容，确认原始候选方案的措辞被完整保留。
 
 策略推断测试将相同的边界应用于 Nadia 偶然被观察到的行为。语义审查器可能会报告某种被观察到的做法已被泛化为库存部门的通用策略，但它绝不能重写候选方案，也不能武断判定哪种做法才是正确的。只有在人工退回之后，Storyteller 才会生成不同的解释。综合起来，这些测试确立了贯穿本章的三重权威边界：确定性代码强制执行声明的约束，专家智能体产出解释方案，而人工审查员决定哪些内容可以成为已验收的知识。
+:::en
+> **Original**: The policy inference test applies the same boundary to Nadia's observed practice. The semantic reviewer might report that an observed practice has been generalized into Stock policy, but it must not rewrite the candidate, nor judge which practice is correct. Only after a human referral does Storyteller produce a different interpretation. Together, these tests establish the three authorities of the chapter: deterministic code enforces declared constraints, specialists produce interpretations, and human reviewers decide what becomes accepted knowledge.
+
+**📌 核心术语与语境解析**：
+- **Three authorities** [θriː ɔːˈθɒrətiz]：*三重权威架构*。确定性程序代码（规则守护者）、AI 专家智能体（候选提议者）、人类架构师与业务专家（领域主权裁决者）。
+:::
+
 
 ## 将多智能体系统作为受治理的工作流运转
 
@@ -502,6 +762,13 @@ Assert.Contains("Stock reserves", candidate.Text);
 *图 11.2 – 候选方案的流向与纠偏退回的路径*
 
 `Completed`（已完成）状态描述的是团队商定的建模流程顺利结束，而非意味着领域内的所有问题都已迎刃而解。专家智能体完成了对已验收材料的转换，必要的审查已然就绪，已验收的工件全程可追溯，且剩余的不确定性依然清晰可见。
+:::en
+> **Original**: Completed describes the agreed modeling process, not a domain in which every question has been answered. The specialists have transformed accepted material, required reviews have taken place, accepted artifacts are traceable, and remaining uncertainty is visible.
+
+**📌 核心术语与语境解析**：
+- **Process completion vs domain resolution**：*流程完成与领域澄清的分离*。严禁将多智能体系统的正常退出误解为系统不再存在业务矛盾；未决问题正是下一步软件架构迭代的核心起点。
+:::
+
 
 这一关键区分也为本专栏的技术探索之旅画上了圆满的句号。我们最初使用 AI 来探索领域素材并生成候选解释方案。随后，我们让这些解释方案变得越来越具备问责性（Accountable）：首先是对齐证据链与共享语言，接着是对齐有界的专家智能体职责、显式的阶段交接、编排规则，最后是对解释自由施加受治理的约束。我们的目标从来不是赋予模型无上的权威，而是让模型的贡献发挥最大价值，同时绝不丢失对知识来源的追溯、清晰保留未决问题、明确每一次决策的制定者，并清楚阐明为什么某个工件被允许成为已验收的领域知识。
 
@@ -517,3 +784,9 @@ Assert.Contains("Stock reserves", candidate.Text);
 - 在整个工作流中贯穿守护证据链、不确定性、决策归属与人工验收。
 
 纵观本专栏，核心焦点已从单纯产出 AI 生成的内容，转变为守护让这些输出变得值得信赖的完整证据链条。原始观察转化为了候选事实。候选方案在跨越人工关卡后才成为被认可的已验收输入；诸如 ES-17 这样的未决问题历经多次转换依然得以保留；纠偏操作被退回给引入漂移的专家智能体；而每一项被验收的决策都能明确溯源至扎实的证据链和获得授权的人工裁决。智能体极大地加速了领域探索、转换与协作协调，但它们从未擅自获得将看似合理的推论独自升格为领域知识的特权。
+:::en
+> **Original**: Across the book, the focus has shifted from producing AI-generated outputs to preserving the chain that makes those outputs trustworthy. Raw observations became candidate facts. Candidates crossed human gates before becoming accepted inputs; unresolved questions such as ES-17 survived multiple transformations; corrections returned to the specialist who introduced the drift; and every accepted decision remained attributable to evidence and human authority. Agents accelerated discovery, transformation, and coordination, but they never acquired the authority to turn a plausible interpretation into domain knowledge on their own.
+
+**📌 核心术语与语境解析**：
+- **Trustworthy chain of evidence** [ˈtrʌstwɜːði tʃeɪn əv ˈevɪdəns]：*值得信赖的证据链路*。AI 增强 DDD 的终极基石：AI 智能体极大加速推演与分析，但绝对不可让其自凭概率跃升为业务领域的主宰者；唯有严密的证据溯源链、认知边界与人类最终审批权，才能构建高可靠的企业级核心系统。
+:::

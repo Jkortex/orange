@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（九）：Spring WebFlux 响应式流与 SSE 实时消息推送
 date: 2026-10-23T00:09:00Z
-description: 探索 Reactor 非阻塞反应式编程模型，构建 Server-Sent Events (SSE) 实时通道，实现图书上新与库存变动的流式推送。
+description: 双栏独立滚动对照：探索 Reactor 非阻塞反应式编程模型，构建 Server-Sent Events (SSE) 实时通道，实现图书上新与库存变动的流式推送。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -12,279 +12,49 @@ tags:
   - 实时通信
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Spring Boot 4 & Angular 22 全栈微服务实战》](/columns/spring-boot-angular)。全专栏共 22 篇，深度覆盖 Java 26 微服务拆分、Spring Cloud 网关与安全鉴权、Angular 22 Signals 状态治理以及端到端容器化交付的全链路工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
-在上一篇中，我们完成了系统的安全加固：引入 Keycloak 集中式认证中心、在 Spring Cloud Gateway 构建了 OAuth2/JWT 资源服务器校验层，并确立了跨微服务传播身份上下文的安全契约。此时，系统已经具备清晰的信任边界。
+## 1. 实时消息传输与并发模型技术决策矩阵
 
-然而，**“安全”并不自动等同于“高并发可扩展”**。
+### 1.1 实时通信协议横向对比
 
-在网上书店的实际业务中，当某本爆款新书上线促销时，成千上万的用户会同时涌入系统：有人浏览商品目录，有人等待秒杀降价，还有外部聚合平台需要实时捕获库存变动。如果仍基于传统的 Servlet 阻塞模型，服务器将迅速陷入线程饥渴。
+| 协议方案 | 通信方向 | 传输开销 | 连接复用与重连 | 适用场景与选型依据 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Server-Sent Events (SSE)** | 服务端向客户端单向流式推送 | 极低（原生基于标准 HTTP/1.1 与 HTTP/2） | 浏览器 `EventSource` 原生支持断线自动重连 | **服务端单向广播首选**：图书上新、降价提醒、库存流式下发 |
+| **WebSocket** | 全双工双向交互 | 较低（需从 HTTP 升级握手至 WS 协议） | 需前端应用层实现心跳检测与重连逻辑 | 适合实时聊天、在线协作白板、双向游戏竞技 |
+| **HTTP 短轮询 (Polling)** | 客户端周期性拉取 | 极高（海量无效空请求与 TCP 握手） | 无连接状态，每次独立请求 | 仅作为老旧浏览器或无长连接支撑环境的降级备选 |
 
-本文我们将重构 Inventory（库存）微服务，打破经典的“每请求一线程（Thread-per-request）”思维定式，引入基于 **Project Reactor** 的 **Spring WebFlux** 响应式框架，构建健壮的 **Server-Sent Events (SSE)** 实时流推送管道，实现图书上新与价格变动的零轮询即时通知。
+### 1.2 并发与 I/O 模型对比
 
----
-
-## 一、传统 Servlet 阻塞模型与高并发瓶颈
-
-### 1. 传统 API 调用：Thread-per-request 的资源浪费
-
-在传统的 Spring MVC 架构中，Tomcat 等 Servlet 容器为每个入站 HTTP 请求从线程池中分配一个工作线程。该线程全权负责请求的整个生命周期：从 Controller、Service 逻辑计算，到通过 JPA 发起数据库阻塞查询，直到最后序列化并回写响应：
-
-![传统 API 调用处理机制](/media/posts/spring-boot-angular/img-09029.png)
-
-在这个链路中，**高并发下的核心资源瓶颈往往不是 CPU 算力，而是无意义的 I/O 等待**。如下图所示，在等待数据库响应的 100~200 毫秒内，该线程处于挂起阻塞状态：
-
-![阻塞式 API 请求处理](/media/posts/spring-boot-angular/img-09030.png)
-
-当瞬时并发达到数千时，线程池迅速被打满。操作系统频繁进行线程上下文切换（Context Switching），内存占用激增，排队延迟恶化，系统吞吐量断崖式下跌。
-
-### 2. 轮询（Polling） vs 流式推送（Streaming）
-
-在“图书降价与到货通知”场景下，传统的做法是客户端前端定时轮询（如每隔 5 秒发一次 GET 请求）。
-- **轮询的弊端**：在 99% 的轮询周期内，商品数据并未改变，但服务器却要承受海量无效请求、执行无意义的 SQL 查询，并反复传输冗余数据；
-- **流式推送的优势**：客户端只需建立一次长连接订阅，服务端仅在“真正发生状态改变”时，主动将事件推送至客户端。无变更时不产生任何网络开销，事件一旦发生即刻送达。
-
-但若在传统阻塞 Servlet 容器中维持成千上万个长期存活的 HTTP 长连接，就意味着必须长期占用对应数量的物理线程，服务器资源将迅速崩溃。
-
-### 3. 非阻塞 I/O 与 Netty 事件循环（Event Loop）
-
-为了以极低的资源代价维系海量长连接，必须切换到**非阻塞事件驱动模型（Non-blocking Event Loop）**。Spring WebFlux 默认以内嵌 **Netty** 作为底层运行时：
-
-![Event Loop 事件循环处理模型](/media/posts/spring-boot-angular/img-09031.png)
-
-Netty 并不为每个连接分配独占线程，而是依靠少数几个核心事件循环线程（通常为 CPU 核心数的 1~2 倍）多路复用（Multiplexing）管理成千上万的客户端通道。当 I/O 尚未就绪时，事件循环线程立即去处理其它连接的事件；当底层的 Socket 缓冲区可读或异步数据准备完毕时，系统发出就绪信号，事件循环再回调执行后续逻辑。
-
-这种机制彻底消除了“一个长连接绑定一个线程”的致命消耗，使单机维持数万个实时推送通道成为现实。
-
-### 4. 架构反思：何时不应盲目引入响应式？
-
-响应式编程绝非放之四海皆准的银弹。它引入了异步回调的思维切换、更加复杂的调用栈跟踪与调试难度，以及严格的无阻塞纪律。若系统满足以下特征，传统的 Spring MVC 依然是更稳健的选择：
-- 低流量或中小型内部管理系统；
-- 绝大部分属于纯 CPU 密集型运算；
-- 强依赖大量缺乏非阻塞驱动的第三方遗留库。
-
-在书店业务中，我们并非推倒重来，而是采取**渐进式混合架构**：常规增删改查仍保留成熟的 JPA 持久层，而将 WebFlux 精准应用在**实时状态分发与 SSE 流式推送**关键路径上。
+| 架构维度 | 传统 Servlet 阻塞模型 (Spring MVC + Tomcat) | 反应式非阻塞模型 (Spring WebFlux + Netty) |
+| :--- | :--- | :--- |
+| **线程利用** | **Thread-per-request**：每个请求占用独占物理线程 | **Event Loop**：少量固定工作线程多路复用海量连接 |
+| **I/O 等待开销** | 数据库查询或下游 RPC 期间线程挂起，内存消耗大 | 异步回调驱动，无阻塞等待，释放 CPU 处理其他连接 |
+| **长连接承载力** | 维持数千长连接即耗尽线程池与物理内存 | 单机可维系万级以上轻量级 SSE / TCP 挂起连接 |
+| **编程模型** | 命令式同步编程，堆栈清晰，易于调试 | 声明式响应式流（Reactive Streams），依赖操作符链条 |
 
 ---
 
-## 二、深入理解 Project Reactor 响应式内核
+## 2. 基于 Sinks.Many 的反应式事件多播生产范式
 
-Spring WebFlux 的底层基石是 **Project Reactor**。当我们从 Controller 返回 `Mono<Book>` 或 `Flux<BookEvent>` 时，我们并非直接返回数据，而是构建了一条符合 **Reactive Streams** 规范的声明式、惰性执行的数据流管道。
-
-### 1. Reactive Streams 规范与背压（Backpressure）机制
-
-Reactive Streams 规范定义了四项核心接口：`Publisher<T>`（发布者）、`Subscriber<T>`（订阅者）、`Subscription`（订阅关系）以及 `Processor<T, R>`。其最核心的架构价值在于引入了**背压（Backpressure）协商机制**：
-
-![Reactive Streams 契约与背压流转](/media/posts/spring-boot-angular/img-09032.png)
-
-在传统盲目 Push 模式下，若生产者发送过快，消费能力较弱的下游客户端会因瞬时高负载导致内存溢出或响应卡死。而在 Reactive Streams 协议中：
-1. `Subscriber` 向 `Publisher` 发起订阅；
-2. `Publisher` 返回 `Subscription` 凭证；
-3. `Subscriber` 通过 `subscription.request(n)` 主动向发布者声明当前具备处理能力的元素数量；
-4. `Publisher` 严格按照配额只推送不超过 $n$ 个数据项。
-
-在我们的书店通知系统中，`NotificationService` 是事件发布者，前端浏览器建立的 SSE 连接是订阅者。通过 Reactor 框架，下游的消费速率直接制约着上游的数据流速，构建起天然的流量韧性屏障。
-
-### 2. Mono 与 Flux 的生命周期语义
-
-- **Mono<T>**：代表包含 **0 或 1 个元素**的异步序列。
-- **Flux<T>**：代表包含 **0 到 N 个元素（可无限流转）**的异步序列。
-
-理解 Reactor 最核心的心智模型是**惰性求值（Laziness）**：
-> “Nothing happens until you subscribe.”（在被显式订阅之前，一切代码只是静态的执行计划，不会产生实际数据操作）。
-
-在 Spring WebFlux 中，Controller 返回的 `Mono` 或 `Flux` 会被框架自动在底层发起订阅，并按信号流（Signal）驱动输出：
-- `onNext(T)`：发出一个数据项；
-- `onComplete()`：序列正常终止；
-- `onError(Throwable)`：序列发生异常并终止。
-
-### 3. 常用反应式操作符实战
-
-响应式操作符是操纵数据流的语法工具：
+使用 Project Reactor 提供的 `Sinks.Many` 构建进程内热发布（Hot Publisher）事件分发中心，并配置背压环形缓冲区：
 
 ```java
-// 1. 过滤与转换
-notificationService.streamEvents()
-    .filter(event -> event.getEventType() == EventType.PRICE_CHANGE)
-    .map(this::enrichForClient);
+package com.packt.bookstore.inventory_service.service;
 
-// 2. 声明式错误恢复，而非粗暴抛出异常
-findOneReactive(id)
-    .onErrorResume(ex -> Mono.error(new BusinessException("Lookup failed", ex)));
+import com.packt.bookstore.inventory_service.event.BookEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
-// 3. 线程调度切换：保护 Event Loop 的关键！
-Mono.fromCallable(() -> blockingJpaRepository.findById(id))
-    .subscribeOn(Schedulers.boundedElastic());
-```
-
----
-
-## 三、库存微服务的“渐进式响应式”混合架构
-
-在 Inventory 微服务中，如果全盘重构为 R2DBC 响应式数据库，不仅需要重构所有复杂关系表映射，还会失去 JPA 丰富的生态积累。因此，我们选择了一种务实且成熟的工程方案：**混合架构（Hybrid Architecture）**。
-
-### 1. 引入 WebFlux 依赖
-
-在 `inventory-ms/pom.xml` 中，用 `spring-boot-starter-webflux` 替换原有的 `spring-boot-starter-web`：
-
-```xml
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-webflux</artifactId>
-</dependency>
-```
-
-引入此依赖后，Spring Boot 会自动卸载 Tomcat，换由 **Netty** 提供非阻塞服务底座。
-
-### 2. 核心纪律：严禁在 Netty Event Loop 上执行阻塞 I/O
-
-JPA 与 PostgreSQL JDBC 驱动是彻底的阻塞模型。**若直接在 Netty 的事件循环线程中调用 JPA 查询，事件循环线程被挂起，将连带阻塞由该线程承载的所有其它并发连接！**
-
-为此，凡是必须在反应式链条中调用的 JPA 操作，必须强制切换至弹性阻塞调度器（`Schedulers.boundedElastic()`）：
-
-```java
-public Mono<BookResponse> findBookByIdReactive(Long id) {
-    return Mono.fromCallable(() -> bookRepository.findById(id))
-            .subscribeOn(Schedulers.boundedElastic()) // 剥离到专属阻塞线程池执行
-            .flatMap(optional -> optional
-                    .map(book -> Mono.just(bookMapper.toResponse(book)))
-                    .orElseGet(() -> Mono.error(new ResourceNotFoundException("Book not found"))));
-}
-```
-
-而在常规的增删改业务中，依旧维持标准的同步执行，仅在数据库事务提交完成后，向反应式管道发射一个领域事件。
-
-### 3. 响应式安全上下文管理
-
-在 Servlet 模型下，安全上下文（`SecurityContext`）保存在 `ThreadLocal` 中。但在响应式管道里，一次请求的执行可能在多个不同线程之间流转切换。
-
-WebFlux 依托 Reactor 提供的 **Context（上下文容器）** 自动传递认证状态。对于需要鉴权的受保护 SSE 或 API 路由，网关传来的认证令牌会在建立 SSE 握手连接时被校验，保障数据管道的安全性。
-
----
-
-## 四、领域事件模型设计：信封-载荷模式
-
-事件流绝非随意散落的 JSON 碎片，必须具备清晰的自解释性与面向未来的扩展能力。我们采用**信封-载荷（Envelope-and-Payload）**模式定义领域事件。
-
-### 1. 统一事件外层信封：BookEvent
-
-`BookEvent.java` 是所有实时流推送的顶层契约：
-
-```java
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class BookEvent {
-    // 基础信封元数据
-    private String eventId;          // 事件全局唯一 UUID，用于防重与链路追踪
-    private EventType eventType;      // 事件类型枚举：NEW_BOOK, PRICE_CHANGE 等
-    private LocalDateTime timestamp;  // 事件生成时间戳
-    
-    // 关键领域定位锚点
-    private Long bookId;
-    private String bookTitle;
-    private String isbn;
-    
-    // 异构多态业务载荷
-    private Object eventData;
-}
-```
-
-### 2. 新书上线载荷：NewBookEventData
-
-新书上线事件承载完整的图书业务属性。我们不建议仅推送一个 `bookId` 让前端再发起一次 HTTP 回查，而应提供自闭环的上下文：
-
-```java
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class NewBookEventData {
-    private String authorName;
-    private String genre;
-    private BigDecimal price;
-    private Integer quantity;
-    private LocalDate published;
-    private String description;
-    private Integer pageCount;
-    private String coverImageUrl;
-}
-```
-
-### 3. 价格变更载荷：PriceChangeEventData
-
-价格变动不能只推送“当前新价格”，而必须表达“状态跃迁”的过程：
-
-```java
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class PriceChangeEventData {
-    private BigDecimal oldPrice;
-    private BigDecimal newPrice;
-    private BigDecimal priceChange;       // 差价绝对值（newPrice - oldPrice）
-    private Double percentageChange;      // 涨跌百分比
-}
-```
-
-客户端接收到此类事件后，无需比对历史快照，即可直接高亮促销降价标签或触发降价提醒。
-
-### 4. 关键原则：严格在事务提交后发射事件
-
-**在分布式事件驱动设计中，绝不能在数据持久化成功之前发射事件！** 否则，一旦后续数据库事务因唯一键冲突或校验失败而回滚，前端已接收到“新书上线”通知，造成严重的脏数据感知：
-
-```java
-@Transactional
-public BookResponse createBook(BookCreateRequest req) {
-    validateSemanticsForCreate(req);
-    Author author = resolveAuthorById(req.authorId());
-    Book entity = bookMapper.toEntity(req, author);
-    
-    // 1. 阻塞执行持久化
-    Book saved = bookRepository.save(entity);
-    
-    // 2. 数据库写入成功后，发射 NEW_BOOK 领域事件至响应式流
-    publishNewBookEvent(saved);
-    
-    return bookMapper.toResponse(saved);
-}
-
-@Transactional
-public BookResponse updatePrice(Long bookId, BigDecimal newPrice) {
-    Book existing = bookRepository.findById(bookId)
-            .orElseThrow(() -> new ResourceNotFoundException("Book not found"));
-    
-    BigDecimal oldPrice = existing.getPrice();
-    boolean priceChanged = newPrice != null && newPrice.compareTo(oldPrice) != 0;
-    
-    existing.setPrice(newPrice);
-    Book saved = bookRepository.save(existing);
-    
-    // 价格确实发生变更时才触发推送
-    if (priceChanged) {
-        publishPriceChangeEvent(saved, oldPrice, newPrice);
-    }
-    
-    return bookMapper.toResponse(saved);
-}
-```
-
----
-
-## 五、响应式通知管道与 SSE 实时端点落地
-
-### 1. 基于 Sinks 构建进程内多播事件总线
-
-在 `NotificationService` 中，我们使用 Reactor 提供的 `Sinks.Many` 构建微服务内部的热发布（Hot Publisher）事件分发中心：
-
-```java
 @Service
-@Slf4j
 public class NotificationService {
 
-    // 核心事件多播 Sink：支持背压缓冲 256 个溢出事件
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
+
+    // 核心事件多播器：背压缓冲 256 个溢出事件
     private final Sinks.Many<BookEvent> sink = 
             Sinks.many().multicast().onBackpressureBuffer(256);
 
@@ -294,12 +64,12 @@ public class NotificationService {
     public void publish(BookEvent event) {
         Sinks.EmitResult result = sink.tryEmitNext(event);
         if (result.isFailure()) {
-            log.warn("无法发射事件 [ID: {}]，原因: {}", event.getEventId(), result);
+            log.warn("无法发射事件 [ID: {}]，发射结果: {}", event.getEventId(), result);
         }
     }
 
     /**
-     * 暴露只读的 Flux 视图供 Controller 订阅
+     * 暴露只读 Flux 供 SSE 控制器订阅
      */
     public Flux<BookEvent> getEventStream() {
         return sink.asFlux();
@@ -307,26 +77,36 @@ public class NotificationService {
 }
 ```
 
-- `Sinks.many().multicast()`：采用**多播模式**。所有目前连接的客户端共享同一事件流，一条事件广播到所有在线订阅者；
-- `onBackpressureBuffer(256)`：为每个订阅通道保留 256 个背压环形缓冲区，当某些客户端网络短暂抖动时，缓冲堆叠数据，避免连接直接被重置；
-- 这是一个热数据源（Hot Stream）：客户端只接收连接建立后发生的最新事件，历史旧数据不作回溯。
+---
 
-### 2. 暴露 Server-Sent Events (SSE) 流式端点
+## 3. WebFlux SSE 实时流式端点生产范式
 
-在 `NotificationController` 中，对外暴露响应式实时流接口：
+控制器声明 `MediaType.TEXT_EVENT_STREAM_VALUE`，基于非阻塞管道输出带有事件名称与唯一 ID 的标准 SSE 帧，并监听连接生命周期：
 
 ```java
+package com.packt.bookstore.inventory_service.controller;
+
+import com.packt.bookstore.inventory_service.event.BookEvent;
+import com.packt.bookstore.inventory_service.event.EventType;
+import com.packt.bookstore.inventory_service.service.NotificationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+
 @RestController
 @RequestMapping("/api/notifications")
-@RequiredArgsConstructor
-@Slf4j
 public class NotificationController {
 
+    private static final Logger log = LoggerFactory.getLogger(NotificationController.class);
     private final NotificationService notificationService;
 
-    /**
-     * SSE 实时事件流端点
-     */
+    public NotificationController(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<BookEvent>> streamEvents() {
         return notificationService.getEventStream()
@@ -335,13 +115,10 @@ public class NotificationController {
                         .event(event.getEventType().name())
                         .data(event)
                         .build())
-                .doOnSubscribe(sub -> log.info("新的客户端建立 SSE 实时通道"))
-                .doOnCancel(() -> log.info("客户端断开 SSE 实时通道"));
+                .doOnSubscribe(sub -> log.info("客户端成功建立 SSE 实时通道"))
+                .doOnCancel(() -> log.info("客户端主动断开 SSE 实时通道"));
     }
 
-    /**
-     * 带有类型过滤的针对性订阅
-     */
     @GetMapping(value = "/stream/{type}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<BookEvent>> streamEventsByType(@PathVariable EventType type) {
         return notificationService.getEventStream()
@@ -355,80 +132,412 @@ public class NotificationController {
 }
 ```
 
-- `produces = MediaType.TEXT_EVENT_STREAM_VALUE`：这是让 HTTP 连接转变为 SSE 长连接的关键声明。Spring WebFlux 识别此媒体类型后，将不再关闭 HTTP 通道，而是以 `text/event-stream` 格式持续分块（Chunked）刷新输出；
-- **连接生命周期自动化管理**：当客户端关闭浏览器标签页或断开连接时，Netty 探测到底层 TCP 通道关闭，主动触发 `doOnCancel()` 并注销订阅，彻底消除了内存泄漏和孤儿线程（Ghost Connections）隐患。
+---
+
+## 4. 阻塞 JPA 与非阻塞 Event Loop 隔离调度范式
+
+在混合架构中，严禁在 Netty 事件循环线程中调用阻塞式 JPA。必须使用 `Schedulers.boundedElastic()` 将阻塞 I/O 剥离至弹性线程池：
+
+```java
+package com.packt.bookstore.inventory_service.service;
+
+import com.packt.bookstore.inventory_service.dto.BookResponse;
+import com.packt.bookstore.inventory_service.exception.ResourceNotFoundException;
+import com.packt.bookstore.inventory_service.mapper.BookMapper;
+import com.packt.bookstore.inventory_service.repository.BookRepository;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+
+@Service
+public class ReactiveBookQueryService {
+
+    private final BookRepository bookRepository;
+    private final BookMapper bookMapper;
+
+    public ReactiveBookQueryService(BookRepository bookRepository, BookMapper bookMapper) {
+        this.bookRepository = bookRepository;
+        this.bookMapper = bookMapper;
+    }
+
+    public Mono<BookResponse> findBookByIdReactive(Long id) {
+        return Mono.fromCallable(() -> bookRepository.findById(id))
+                // 核心隔离：强制剥离到弹性阻塞调度器执行，杜绝挂起 Netty Event Loop
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(optional -> optional
+                        .map(book -> Mono.just(bookMapper.toResponse(book)))
+                        .orElseGet(() -> Mono.error(new ResourceNotFoundException("Book not found with id: " + id))));
+    }
+}
+```
 
 ---
 
-## 六、端到端测试与流式管道验证
+## 5. 反应式实时流与背压时序架构图
 
-### 1. 终端命令行建立 SSE 长连接订阅
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as 前端 (Angular EventSource)
+    participant Controller as NotificationController
+    participant Sinks as Sinks.Many (Multicast)
+    participant Biz as BookService (@Transactional)
+    participant DB as PostgreSQL (5432)
 
-打开一个独立终端（Terminal 1），使用 `curl` 监听 SSE 实时端点：
+    Client->>Controller: GET /api/notifications/stream (Accept: text/event-stream)
+    Controller->>Sinks: asFlux() 注册订阅
+    Controller-->>Client: HTTP 200 OK (持续分块流 text/event-stream)
+    
+    Note over Biz,DB: 业务操作执行
+    Biz->>DB: INSERT / UPDATE 图书数据
+    DB-->>Biz: 事务成功提交 (Commit)
+    
+    Biz->>Sinks: tryEmitNext(BookEvent)
+    Note over Sinks: 1. 背压缓冲区暂存 (BackpressureBuffer)<br/>2. 广播至所有在线客户端 Flux
+    Sinks-->>Controller: onNext(ServerSentEvent)
+    Controller-->>Client: 推送 SSE 帧 (id: uuid, event: NEW_BOOK, data: {...})
+    
+    Note over Client,Controller: 客户端关闭页面时触发 TCP FIN
+    Controller->>Sinks: doOnCancel() 取消订阅并释放资源
+```
+
+---
+
+## 6. 架构避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 在数据库事务提交成功前发射领域事件。 | 必须在事务提交之后再向 `Sinks.Many` 投递事件，防止事务回滚导致客户端感知到脏数据。 |
+| 在 Netty Event Loop 线程中直接执行阻塞式的 JDBC/JPA 查询。 | 使用 `Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())` 隔离阻塞调用。 |
+| 使用无界队列缓冲慢消费者的实时事件。 | 显式声明背压策略（如 `onBackpressureBuffer(256)`），防止慢客户端耗尽服务端堆内存。 |
+| 双向复杂交互场景盲目选用 SSE。 | SSE 仅适合服务端单向广播场景；若需高频双向低延迟交互，应选用 WebSocket。 |
+| 忽略客户端断连导致后台流持续泄漏。 | 挂载 `doOnCancel()` 钩子，由框架在检测到底层 TCP 断开时自动注销订阅与释放通道资源。 |
+
+<!-- split -->
+
+# 原著完整参考：Spring WebFlux 响应式流与 SSE 实时消息推送
+
+在完成了微服务网关安全与认证体系的建设后，系统已经确立了严格的信任边界。然而，在真实生产环境中，微服务不仅需要防御非法访问，还需要在突发高流量访问与实时数据交互场景下维持极高的系统吞吐能力。
+
+在图书商城业务中，当热门书籍上线或开展限时折扣活动时，大量用户会同时在线关注图书状态。如果依然依赖传统的 Servlet 阻塞模型或客户端高频轮询机制，服务器的线程资源与数据库连接池将迅速耗尽。
+
+本文针对库存服务进行架构演进，打破传统的“每请求一线程（Thread-per-request）”模型，引入基于 **Project Reactor** 的 **Spring WebFlux** 响应式框架，落地基于 **Server-Sent Events (SSE)** 的轻量级实时流推送通道，实现图书上新与价格变动的零轮询即时下发。
+
+:::en
+> **Original**: Server-Sent Events provide a standardized, unidirectional transport over standard HTTP, allowing servers to stream events to web clients without the protocol upgrade overhead of WebSockets.
+
+**📌 核心术语与语境解析**：
+- **Server-Sent Events (SSE)** [ˈsɜːrvər sent ɪˈvents]：*服务端发送事件*。基于标准 HTTP/1.1 与 HTTP/2 的轻量级单向长连接实时流推送协议。
+- **Chunked Transfer Encoding** [tʃʌŋkt trænsˈfɜːr ɪnˈkoʊdɪŋ]：*分块传输编码*。HTTP 响应中无需预先计算内容总长度，允许服务端持续向客户端写出数据块的流式传输机制。
+:::
+
+---
+
+## 1. 传统 Servlet 阻塞模型与高并发瓶颈
+
+### 1.1 传统 API 调用：Thread-per-request 资源损耗
+
+在传统的 Spring MVC 架构中，Tomcat 等 Servlet 容器为每个入站 HTTP 请求从工作线程池中分配一个独占线程。该线程负责调用 Controller、执行业务逻辑、发起阻塞式数据库查询，直至最终回写响应报文：
+
+![传统 API 调用处理机制](/media/posts/spring-boot-angular/img-09029.png)
+
+在高并发场景下，**系统的主要资源瓶颈通常不是 CPU 运算能力，而是网络与 I/O 阻塞等待**。在等待数据库返回结果的数十至数百毫秒内，该工作线程处于完全挂起状态：
+
+![阻塞式 API 请求处理](/media/posts/spring-boot-angular/img-09030.png)
+
+当瞬时并发达到上千时，线程池迅速被打满。操作系统发生频繁的线程上下文切换（Context Switching），系统内存剧增，响应延迟急剧恶化。
+
+### 1.2 轮询（Polling） vs 流式推送（Streaming）
+
+在“图书降价与库存变动”场景中，客户端传统方案是定时发起 HTTP 轮询：
+- **轮询的弊端**：在绝大多数轮询周期中，数据并未改变，但服务器却要承受海量的无效握手、SQL 解析与冗余数据传输开销；
+- **流式推送的优势**：客户端仅需建立一次长连接订阅，服务端在真正发生领域状态改变时主动推送事件，无变动时维持零额外计算消耗。
+
+但在传统 Servlet 容器中，长连接意味着独占物理线程，无法承载海量并发挂起通道。
+
+### 1.3 非阻塞 I/O 与 Netty 事件循环（Event Loop）
+
+为解决这一问题，必须转向**非阻塞事件驱动模型**。Spring WebFlux 默认以 **Netty** 作为底层运行时：
+
+![Event Loop 事件循环处理模型](/media/posts/spring-boot-angular/img-09031.png)
+
+Netty 仅使用极少量的核心工作线程（通常为 CPU 核心数的 1~2 倍），通过 I/O 多路复用（Multiplexing）协同管理成千上万个客户端通道。当某个连接的 I/O 尚未就绪时，事件循环线程立即调度处理其他就绪通道；当底层 Socket 缓冲区就绪时，系统发出就绪信号，事件循环再执行后续业务回调。
+
+:::en
+> **Original**: The event loop model decouples connection count from thread count, utilizing non-blocking I/O multiplexing to handle tens of thousands of concurrent persistent connections on minimal system resources.
+
+**📌 核心术语与语境解析**：
+- **Event Loop** [ɪˈvent luːp]：*事件循环*。在单一线程中持续轮询并在底层 I/O 就绪时触发回调的非阻塞并发运行结构。
+- **I/O Multiplexing** [ˌaɪ ˈoʊ ˌmʌltɪˈpleksɪŋ]：*I/O 多路复用*。单个进程或线程通过 select/epoll 机制同时监听多个网络套接字就绪状态的技术。
+:::
+
+---
+
+## 2. Project Reactor 响应式内核与背压机制
+
+Spring WebFlux 的底层核心是 **Project Reactor**。Controller 返回的 `Mono` 或 `Flux` 并非直接数据容器，而是声明式的异步执行流水线。
+
+### 2.1 Reactive Streams 规范与背压（Backpressure）
+
+Reactive Streams 规范由四项核心接口定义：`Publisher<T>`（发布者）、`Subscriber<T>`（订阅者）、`Subscription`（订阅关系）与 `Processor<T, R>`。其核心架构贡献在于引入了**背压（Backpressure）流控机制**：
+
+![Reactive Streams 契约与背压流转](/media/posts/spring-boot-angular/img-09032.png)
+
+在传统的盲目 Push 模型中，若上游生产过快，下游消费能力不足会导致堆内存溢出。而在背压机制中：
+1. `Subscriber` 向 `Publisher` 发起订阅；
+2. `Publisher` 颁发 `Subscription` 凭证；
+3. `Subscriber` 通过 `subscription.request(n)` 显式向上游声明当前具备承载能力的元素配额；
+4. `Publisher` 严格受限于该配额下发数据项。
+
+### 2.2 Mono 与 Flux 的生命周期语义
+
+- **`Mono<T>`**：表示包含 **0 或 1 个元素**的异步序列；
+- **`Flux<T>`**：表示包含 **0 到 N 个元素（可无限流转）**的异步序列。
+
+Reactor 遵循**惰性求值（Laziness）**法则：
+> 在被显式订阅（Subscribe）之前，任何代码仅为静态执行计划，不会产生实际数据操作。
+
+数据流驱动信号包含：
+- `onNext(T)`：发出一个数据项；
+- `onComplete()`：序列正常终止；
+- `onError(Throwable)`：序列发生异常并终止。
+
+:::en
+> **Original**: Reactive Streams define a non-blocking backpressure contract that allows downstream subscribers to pace upstream publishers, preventing memory exhaustion under uneven consumer throughput.
+
+**📌 核心术语与语境解析**：
+- **Backpressure** [ˈbækpreʃər]：*背压/回压*。下游订阅方通过信号反馈机制限制上游生产速率，保护消费端不被瞬时流量淹没的流量调节机制。
+- **Hot vs Cold Publisher** [hɑːt vɜːrsəs koʊld ˈpʌblɪʃər]：*热/冷发布者*。冷发布者在每个订阅发生时从头重新生成数据；热发布者无论是否有订阅者均持续产出数据，新订阅者仅接收后续到达的增量事件。
+:::
+
+---
+
+## 3. 库存微服务的“渐进式响应式”混合架构
+
+### 3.1 引入 WebFlux 依赖
+
+在 `inventory-ms/pom.xml` 中引入 WebFlux 替换 Servlet 容器：
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-webflux</artifactId>
+</dependency>
+```
+
+引入此依赖后，Spring Boot 自动卸载 Tomcat，换由 **Netty** 提供非阻塞服务底座。
+
+### 3.2 严禁在 Netty Event Loop 上执行阻塞 I/O
+
+JPA 与 PostgreSQL JDBC 驱动是典型的阻塞模型。若在 Netty 事件循环线程中直接调用 JPA 查询，事件循环线程被挂起，将连带阻塞由该线程负责管理的所有并发通道。
+
+因此，在混合架构中，凡是必须调用的阻塞 JPA 操作，必须强制切换到弹性调度器（`Schedulers.boundedElastic()`）：
+
+```java
+public Mono<BookResponse> findBookByIdReactive(Long id) {
+    return Mono.fromCallable(() -> bookRepository.findById(id))
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMap(optional -> optional
+                    .map(book -> Mono.just(bookMapper.toResponse(book)))
+                    .orElseGet(() -> Mono.error(new ResourceNotFoundException("Book not found"))));
+}
+```
+
+而在常规的写操作业务中，维持标准的同步执行，仅在数据库事务提交完成后，向反应式管道发射领域事件。
+
+:::en
+> **Original**: Blocking database calls must be isolated to dedicated thread pools like `Schedulers.boundedElastic()` to prevent starvation of the shared Netty event loops.
+
+**📌 核心术语与语境解析**：
+- **Thread Starvation** [θred stɑːrˈveɪʃn]：*线程饥饿*。因少量任务长期阻塞关键共享线程，导致其他大量就绪任务无法获得调度的并发异常状态。
+- **Bounded Elastic Scheduler** [ˈbaʊndɪd ɪˈlæstɪk ˈskedʒuːlər]：*有界弹性调度器*。Reactor 为阻塞 I/O 操作量身定制的自适应弹性线程池，具备最大容量限制与空闲回收特性。
+:::
+
+---
+
+## 4. 领域事件模型设计：信封-载荷模式
+
+事件流需具备自解释性与版本扩展能力，采用**信封-载荷（Envelope-and-Payload）**模式定义。
+
+### 4.1 统一顶层信封：BookEvent
+
+```java
+package com.packt.bookstore.inventory_service.event;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BookEvent {
+    private String eventId;
+    private EventType eventType;
+    private LocalDateTime timestamp;
+    private Long bookId;
+    private String bookTitle;
+    private String isbn;
+    private Object eventData;
+}
+```
+
+### 4.2 业务载荷模型
+
+价格变更载荷明确表达状态跃迁过程：
+
+```java
+package com.packt.bookstore.inventory_service.event;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PriceChangeEventData {
+    private BigDecimal oldPrice;
+    private BigDecimal newPrice;
+    private BigDecimal priceChange;
+    private Double percentageChange;
+}
+```
+
+### 4.3 核心原则：严格在事务提交后发射事件
+
+**在事件驱动架构中，绝不能在数据持久化事务提交之前发射事件**。否则一旦事务因约束冲突回滚，前端已接收到虚假通知，产生脏数据感知：
+
+```java
+@Transactional
+public BookResponse updatePrice(Long bookId, BigDecimal newPrice) {
+    Book existing = bookRepository.findById(bookId)
+            .orElseThrow(() -> new ResourceNotFoundException("Book not found"));
+    
+    BigDecimal oldPrice = existing.getPrice();
+    boolean priceChanged = newPrice != null && newPrice.compareTo(oldPrice) != 0;
+    
+    existing.setPrice(newPrice);
+    Book saved = bookRepository.save(existing);
+    
+    if (priceChanged) {
+        publishPriceChangeEvent(saved, oldPrice, newPrice);
+    }
+    
+    return bookMapper.toResponse(saved);
+}
+```
+
+---
+
+## 5. 响应式通知管道与 SSE 实时端点落地
+
+### 5.1 基于 Sinks 构建进程内多播总线
+
+在 `NotificationService` 中使用 `Sinks.Many` 构建微服务内部的热发布中心：
+
+```java
+@Service
+@Slf4j
+public class NotificationService {
+
+    private final Sinks.Many<BookEvent> sink = 
+            Sinks.many().multicast().onBackpressureBuffer(256);
+
+    public void publish(BookEvent event) {
+        Sinks.EmitResult result = sink.tryEmitNext(event);
+        if (result.isFailure()) {
+            log.warn("无法发射事件 [ID: {}]，原因: {}", event.getEventId(), result);
+        }
+    }
+
+    public Flux<BookEvent> getEventStream() {
+        return sink.asFlux();
+    }
+}
+```
+
+### 5.2 暴露 SSE 流式端点
+
+在 `NotificationController` 中对外暴露流式接口：
+
+```java
+@RestController
+@RequestMapping("/api/notifications")
+@RequiredArgsConstructor
+@Slf4j
+public class NotificationController {
+
+    private final NotificationService notificationService;
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<BookEvent>> streamEvents() {
+        return notificationService.getEventStream()
+                .map(event -> ServerSentEvent.<BookEvent>builder()
+                        .id(event.getEventId())
+                        .event(event.getEventType().name())
+                        .data(event)
+                        .build())
+                .doOnSubscribe(sub -> log.info("新的客户端建立 SSE 实时通道"))
+                .doOnCancel(() -> log.info("客户端断开 SSE 实时通道"));
+    }
+}
+```
+
+当客户端关闭标签页时，Netty 感知到底层 TCP 断开，主动触发 `doOnCancel()` 注销订阅，彻底杜绝孤儿连接与内存泄漏。
+
+---
+
+## 6. 端到端测试与流式管道验证
+
+### 6.1 终端建立 SSE 长连接监听
+
+在终端中通过 `curl` 建立流式监听：
 
 ```bash
-# 监听全局事件流
 curl -N -H "Accept: text/event-stream" http://localhost:8080/packt/inventory/api/notifications/stream
 ```
 
-> [!TIP]
-> `-N` 参数（`--no-buffer`）对 curl 至关重要，它能关闭 curl 的本地输出缓存，确保服务端推送的 SSE 消息能立即在终端控制台实时逐行打出。
+> 提示：`-N` 参数（`--no-buffer`）可关闭输出缓冲，确保服务端推送的数据实时逐行呈现。
 
-### 2. 触发领域变更事件
+### 6.2 触发价格变更
 
-打开另一个终端（Terminal 2），通过 API Gateway 依次触发创建书籍与修改价格：
-
-```bash
-# 1. 录入一本新书
-curl -X POST http://localhost:8080/packt/inventory/api/books \
-  -H "Authorization: Bearer ${AUTHOR_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Reactive Spring Boot 4 in Action",
-    "isbn": "978-7-111-88888-8",
-    "authorId": 1,
-    "price": 89.00
-  }'
-```
+通过网关发起图书调价请求：
 
 ```bash
-# 2. 调整该图书的价格（模拟促销降价）
 curl -X PATCH http://localhost:8080/packt/inventory/api/books/1 \
   -H "Authorization: Bearer ${ADMIN_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"price": 69.00}'
 ```
 
-### 3. 观察 SSE 实时接收报文
+### 6.3 观察 SSE 推送报文
 
-此时切换回 Terminal 1，可以看到长连接无需刷新，自动推送了标准格式的 SSE 帧：
+监听终端立即捕获并打印出格式化的 SSE 数据帧：
 
 ```http
-id:550e8400-e29b-41d4-a716-446655440000
-event:NEW_BOOK
-data:{"eventId":"550e8400-e29b-41d4-a716-446655440000","eventType":"NEW_BOOK","timestamp":"2026-10-23T10:30:00","bookId":1,"bookTitle":"Reactive Spring Boot 4 in Action","isbn":"978-7-111-88888-8","eventData":{"authorName":"Josh Long","price":89.00,"quantity":50}}
-
 id:660f9511-f30c-52e5-b827-557766551111
 event:PRICE_CHANGE
-data:{"eventId":"660f9511-f30c-52e5-b827-557766551111","eventType":"PRICE_CHANGE","timestamp":"2026-10-23T10:35:00","bookId":1,"bookTitle":"Reactive Spring Boot 4 in Action","isbn":"978-7-111-88888-8","eventData":{"oldPrice":89.00,"newPrice":69.00,"priceChange":-20.00,"percentageChange":-22.47}}
+data:{"eventId":"660f9511-f30c-52e5-b827-557766551111","eventType":"PRICE_CHANGE","timestamp":"2026-10-23T10:35:00","bookId":1,"bookTitle":"Reactive Spring Boot in Action","isbn":"978-7-111-88888-8","eventData":{"oldPrice":89.00,"newPrice":69.00,"priceChange":-20.00,"percentageChange":-22.47}}
 ```
 
-### 4. 验证分类通道过滤隔离
-
-测试定制化过滤端点：
-- 启动终端 A：`curl -N http://localhost:8080/packt/inventory/api/notifications/stream/NEW_BOOK`
-- 启动终端 B：`curl -N http://localhost:8080/packt/inventory/api/notifications/stream/PRICE_CHANGE`
-
-再次触发价格调整时，只有终端 B 会捕获到数据，终端 A 保持静默。这验证了 WebFlux 操作符在服务端进行流过滤分发的精准性。
+前端接收到该事件帧后，即可直接解析载荷并在界面局部更新降价标签。
 
 ---
 
-## 七、总结与全栈展望
+## 7. 总结与全栈展望
 
-在微服务技术架构中，从“传统的阻塞式请求-响应”跃迁至“响应式实时流”，是一次重大的架构升级：
+从“同步阻塞请求-响应”跃迁至“响应式实时流”带来了系统吞吐能力的显著提升：
+- **资源利用率质的突破**：借助 Netty 事件循环，微服务将长连接开销从昂贵的操作系统线程转化为轻量通道对象，单机轻松支撑大规模并发推送；
+- **务实的渐进式混合架构**：通过 `Schedulers.boundedElastic()` 有效隔离阻塞 JPA 与非阻塞 Event Loop，兼顾响应性能与既有业务资产；
+- **自解释的领域事件信封**：以标准 `BookEvent` 规范推送完整业务状态转移，消除无意义的反向查询。
 
-1. **资源利用率的质的飞跃**：借助 Netty 的 Event Loop 机制，我们将长连接占用的开销从昂贵的操作系统物理线程转换为轻量的非阻塞通道对象，单机轻松抗住海量在线推送；
-2. **务实的混合架构落地**：不盲目全盘改造，把阻塞 JPA 与响应式 WebFlux 有序隔离在不同的线程调度域（`Schedulers.boundedElastic`），既保护了核心事件循环的响应性，又最大化复用了成熟业务持久层逻辑；
-3. **领域驱动的自包含设计**：通过统一的 `BookEvent` 信封模型，将“有业务价值的完整状态转移”推送到消费端，从根本上杜绝了无意义的轮询与反向查询。
-
-随着后端服务已经具备完整的微服务拆分、服务发现、网关安全以及实时推送能力，下一篇我们将进入生产工程化交付阶段——**微服务容器化构建与多阶段镜像打包（Docker & OCI）**，探索如何将所有服务标准化打包并为 Kubernetes 部署做好准备。
+随着后端服务已经具备完整的微服务拆分、服务发现、网关安全与实时流式推送能力，下一篇我们将进入生产工程化交付阶段——**微服务容器化构建与多阶段镜像打包（Docker & OCI）**，探索如何将所有服务标准化打包并为分布式集群部署做好准备！

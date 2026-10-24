@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（四）：Spring Data 多范式持久化（PostgreSQL 与 MongoDB）
 date: 2026-10-23T00:04:00Z
-description: 结合关系型数据库 PostgreSQL 与 NoSQL 文档数据库 MongoDB，实战 Spring Data JPA 与 Spring Data MongoDB 的实体建模、Repository 设计与多范式持久化架构。
+description: 双栏独立滚动对照：结合关系型数据库 PostgreSQL 与 NoSQL 文档数据库 MongoDB，实战 Spring Data JPA 与 Spring Data MongoDB 的实体建模、Repository 设计与多范式持久化架构。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -12,34 +12,228 @@ tags:
   - 持久化
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Spring Boot 4 & Angular 22 全栈微服务实战》](/columns/spring-boot-angular)。全专栏共 22 篇，深度覆盖 Java 26 微服务拆分、Spring Cloud 网关与安全鉴权、Angular 22 Signals 状态治理以及端到端容器化交付的全链路工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
----
+## 1. 架构选型与多范式持久化决策矩阵
 
-在前几篇的实战演练中，我们完成了微服务工程的工程脚手架搭建与核心架构规划。在现代全栈系统的微服务落地过程中，数据持久化（Persistence Layer）往往是决定系统伸缩性、事务边界和演进效率的关键地基。
+| 架构维度 | PostgreSQL 17 (关系型 / Spring Data JPA) | MongoDB 8 (文档型 NoSQL / Spring Data Mongo) | 决策依据与架构考量 |
+| :--- | :--- | :--- | :--- |
+| **存储数据模型** | 表 (Tables)、行 (Rows)、外键关联 | 集合 (Collections)、BSON 嵌套文档 (Documents) | 库存强关联结构 vs 用户画像深层嵌套 |
+| **Schema 规范性** | 强 Schema，字段变更需 Flyway/DDL 迁移版本化 | 动态模式（Schema-less），按需灵活扩展 | 用户配置与偏好频繁演进无需锁表变更 |
+| **事务一致性** | 跨表 ACID 强事务、行级锁并发控制 | 单文档内原子更新，多文档分布式事务成本高 | 库存扣减要求绝对一致；用户画像单文档内高内聚 |
+| **关联与查询** | SQL / JPQL，支持多表 JOIN 与 `JOIN FETCH` | 点路径嵌套穿透，避免重型 `$lookup` 聚合 | JPA 规约规范；MongoDB 读吞吐极佳（单文档免 JOIN） |
+| **测试切片工具** | `@DataJpaTest`（配合 Testcontainers / PostgreSQL） | `@DataMongoTest`（配合 Testcontainers / Mongo） | 毫秒级持久层切片单元测试 |
+| **微服务边界归属** | **库存微服务 (inventory-ms)** | **用户微服务 (user-ms)** | 严格践行 Database-per-Service 原则 |
 
-单一的“万能数据库”时代早已过去。在分布式微服务架构中，**多范式持久化（Polyglot Persistence）** 是最核心的设计哲学——根据不同微服务内聚的业务上下文（Bounded Context），挑选最适合其访问模式与数据特征的存储引擎。
+## 2. 生产级高内聚多范式持久化代码范式
 
-本篇我们将通过书店系统的两个核心微服务，完整落地多范式持久化方案：
-1. **库存微服务（Inventory Service）**：面对图书、作者、库存、分类之间严苛的实体关联与强事务约束，选择 **PostgreSQL 17** 搭配 **Spring Data JPA**。
+### 2.1 JPA 实体与 N+1 查询治理（`JOIN FETCH`）
+
+```java
+package com.packt.bookstore.inventory.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "books")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = false)
+public class Book extends Auditable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(nullable = false, unique = true)
+    private String isbn;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
+
+    @Column(nullable = false)
+    private int quantity;
+
+    // 生产规范：显式声明 LAZY 懒加载，严禁使用默认 EAGER
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
+    private Author author;
+
+    private String genre;
+    private LocalDate published;
+
+    @Column(length = 2000)
+    private String description;
+}
+```
+
+```java
+package com.packt.bookstore.inventory.repository;
+
+import com.packt.bookstore.inventory.entity.Book;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface BookRepository extends JpaRepository<Book, Long> {
+
+    // 关键优化：JOIN FETCH 强制单次 SQL 抓取关联实体，杜绝 1 + N 次查询
+    @Query("SELECT b FROM Book b JOIN FETCH b.author")
+    List<Book> findAllWithAuthors();
+}
+```
+
+### 2.2 Specification 动态组合规约查询范式
+
+```java
+package com.packt.bookstore.inventory.repository.spec;
+
+import com.packt.bookstore.inventory.entity.Book;
+import org.springframework.data.jpa.domain.Specification;
+import java.math.BigDecimal;
+
+public final class BookSpecifications {
+
+    private BookSpecifications() {}
+
+    public static Specification<Book> hasTitleLike(String keyword) {
+        return (root, query, cb) -> (keyword == null || keyword.isBlank())
+            ? cb.conjunction()
+            : cb.like(cb.lower(root.get("title")), "%" + keyword.toLowerCase() + "%");
+    }
+
+    public static Specification<Book> priceBetween(BigDecimal min, BigDecimal max) {
+        return (root, query, cb) -> {
+            if (min == null && max == null) return cb.conjunction();
+            if (min != null && max != null) return cb.between(root.get("price"), min, max);
+            if (min != null) return cb.greaterThanOrEqualTo(root.get("price"), min);
+            return cb.lessThanOrEqualTo(root.get("price"), max);
+        };
+    }
+}
+```
+
+### 2.3 MongoDB 内嵌文档与点路径查询范式
+
+```java
+package com.packt.bookstore.usermanagement.document;
+
+import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "users")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class User {
+
+    @Id
+    private String id; // 映射 MongoDB 底层 _id (ObjectId 字符串形式)
+
+    @Indexed(unique = true)
+    private String email;
+
+    @Indexed(unique = true)
+    private String username;
+
+    private Profile profile;         // 内嵌实体：免 JOIN 单文档聚合
+    private Preferences preferences; // 内嵌配置
+}
+```
+
+```java
+package com.packt.bookstore.usermanagement.repository;
+
+import com.packt.bookstore.usermanagement.document.User;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface UserRepository extends MongoRepository<User, String> {
+
+    // 点路径 (Dot notation) 穿透内嵌文档 JSON 字段
+    @Query("{ 'preferences.language': ?0 }")
+    List<User> findByLanguagePreference(String language);
+}
+```
+
+## 3. 多范式微服务数据持久化拓扑流图
+
+```text
+┌────────────────────────────────────────────────────────┐
+│           Bookstore 多范式数据持久化边界拓扑            │
+└───────────────────────────┬────────────────────────────┘
+                            │
+       ┌────────────────────┴────────────────────┐
+       ▼                                         ▼
+[ 库存微服务: inventory-ms ]            [ 用户微服务: user-ms ]
+├── 领域模型: 实体关联与强事务约束           ├── 领域模型: 嵌套文档与灵活 Schema
+├── 框架引擎: Spring Data JPA + Hibernate  ├── 框架引擎: Spring Data MongoDB
+├── 查询抽象: JPQL / Specification / ILIKE ├── 查询抽象: JSON Query / MongoTemplate
+└── 持久边界: PostgreSQL 17 (5432)        └── 持久边界: MongoDB 8 (27017)
+```
+
+## 4. 持久层架构避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 在生产或预发环境开启 `spring.jpa.hibernate.ddl-auto: update`。 | 生产显式设为 `validate` 或 `none`，使用 Flyway/Liquibase 执行版本化迁移脚本。 |
+| 开启 Open Session In View（`open-in-view: true`）隐式持有连接。 | 显式配置 `open-in-view: false`，强制懒加载与数据访问必须在 `@Transactional` 服务边界内完成。 |
+| 在 JPA 实体多对一或一对多关系中使用默认的 `FetchType.EAGER`。 | 始终显式声明 `FetchType.LAZY`，并在需要关联列表的场景使用 `JOIN FETCH`。 |
+| 跨微服务在应用层执行伪分布式跨库关联（Cross-service DB joins）。 | 严守 Database-per-Service 规则，跨微服务数据通过 API 聚合或消息总线领域事件交互。 |
+| 在无索引支持的字段上高频执行模糊正则匹配或深度点路径扫描。 | 对常用过滤字段（如 `email`, `username`, `isbn`）声明唯一或组合索引。 |
+
+<!-- split -->
+
+# 原著完整参考：Spring Data 多范式持久化（PostgreSQL 与 MongoDB）
+
+在现代全栈系统的微服务落地过程中，数据持久化（Persistence Layer）是决定系统伸缩性、事务边界和演进效率的关键地基。
+
+单一数据库已无法兼顾所有业务场景。在分布式微服务架构中，**多范式持久化（Polyglot Persistence）** 是核心设计模式——根据不同微服务内聚的业务上下文（Bounded Context），挑选最适合其访问模式与数据特征的存储引擎。
+
+本文通过书店系统的两个核心微服务，完整落地多范式持久化方案：
+1. **库存微服务（Inventory Service）**：面对图书、作者、库存、分类之间严格的实体关联与强事务约束，选择 **PostgreSQL 17** 搭配 **Spring Data JPA**。
 2. **用户管理微服务（User Service）**：面对快速演进、高频读取、包含复杂内嵌结构（如用户画像、多地址、偏好配置）的用户数据，选用文档型数据库 **MongoDB 8** 搭配 **Spring Data MongoDB**。
 
-通过本篇，我们将从容器化环境编排、领域实体建模、Spring Data 衍生与自定义查询、分页与排序，再到企业级 Repository 自动化测试，全面构建高质量的微服务持久化底座。
+本文从容器化环境编排、领域实体建模、Spring Data 衍生与自定义查询、分页与排序，再到企业级 Repository 自动化测试，全面构建高质量的微服务持久化底座。
+
+:::en
+> **Original**: Polyglot persistence empowers microservices to select optimal storage engines tailored to each domain's transactional integrity and data access patterns.
+
+**📌 核心术语与语境解析**：
+- **Polyglot Persistence** [ˈpɒliɡlɒt pəˈsɪstəns]：*多范式持久化*。在分布式系统中针对不同子域特性（如关系型、文档型、键值型）混用多种持久化存储的架构策略。
+- **Database-per-Service** [ˈdeɪtəbeɪs pɜː ˈsɜːvɪs]：*每个服务独立数据库*。微服务核心设计模式，每个微服务独占专用数据库，杜绝共享物理库。
+:::
 
 ---
 
 ## 1. 为什么选择多范式持久化（Polyglot Persistence）？
 
-微服务自治原则强调不仅要实现**代码逻辑的解耦**，更要实现**数据所有权的自治（Database-per-Service）**。不同业务领域的数据访问模式天差地别：
+微服务自治原则强调不仅要实现**代码逻辑的解耦**，更要实现**数据所有权的自治（Database-per-Service）**。不同业务领域的数据访问模式存在显著差异：
 
 - **关系型数据库（RDBMS - PostgreSQL）**：
-  - 数据模型严格标准化为表、行与列，外键约束天然守护业务完整性（如“不允许存在没有作者孤立图书”）。
-  - 支持多表 JOIN、复杂的聚合统计和严格的 ACID 事务。在库存微服务中，我们需要保证每笔库存扣减与图书元数据的绝对一致。
+  - 数据模型标准化为表、行与列，外键约束天然守护业务完整性（如“不允许存在无作者的孤立图书”）。
+  - 支持多表 JOIN、复杂的聚合统计和严格的 ACID 事务。在库存微服务中，需要保证每笔库存扣减与图书元数据的绝对一致。
 - **文档型 NoSQL 数据库（MongoDB）**：
   - 数据以类似 JSON 的 BSON 文档组织，无需预先固化严格的 Schema。
-  - 用户配置、收货地址、阅读偏好等字段会随系统演进而快速迭代。文档天然支持嵌套层级结构，单次查询即可直接返回完整聚合根，极大地降低了多次 JOIN 带来的查询开销与锁冲突。
+  - 用户配置、收货地址、阅读偏好等字段随系统演进而快速迭代。文档天然支持嵌套层级结构，单次查询即可直接返回完整聚合根，降低了多次 JOIN 带来的查询开销与锁冲突。
 
-下表总结了在微服务实践中两者的技术特征对比：
+两者的技术特征对比如下：
 
 | 架构维度 | PostgreSQL (关系型) | MongoDB (文档型 NoSQL) |
 | :--- | :--- | :--- |
@@ -55,11 +249,9 @@ tags:
 
 ## 2. 基于 PostgreSQL + Spring Data JPA 构建库存微服务
 
-我们首先落地库存微服务的数据持久层。
-
 ### 2.1 本地 Docker 容器化编排
 
-通过容器化基础设施，我们可以摆脱本地环境脏依赖的困扰，保证开发、CI/CD 与生产环境的高度一致：
+通过容器化基础设施，可以摆脱本地环境配置差异，保证开发、CI/CD 与生产环境的高度一致：
 
 ```bash
 docker run -d \
@@ -71,9 +263,9 @@ docker run -d \
   postgres:17
 ```
 
-参数解释：
-- `-e POSTGRES_USER=bookstore` / `POSTGRES_PASSWORD=bookstore123`：设置数据库超级用户与鉴权口令。
-- `-e POSTGRES_DB=inventory`：在容器启动时自动初始化名为 `inventory` 的数据库，作为库存微服务的专属数据库边界。
+参数说明：
+- `-e POSTGRES_USER=bookstore` / `POSTGRES_PASSWORD=bookstore123`：设置数据库超级用户与鉴权口令；
+- `-e POSTGRES_DB=inventory`：在容器启动时自动初始化名为 `inventory` 的数据库，作为库存微服务的专属数据库边界；
 - `-p 5432:5432`：将容器内 PostgreSQL 标准端口映射到宿主机。
 
 启动后通过以下指令验证容器运行状态与端口占用：
@@ -84,15 +276,13 @@ docker ps --filter "name=bookstore-postgres"
 
 ![验证 PostgreSQL 容器运行状态](/media/posts/spring-boot-angular/img-08933.png)
 
-同时可通过系统指令确认 5432 端口正被监听：
+通过系统指令确认 5432 端口正被监听：
 
 ```bash
 lsof -i :5432
 ```
 
 ![验证 5432 端口监听状态](/media/posts/spring-boot-angular/img-08935.png)
-
----
 
 ### 2.2 Maven 核心依赖声明
 
@@ -119,8 +309,6 @@ lsof -i :5432
   <artifactId>spring-boot-starter-data-jpa</artifactId>
 </dependency>
 ```
-
----
 
 ### 2.3 数据源与 JPA 参数深度配置
 
@@ -150,15 +338,15 @@ logging:
     "[org.hibernate.type.descriptor.sql]": TRACE
 ```
 
-#### 关键生产参数深度解析：
+#### 关键生产参数解析：
 1. **`hibernate.ddl-auto: update`**：
    在本地开发阶段，Hibernate 会比对实体定义并自动同步增量数据库表结构。
    > [!IMPORTANT]
-   > 在生产或预发环境中，必须将其显式设置为 `validate` 或 `none`！绝不能依赖 Hibernate 自动修改生产表结构，应使用 **Flyway** 或 **Liquibase** 执行严格版本化的 SQL 迁移脚本。
+   > 在生产或预发环境中，必须将其显式设置为 `validate` 或 `none`，使用 **Flyway** 或 **Liquibase** 执行严格版本化的 SQL 迁移脚本。
 2. **`open-in-view: false`**：
    Spring Boot 默认开启 OSIV（Open Session In View），会导致数据库连接一直保持到视图或 JSON 序列化阶段，容易造成连接池耗尽并引发隐蔽的延迟加载异常。将其设为 `false`，强迫所有懒加载和数据访问必须发生在明确声明的 `@Transactional` 服务层边界之内。
 3. **Hibernate SQL 追踪**：
-   将 `org.hibernate.SQL` 设为 `DEBUG`，`org.hibernate.type.descriptor.sql` 设为 `TRACE`，可在控制台清晰观察到生成的参数化 SQL 语句及实际入参绑定，极大方便调优。
+   将 `org.hibernate.SQL` 设为 `DEBUG`，`org.hibernate.type.descriptor.sql` 设为 `TRACE`，可在控制台清晰观察到生成的参数化 SQL 语句及实际入参绑定。
 
 执行启动命令验证数据源与 JPA 初始化：
 
@@ -170,16 +358,24 @@ logging:
 
 日志中出现 `Bootstrapping Spring Data JPA repositories` 以及 `HikariDataSource ... connected to jdbc:postgresql://...`，即代表数据源与 ORM 引擎装载完毕。
 
+:::en
+> **Original**: Disabling Open Session in View (`open-in-view: false`) prevents database connections from leaking into the presentation layer, confining transactional lifecycles to service boundaries.
+
+**📌 核心术语与语境解析**：
+- **Open Session in View (OSIV)** [ˈəʊpən ˈseʃn ɪn vjuː]：*视图层开放会话*。Spring 默认开启的反模式机制，将持久化会话延迟到视图渲染完毕后才关闭，易引发连接耗尽。
+- **Entity Auditing** [ˈentɪti ˈɔːdɪtɪŋ]：*实体审计*。通过 `@CreatedDate` 与 `@LastModifiedDate` 等注解自动填充元数据记录的持久化特性。
+:::
+
 ---
 
 ### 2.4 JPA 领域实体建模
 
-在书店库存领域中，核心领域模型由图书（`Book`）、作者（`Author`）以及通用审计元数据（`Auditable`）构成，其类图设计如下：
+在书店库存领域中，核心领域模型由图书（`Book`）、作者（`Author`）以及通用审计元数据（`Auditable`）构成，类图设计如下：
 
 ![库存微服务实体类图关联](/media/posts/spring-boot-angular/img-08939.png)
 
-#### 1. 抽取基础审计类（`Auditable`）
-所有实体都应具备基础的创建与最后修改时间。借助 Spring Data JPA 提供的 `@EntityListeners(AuditingEntityListener.class)`，我们无需手动干预时间戳：
+#### 1. 基础审计基类（`Auditable`）
+所有实体具备创建与最后修改时间。借助 Spring Data JPA 的 `@EntityListeners(AuditingEntityListener.class)` 实现自动填充：
 
 ```java
 package com.packt.bookstore.inventory.entity;
@@ -209,7 +405,7 @@ public abstract class Auditable {
 }
 ```
 
-别忘了在微服务主启动类上开启审计扫描：
+在微服务启动类上开启审计扫描：
 
 ```java
 @SpringBootApplication
@@ -274,12 +470,12 @@ public class Book extends Auditable {
 ```
 
 > [!NOTE]
-> 主键生成策略选用 `GenerationType.IDENTITY`，由底层 PostgreSQL 的 `SERIAL` / `BIGIDENTITY` 序列负责自动递增。关联关系必须显式声明 `FetchType.LAZY`（懒加载），严禁使用默认的 EAGER，以防意外的全表级联拉取。
+> 主键生成策略选用 `GenerationType.IDENTITY`，由底层 PostgreSQL 的自增序列负责递增。关联关系显式声明 `FetchType.LAZY`（懒加载），杜绝默认的 EAGER，防止非必要的级联拉取。
 
 #### 3. 避免 N+1 查询隐患与 `JOIN FETCH` 优化
-懒加载能避免非必要的关联拉取，但在列表场景（例如 `bookRepository.findAll()` 并遍历输出作者名字时），ORM 会先执行 1 次查询查出所有图书，然后对每本图书单独触发 1 次 `author` 的 SQL 查询。如果有 100 本图书，就会产生 $1 + 100$ 次查询，带来严重的数据库 IO 瓶颈。
+懒加载能避免非必要的关联拉取，但在列表场景（例如查询所有图书并遍历输出作者信息），ORM 会先执行 1 次查询查出所有图书，然后对每本图书单独触发 1 次作者 SQL 查询，产生 $1 + N$ 次查询开销。
 
-应对方案是通过自定义 JPQL 显式使用 `JOIN FETCH`，实现单次 SQL 完成双表内联：
+应对方案是通过自定义 JPQL 显式使用 `JOIN FETCH`，通过单次 SQL 完成关联内联：
 
 ```java
 @Query("SELECT b FROM Book b JOIN FETCH b.author")
@@ -320,17 +516,24 @@ public class Author extends Auditable {
 }
 ```
 
+:::en
+> **Original**: The N+1 query problem occurs when an ORM issues one initial query plus N subsequent queries to fetch associated entities; resolving it requires `JOIN FETCH` clauses or entity graphs.
+
+**📌 核心术语与语境解析**：
+- **N+1 Query Problem** [en plʌs wʌn ˈkwɪəri ˈprɒbləm]：*N+1 查询隐患*。ORM 框架在批量拉取主实体时，因关联延迟加载逐条触发次级查询导致的数据库 I/O 剧增问题。
+- **JOIN FETCH** [dʒɔɪn fetʃ]：*连接抓取*。JPQL 专属指令，指示 Hibernate 在一条 SQL 中同时预先抓取关联实体。
+:::
+
 ---
 
 ### 2.5 Spring Data JPA 核心 Repository 层设计
 
-Spring Data 采用声明式接口替代了繁重的 DAO 实现类。在框架继承体系中：
-- `CrudRepository`：提供保存、单条查询、删除等基础持久能力。
-- `PagingAndSortingRepository`：引入物理分页（`Pageable`）与动态排序（`Sort`）。
-- `JpaRepository`：继承上述所有接口，并追加批量操作（`saveAllAndFlush`）、持久化上下文刷新（`flush`）以及更丰富的泛型支持。
+Spring Data 采用声明式接口替代繁重的 DAO 实现类：
+- `CrudRepository`：提供保存、单条查询、删除等基础持久能力；
+- `PagingAndSortingRepository`：引入物理分页（`Pageable`）与动态排序（`Sort`）；
+- `JpaRepository`：继承上述接口，追加批量操作与持久化上下文刷新。
 
 #### 1. `AuthorRepository`
-利用方法命名约定（Method Name Derivation），Spring 会在启动期自动解析语义并翻译为底层 SQL：
 
 ```java
 package com.packt.bookstore.inventory.repository;
@@ -347,7 +550,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
 }
 ```
 
-#### 2. `BookRepository`（丰富查询与多维检索）
+#### 2. `BookRepository`（多维检索）
 
 ```java
 package com.packt.bookstore.inventory.repository;
@@ -399,7 +602,8 @@ public interface BookRepository extends JpaRepository<Book, Long>, JpaSpecificat
 ```
 
 #### 3. 动态组合查询：JPA Specification 模式
-在电商类系统的后台管理中，常常需要支持组合多选筛选（如“标题包含关键字 AND 价格在区间内 AND 分类属于 X”）。Spring Data JPA 提供的 `Specification` 结合了 Criteria API 的动态构建能力：
+
+Spring Data JPA 提供的 `Specification` 结合了 Criteria API 的动态构建能力：
 
 ```java
 package com.packt.bookstore.inventory.repository.spec;
@@ -431,7 +635,7 @@ public final class BookSpecifications {
 }
 ```
 
-在服务层可极其优雅地链式组装：
+在服务层可进行链式组装：
 
 ```java
 List<Book> results = bookRepository.findAll(
@@ -440,13 +644,19 @@ List<Book> results = bookRepository.findAll(
 );
 ```
 
+:::en
+> **Original**: The Specification pattern encapsulates domain predicates into composable units using the JPA Criteria API, decoupling complex query building from database queries.
+
+**📌 核心术语与语境解析**：
+- **Specification Pattern** [ˌspesɪfɪˈkeɪʃn ˈpætən]：*规约模式*。DDD 核心设计模式，将业务过滤条件封装为可组合、可复用的谓词对象。
+- **Criteria API** [kraɪˈtɪəriə ˌeɪ piː ˈaɪ]：*条件查询接口*。JPA 提供的类型安全动态面向对象查询构建规范。
+:::
+
 ---
 
 ## 3. 基于 MongoDB + Spring Data 构建用户微服务
 
-关系型模型处理强一致结构十分优秀，但在用户中心，用户的偏好配置（如多语言、主题、通知选项）、多套收货地址与身份信息可能频繁扩展。在关系型数据库中，要么建立大量关联表，要么频繁产生 NULL 字段。
-
-我们转向文档型设计，让一个 `User` 聚合根直接包裹其所有从属数据。
+在用户中心，用户的偏好配置（如多语言、主题、通知选项）、多套收货地址与身份信息频繁扩展。关系型模型需要建立大量关联表，而文档型设计允许一个 `User` 聚合根直接包裹其所有从属数据。
 
 ### 3.1 本地 Docker 容器化编排 MongoDB 8
 
@@ -467,11 +677,9 @@ docker ps --filter "name=bookstore-mongo"
 lsof -i :27017
 ```
 
----
-
 ### 3.2 用户微服务脚手架与依赖装配
 
-在 `user-ms` 的 `pom.xml` 中引入 Spring Data MongoDB 官方 Starter：
+在 `user-ms` 的 `pom.xml` 中引入 Spring Data MongoDB Starter：
 
 ```xml
 <dependency>
@@ -485,7 +693,7 @@ lsof -i :27017
 </dependency>
 ```
 
-配置 `application.yml`（独立指定运行端口为 `8082`，与库存微服务的 `8081` 区分）：
+配置 `application.yml`（指定运行端口为 `8082`，与库存微服务的 `8081` 区分）：
 
 ```yaml
 spring:
@@ -498,16 +706,14 @@ server:
   port: 8082
 ```
 
----
-
 ### 3.3 文档实体领域建模（内嵌文档实践）
 
-在 MongoDB 中，我们将相关联的 `Profile`、`Address` 和 `Preferences` 直接内嵌到 `User` 主文档内，其聚合类图如下：
+在 MongoDB 中，将相关联的 `Profile`、`Address` 和 `Preferences` 直接内嵌到 `User` 主文档内：
 
 ![用户微服务文档实体类图](/media/posts/spring-boot-angular/img-08942.png)
 
 #### 1. 聚合根文档：`User`
-使用 `@Document(collection = "users")` 映射集合，并通过 `@Indexed(unique = true)` 让数据库层面保障邮箱与用户名的全局唯一性：
+使用 `@Document(collection = "users")` 映射集合，并通过 `@Indexed(unique = true)` 保障唯一性：
 
 ```java
 package com.packt.bookstore.usermanagement.document;
@@ -550,7 +756,7 @@ public class User {
 ```
 
 #### 2. 内嵌对象：`Profile`、`Address` 与 `Preferences`
-这些类不需要添加 `@Document` 注解，仅作为主文档内部的 BSON 子文档被序列化与持久化：
+这些类不需要添加 `@Document` 注解，仅作为主文档内部的 BSON 子文档被序列化：
 
 ```java
 package com.packt.bookstore.usermanagement.document;
@@ -595,9 +801,7 @@ public class Preferences {
 }
 ```
 
-这种组合模式使得查询单个用户时，无需跨表 JOIN，一条单文档读取即可获取其全量档案，大幅降低了查询延迟。
-
----
+查询单个用户时，无需跨表 JOIN，一条单文档读取即可获取其全量档案，降低了查询延迟。
 
 ### 3.4 `UserRepository` 声明式数据访问
 
@@ -632,7 +836,7 @@ public interface UserRepository extends MongoRepository<User, String> {
 }
 ```
 
-若遇到高度动态的复杂条件检索，还可以利用 `MongoTemplate` 结合 `Criteria` API 实现灵活拼装：
+若遇到高度动态的复杂条件检索，可以利用 `MongoTemplate` 结合 `Criteria` API 实现灵活拼装：
 
 ```java
 @Autowired
@@ -649,6 +853,14 @@ public List<User> searchUsers(String city, String lang) {
     return mongoTemplate.find(query, User.class);
 }
 ```
+
+:::en
+> **Original**: Document embedding groups cohesive child structures inside a single BSON document, optimizing read throughput by eliminating expensive joins.
+
+**📌 核心术语与语境解析**：
+- **Embedded Document** [ɪmˈbedɪd ˈdɒkjumənt]：*内嵌文档*。MongoDB 中将关联子结构作为字段直接嵌套在父文档中的数据建模范式。
+- **Dot Notation** [dɒt nəʊˈteɪʃn]：*点路径语法*。MongoDB 查询中通过 `parent.child.field` 级联访问嵌套字段的语法格式。
+:::
 
 ---
 
@@ -671,7 +883,7 @@ public List<User> searchUsers(String city, String lang) {
 
 ### 5.1 本地 IDE 可视化数据校验
 
-在编写测试代码前，我们建议先使用数据库工具直接窥探底层存储，确保表结构与文档形态符合预期。
+在编写测试代码前，先使用数据库工具直连底层存储，确保表结构与文档形态符合预期。
 
 #### 1. PostgreSQL 校验
 在 VS Code 中安装 PostgreSQL 官方扩展，连接 `postgresql://bookstore:bookstore123@localhost:5432/inventory`：
@@ -688,7 +900,7 @@ SELECT * FROM authors;
 ![PostgreSQL 表数据查询确认](/media/posts/spring-boot-angular/img-08947.png)
 
 #### 2. MongoDB 校验
-安装 MongoDB 官方扩展并连接 `mongodb://bookstore:bookstore123@localhost:27017/userDB?authSource=admin`：
+安装 MongoDB 扩展并连接 `mongodb://bookstore:bookstore123@localhost:27017/userDB?authSource=admin`：
 
 ![MongoDB 扩展连接配置](/media/posts/spring-boot-angular/img-08953.png)
 
@@ -722,10 +934,10 @@ SELECT * FROM authors;
 持久层测试的核心目标是验证：**SQL/JPQL 语法合法性、主外键级联映射是否生效、方法名衍生查询与分页是否返回准确子集**。
 
 Spring Boot 提供了精细化的测试切片：
-- `@DataJpaTest` / `@DataMongoTest`：极速测试，只初始化 Repository 和数据源，不启动 Web 容器。
-- `@SpringBootTest` + `@Transactional`：启动全量容器，用于验证真实数据库环境下的完整持久链路。测试执行完毕后事务自动回滚，确保环境幂等。
+- `@DataJpaTest` / `@DataMongoTest`：极速测试，只初始化 Repository 和数据源，不启动 Web 容器；
+- `@SpringBootTest` + `@Transactional`：启动全量容器，用于验证真实数据库环境下的完整持久链路。测试执行完毕后事务自动回滚，确保测试幂等。
 
-我们编写针对 `BookRepository` 的全场景集成测试类：
+针对 `BookRepository` 的集成测试类实现：
 
 ```java
 package com.packt.bookstore.inventory.repository;
@@ -851,14 +1063,10 @@ class BookRepositoryTest {
 }
 ```
 
----
+:::en
+> **Original**: Persistence slice tests (`@DataJpaTest` and `@DataMongoTest`) isolate repository behaviors with minimal bootstrapping overhead, ensuring deterministic query execution.
 
-## 6. 本篇小结与下篇展望
-
-在本篇中，我们通过书店系统完整构建了微服务的多范式持久层架构：
-1. **持久化选型与边界划分**：掌握了关系型数据库（PostgreSQL）与文档型数据库（MongoDB）的技术适用场景，坚守了 Database-per-Service 的自治原则；
-2. **Spring Data JPA 实战**：在库存微服务中完成了实体建模、主键策略、自动审计配置、N+1 查询治理，并落地了衍生查询、JPQL、原生 SQL 及 Specification 动态筛选；
-3. **Spring Data MongoDB 实战**：在用户微服务中实践了内嵌文档（Embedded Document）设计模式，体验了灵活演进且免去复杂 JOIN 的文档查询；
-4. **测试与质量守护**：通过本地 Docker 容器与 `@SpringBootTest` 自动化测试用例，确保了持久层在真实环境下的健壮性。
-
-持久层仅仅是整个架构的基石。在下一篇 **《Spring Boot & Angular 全栈实战（五）：应用服务层与企业级 RESTful API 实战》** 中，我们将在持久层之上构建企业级的应用服务层（Service Layer），完成 DTO 映射、参数校验、全局异常治理与生产级 RESTful API 的设计与实现。敬请期待！
+**📌 核心术语与语境解析**：
+- **Data Slice Testing** [ˈdeɪtə slaɪs ˈtestɪŋ]：*数据切片测试*。Spring Boot 提供的测试切片机制，仅实例化持久化上下文与 Repository Bean，实现毫秒级验证。
+- **Testcontainers** [test kənˈteɪnəz]：*测试容器库*。利用 Docker 在测试生命周期内动态启停真实数据库实例的现代化测试支撑框架。
+:::

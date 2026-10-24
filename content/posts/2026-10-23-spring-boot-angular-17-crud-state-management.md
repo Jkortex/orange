@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十七）：状态管理驱动的完整 CRUD 交互闭环
 date: 2026-10-23T00:17:00Z
-description: 结合 AuthorStore 与 BookStore，实战分页列表、动态防抖检索、模态框创建/编辑与级联下拉关联的生产级 CRUD 完整流程。
+description: 双栏独立滚动对照：结合 AuthorStore 与 BookStore，实战分页列表契约适配、动态防抖检索、模态框创建编辑与级联下拉关联的生产级 CRUD 治理闭环。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -12,257 +12,19 @@ tags:
   - 业务实战
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Spring Boot 4 & Angular 22 全栈微服务实战》](/columns/spring-boot-angular)。全专栏共 22 篇，深度覆盖 Java 26 微服务拆分、Spring Cloud 网关与安全鉴权、Angular 22 Signals 状态治理以及端到端容器化交付的全链路工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
----
+## 1. CRUD 状态流与并发治理决策矩阵
 
-在上一章中，我们打通了客户端与后端微服务的安全通道，实现了基于函数式 HTTP 拦截器的 JWT 自动装配、高并发无感刷新以及基于 Signals 的路由守卫。前端不仅具备了完整的鉴权能力，还确立了“面向接口契约、通过全局拦截器解耦认证逻辑”的标准通信范式。
+| 技术维度 | 选型方案 | 替代方案 | 决策依据 |
+| :--- | :--- | :--- | :--- |
+| **分页契约适配** | `PaginatedResponse<T>` 映射模型 | 扁平数组 + 前端切片计算 | 对齐 Spring Data `Page<T>` 元数据（总条数/页数/当前页），降低客户端内存占用。 |
+| **读写不对称性** | `Book`（含嵌套对象）与 `BookRequest`（标量外键）分离 | 前后端共用单一宽松类型 | 杜绝提交包含循环引用或冗余实体的大对象，契约语义清晰明确。 |
+| **并发流线控制** | 读操作 `switchMap` / 写操作 `exhaustMap` | 统一使用 `mergeMap` 或 `concatMap` | 检索与分页自动取消在途旧请求；写操作在提交完成前忽略重复触发，天然防重。 |
+| **变更新鲜度保证** | 声明式事件流水线 `reloadAfterMutation$` | 本地 Reducer 手动拼接追加数组 | 确保排序规则、分页总条数与关联统计完全由数据库计算裁决，杜绝数据撕裂。 |
+| **跨域级联选择** | 视图层直接注入 `AuthorStore` 活信号 | 局部组件各自分立拉取作者数据 | 消除重复 HTTP 请求，利用全局 SignalStore 缓存实现多模态框状态实时同步。 |
 
-在本章中，我们将聚焦于系统最核心的业务领域：**图书（Book）与作者（Author）的完整 CRUD 数据流转闭环**。
-
-在实际工业级研发中，CRUD 绝不仅是简单的 GET/POST。我们将系统化解决一系列生产级难点：
-1. **Spring Data 分页契约适配**：如何在客户端状态模型中无缝对齐 Spring Boot 的 `Page<T>` 结构；
-2. **读写不对称性契约治理**：查询时后端返回嵌套的 `Author` 关联对象，变更（POST/PUT）时前端仅传递标量外键 `authorId`；
-3. **并发安全与请求取消**：使用 RxJS `switchMap` 治理读操作（快速翻页或输入检索时自动取消在途请求），使用 `exhaustMap` 治理写操作（创建/更新/删除时天然防重复点击）；
-4. **变更新鲜度保证**：通过声明式事件重载流水线（`reloadAfterMutation$`），在写操作成功后自动按当前分页参数刷新表格，杜绝手写数组拼接引发的数据不一致；
-5. **跨域数据级联绑定**：在图书创建/编辑表单中，直接注入 `AuthorStore` 的响应式 Signals，实现级联动态下拉选择。
-
----
-
-## 一、微服务后端 API 契约一览
-
-所有业务请求均经由统一的 API 网关（基准路径为 `/packt`）转发至底层的库存微服务（`inventory-service`）。得益于上一章构建的 `authInterceptor`，所有 HTTP 请求都会自动附带 `Authorization: Bearer <JWT>` 报头，微服务各端点定义如下：
-
-### 1.1 作者管理端点（Author Endpoints）
-
-| HTTP 方法 | 请求路径 | 功能说明 |
-| :--- | :--- | :--- |
-| `GET` | `/inventory/api/authors` | 获取全量作者列表 |
-| `GET` | `/inventory/api/authors/paged?page=0&size=10` | 服务端分页查询（0 索引） |
-| `GET` | `/inventory/api/authors/by-name-ignore-case?name=xxx` | 忽略大小写的模糊检索 |
-| `GET` | `/inventory/api/authors/{id}` | 根据 ID 获取作者详情 |
-| `POST` | `/inventory/api/authors` | 新增作者 |
-| `PUT` | `/inventory/api/authors/{id}` | 更新作者信息 |
-| `DELETE` | `/inventory/api/authors/{id}` | 删除指定作者 |
-
-### 1.2 图书管理端点（Book Endpoints）
-
-| HTTP 方法 | 请求路径 | 功能说明 |
-| :--- | :--- | :--- |
-| `GET` | `/inventory/api/books` | 获取全量图书列表 |
-| `GET` | `/inventory/api/books/paged?page=0&size=10` | 服务端分页查询（0 索引） |
-| `GET` | `/inventory/api/books/by-title-ignore-case?title=xxx` | 忽略大小写的书名检索 |
-| `GET` | `/inventory/api/books/{id}` | 根据 ID 获取图书详情 |
-| `POST` | `/inventory/api/books` | 新增图书（需传递 `authorId`） |
-| `PUT` | `/inventory/api/books/{id}` | 更新图书信息 |
-| `DELETE` | `/inventory/api/books/{id}` | 删除指定图书 |
-
----
-
-## 二、共享接口与请求模型定义
-
-### 2.1 分页契约模型：PaginatedResponse
-
-Spring Data JPA 的分页返回对象包含丰富的元数据（总元素数、总页数、当前页码、分页大小等）。我们创建 `src/app/shared/models/paginated.ts`：
-
-```typescript
-export interface PaginatedResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number; // 当前页码（从 0 开始）
-  first: boolean;
-  last: boolean;
-  empty: boolean;
-}
-```
-
-### 2.2 读写模型不对称性：Book 与 BookRequest
-
-更新 `src/app/shared/models/author.ts`：
-
-```typescript
-export interface Author {
-  id?: number;
-  name: string;
-  nationality: string;
-  books?: string[];
-}
-```
-
-更新 `src/app/shared/models/book.ts`。这里体现了典型的领域模型不对称性：
-- `Book` 用于 **读展示**：包含完整的 `Author` 嵌套对象；
-- `BookRequest` 用于 **写提交**：只包含后端外键所必需的 `authorId: number`。
-
-```typescript
-import { Author } from './author';
-
-export interface Book {
-  id?: number;
-  title: string;
-  isbn: string;
-  author: Author;
-  price: number;
-  genre: string;
-  published: string;
-  description?: string;
-  pageCount?: number;
-  coverImageUrl?: string;
-}
-
-export interface BookRequest {
-  title: string;
-  isbn: string;
-  authorId: number;
-  price: number;
-  genre: string;
-  published: string;
-  description?: string;
-  pageCount?: number;
-  coverImageUrl?: string;
-}
-```
-
----
-
-## 三、第一阶段：手动构建 Author 领域闭环
-
-我们先以字段结构相对简单、但 CRUD 流程完整的作者模块作为标杆范式。
-
-### 3.1 编写 AuthorService
-
-创建 `src/app/features/books/services/author.service.ts`：
-
-```typescript
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
-import { environment } from '../../../../environments/environment';
-import { Author } from '../../../shared/models/author';
-import { PaginatedResponse } from '../../../shared/models/paginated';
-
-@Injectable({ providedIn: 'root' })
-export class AuthorService {
-  private http = inject(HttpClient);
-  private baseUrl = `${environment.apiUrl}/inventory/api/authors`;
-
-  getAll(): Observable<Author[]> {
-    return this.http.get<Author[]>(this.baseUrl);
-  }
-
-  getPaged(page: number, size: number): Observable<PaginatedResponse<Author>> {
-    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
-    return this.http.get<PaginatedResponse<Author>>(`${this.baseUrl}/paged`, { params });
-  }
-
-  searchByName(name: string): Observable<Author[]> {
-    const params = new HttpParams().set('name', name);
-    return this.http.get<Author[]>(`${this.baseUrl}/by-name-ignore-case`, { params });
-  }
-
-  getById(id: number): Observable<Author> {
-    return this.http.get<Author>(`${this.baseUrl}/${id}`);
-  }
-
-  create(author: Omit<Author, 'id'>): Observable<Author> {
-    return this.http.post<Author>(this.baseUrl, author);
-  }
-
-  update(id: number, author: Omit<Author, 'id'>): Observable<Author> {
-    return this.http.put<Author>(`${this.baseUrl}/${id}`, author);
-  }
-
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id}`);
-  }
-}
-```
-
-> **设计细节**：新增作者时 ID 由数据库自增分配，因此入参类型使用 TypeScript 工具类型 `Omit<Author, 'id'>` 严格约束前端不可传递空 ID。
-
-### 3.2 定义领域事件：Author Events
-
-在 `src/app/features/books/store/author-store/author.events.ts` 中遵循源头驱动的分组契约：
-
-```typescript
-import { eventGroup } from '@ngrx/signals/events';
-import { type } from '@ngrx/signals';
-import { Author } from '../../../../shared/models/author';
-
-export const authorPageEvents = eventGroup({
-  source: 'Author Page',
-  events: {
-    loadAuthors: type<{ page: number; size: number }>(),
-    searchByName: type<{ name: string }>(),
-    createSubmitted: type<Omit<Author, 'id'>>(),
-    updateSubmitted: type<{ id: number } & Omit<Author, 'id'>>(),
-    deleteConfirmed: type<{ id: number }>(),
-  },
-});
-
-export const authorApiEvents = eventGroup({
-  source: 'Author API',
-  events: {
-    loadSuccess: type<{
-      authors: Author[];
-      totalElements: number;
-      totalPages: number;
-    }>(),
-    loadFailure: type<{ error: string }>(),
-    searchSuccess: type<{ authors: Author[] }>(),
-    searchFailure: type<{ error: string }>(),
-    createSuccess: type<{ author: Author }>(),
-    createFailure: type<{ error: string }>(),
-    updateSuccess: type<{ author: Author }>(),
-    updateFailure: type<{ error: string }>(),
-    deleteSuccess: type<{ id: number }>(),
-    deleteFailure: type<{ error: string }>(),
-  },
-});
-```
-
-### 3.3 定义状态模型：AuthorState
-
-创建 `src/app/features/books/store/author-store/author.state.ts`：
-
-```typescript
-import { Author } from '../../../../shared/models/author';
-
-export interface AuthorState {
-  authors: Author[];
-  totalElements: number;
-  totalPages: number;
-  currentPage: number;
-  pageSize: number;
-  searchTerm: string;
-  loading: boolean;
-  error: string | null;
-}
-
-export const initialAuthorState: AuthorState = {
-  authors: [],
-  totalElements: 0,
-  totalPages: 0,
-  currentPage: 0,
-  pageSize: 10,
-  searchTerm: '',
-  loading: false,
-  error: null,
-};
-```
-
-### 3.4 核心实现：AuthorStore 与自动化刷新机制
-
-创建 `src/app/features/books/store/author-store/author.store.ts`。
-
-在此 Store 中，我们应用了两项高级 RxJS 状态治理模式：
-1. **区分操作特性的操作符调度**：
-   - 数据加载与检索采用 `switchMap`：若用户在输入框连续键入检索或连续点击翻页，旧请求会被自动 abort 取消，防止乱序返回；
-   - 增删改采用 `exhaustMap`：在当前提交请求完成前，忽略用户的重复点击，天然构建防重防护。
-2. **变更新鲜度管线（Reload-after-mutation）**：
-   - 监听 `createSuccess`、`updateSuccess`、`deleteSuccess`，直接映射派发 `authorPageEvents.loadAuthors`。
-   - 重新拉取当前页码（`store.currentPage()`）和条数（`store.pageSize()`），服务端返回最新排序和计算结果，完全避免客户端手动拼接数组带来的数据撕裂。
+## 2. 生产级 SignalStore：完整 CRUD 与自动刷新管线
 
 ```typescript
 import { computed, inject } from '@angular/core';
@@ -279,7 +41,7 @@ export const AuthorStore = signalStore(
   withState(initialAuthorState),
 
   withReducer(
-    // 列表分页加载
+    // 分页加载与检索
     on(authorPageEvents.loadAuthors, (event) => ({
       loading: true,
       error: null,
@@ -299,23 +61,7 @@ export const AuthorStore = signalStore(
       error: event.payload.error,
     })),
 
-    // 搜索
-    on(authorPageEvents.searchByName, (event) => ({
-      loading: true,
-      error: null,
-      searchTerm: event.payload.name,
-    })),
-    on(authorApiEvents.searchSuccess, (event) => ({
-      authors: event.payload.authors,
-      loading: false,
-      error: null,
-    })),
-    on(authorApiEvents.searchFailure, (event) => ({
-      loading: false,
-      error: event.payload.error,
-    })),
-
-    // 增、改、删过渡态
+    // 变动过渡态
     on(authorPageEvents.createSubmitted, () => ({ loading: true, error: null })),
     on(authorApiEvents.createSuccess, () => ({ loading: false, error: null })),
     on(authorApiEvents.createFailure, (event) => ({ loading: false, error: event.payload.error })),
@@ -335,385 +81,90 @@ export const AuthorStore = signalStore(
     authorCount: computed(() => store.totalElements()),
   })),
 
-  withEventHandlers(
-    (store, events = inject(Events), authorService = inject(AuthorService)) => ({
-      // 分页查询：switchMap 取消过时请求
-      load$: events.on(authorPageEvents.loadAuthors).pipe(
-        switchMap((event) =>
-          authorService.getPaged(event.payload.page, event.payload.size).pipe(
-            map((response) =>
-              authorApiEvents.loadSuccess({
-                authors: response.content,
-                totalElements: response.totalElements,
-                totalPages: response.totalPages,
-              })
-            ),
-            catchError((error: unknown) =>
-              of(
-                authorApiEvents.loadFailure({
-                  error: normalizeApiErrorMessage(error, 'Failed to load authors'),
-                })
-              )
-            )
+  withEventHandlers((store, events = inject(Events), authorService = inject(AuthorService)) => ({
+    // 读操作：switchMap 自动取消在途旧请求
+    load$: events.on(authorPageEvents.loadAuthors).pipe(
+      switchMap((event) =>
+        authorService.getPaged(event.payload.page, event.payload.size).pipe(
+          map((res) =>
+            authorApiEvents.loadSuccess({
+              authors: res.content,
+              totalElements: res.totalElements,
+              totalPages: res.totalPages,
+            })
+          ),
+          catchError((err) =>
+            of(authorApiEvents.loadFailure({ error: normalizeApiErrorMessage(err, 'Failed to load authors') }))
           )
         )
-      ),
+      )
+    ),
 
-      // 关键词检索
-      search$: events.on(authorPageEvents.searchByName).pipe(
-        switchMap((event) => {
-          if (event.payload.name.trim() === '') {
-            return of(authorApiEvents.searchSuccess({ authors: [] }));
-          }
-          return authorService.searchByName(event.payload.name).pipe(
-            map((authors) => authorApiEvents.searchSuccess({ authors })),
-            catchError((error: unknown) =>
-              of(
-                authorApiEvents.searchFailure({
-                  error: normalizeApiErrorMessage(error, 'Search failed'),
-                })
-              )
-            )
-          );
-        })
-      ),
-
-      // 新增：exhaustMap 防止重复提交
-      create$: events.on(authorPageEvents.createSubmitted).pipe(
-        exhaustMap((event) =>
-          authorService.create(event.payload).pipe(
-            map((author) => authorApiEvents.createSuccess({ author })),
-            catchError((error: unknown) =>
-              of(
-                authorApiEvents.createFailure({
-                  error: normalizeApiErrorMessage(error, 'Failed to create author'),
-                })
-              )
-            )
+    // 写操作：exhaustMap 阻止并发重复提交
+    create$: events.on(authorPageEvents.createSubmitted).pipe(
+      exhaustMap((event) =>
+        authorService.create(event.payload).pipe(
+          map((author) => authorApiEvents.createSuccess({ author })),
+          catchError((err) =>
+            of(authorApiEvents.createFailure({ error: normalizeApiErrorMessage(err, 'Failed to create author') }))
           )
         )
-      ),
+      )
+    ),
 
-      // 更新
-      update$: events.on(authorPageEvents.updateSubmitted).pipe(
-        exhaustMap((event) => {
-          const { id, ...data } = event.payload;
-          return authorService.update(id, data).pipe(
-            map((author) => authorApiEvents.updateSuccess({ author })),
-            catchError((error: unknown) =>
-              of(
-                authorApiEvents.updateFailure({
-                  error: normalizeApiErrorMessage(error, 'Failed to update author'),
-                })
-              )
-            )
-          );
-        })
-      ),
+    update$: events.on(authorPageEvents.updateSubmitted).pipe(
+      exhaustMap((event) => {
+        const { id, ...data } = event.payload;
+        return authorService.update(id, data).pipe(
+          map((author) => authorApiEvents.updateSuccess({ author })),
+          catchError((err) =>
+            of(authorApiEvents.updateFailure({ error: normalizeApiErrorMessage(err, 'Failed to update author') }))
+          )
+        );
+      })
+    ),
 
-      // 删除
-      delete$: events.on(authorPageEvents.deleteConfirmed).pipe(
-        exhaustMap((event) =>
-          authorService.delete(event.payload.id).pipe(
-            map(() => authorApiEvents.deleteSuccess({ id: event.payload.id })),
-            catchError((error: unknown) =>
-              of(
-                authorApiEvents.deleteFailure({
-                  error: normalizeApiErrorMessage(error, 'Failed to delete author'),
-                })
-              )
-            )
+    delete$: events.on(authorPageEvents.deleteConfirmed).pipe(
+      exhaustMap((event) =>
+        authorService.delete(event.payload.id).pipe(
+          map(() => authorApiEvents.deleteSuccess({ id: event.payload.id })),
+          catchError((err) =>
+            of(authorApiEvents.deleteFailure({ error: normalizeApiErrorMessage(err, 'Failed to delete author') }))
           )
         )
-      ),
+      )
+    ),
 
-      // 变更后自动触发列表刷新流水线
-      reloadAfterCreate$: events.on(authorApiEvents.createSuccess).pipe(
-        map(() =>
-          authorPageEvents.loadAuthors({
-            page: store.currentPage(),
-            size: store.pageSize(),
-          })
-        )
-      ),
-
-      reloadAfterUpdate$: events.on(authorApiEvents.updateSuccess).pipe(
-        map(() =>
-          authorPageEvents.loadAuthors({
-            page: store.currentPage(),
-            size: store.pageSize(),
-          })
-        )
-      ),
-
-      reloadAfterDelete$: events.on(authorApiEvents.deleteSuccess).pipe(
-        map(() =>
-          authorPageEvents.loadAuthors({
-            page: store.currentPage(),
-            size: store.pageSize(),
-          })
-        )
-      ),
-    })
-  )
+    // 变更新鲜度管线：成功后自动重载当前分页，保持多端数据精确一致
+    reloadAfterCreate$: events.on(authorApiEvents.createSuccess).pipe(
+      map(() => authorPageEvents.loadAuthors({ page: store.currentPage(), size: store.pageSize() }))
+    ),
+    reloadAfterUpdate$: events.on(authorApiEvents.updateSuccess).pipe(
+      map(() => authorPageEvents.loadAuthors({ page: store.currentPage(), size: store.pageSize() }))
+    ),
+    reloadAfterDelete$: events.on(authorApiEvents.deleteSuccess).pipe(
+      map(() => authorPageEvents.loadAuthors({ page: store.currentPage(), size: store.pageSize() }))
+    ),
+  }))
 );
 ```
 
-### 3.5 模态框交互：AuthorListDialog 与多层弹窗嵌套
-
-作者本身属于图书的辅助支撑域，不需要开辟专属页面路由。我们将其收敛在 `MatDialog` 模态框中，并在其中进一步弹窗调起 `AuthorForm`（模态框嵌套 Dialog Stacking）。
-
-创建 `src/app/features/books/components/author-list-dialog/author-list-dialog.ts`：
-
-```typescript
-import { Component, OnInit, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { injectDispatch } from '@ngrx/signals/events';
-import { Author } from '../../../../shared/models/author';
-import { authorPageEvents } from '../../store/author-store/author.events';
-import { AuthorStore } from '../../store/author-store/author.store';
-import { AuthorForm } from '../author-form/author-form';
-
-@Component({
-  selector: 'author-list-dialog',
-  templateUrl: './author-list-dialog.html',
-  styleUrl: './author-list-dialog.scss',
-  imports: [
-    MatTableModule,
-    MatPaginatorModule,
-    MatButtonModule,
-    MatIconModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatProgressSpinnerModule,
-    FormsModule,
-    MatDialogModule,
-  ],
-})
-export class AuthorListDialog implements OnInit {
-  protected readonly store = inject(AuthorStore);
-  private dialogRef = inject(MatDialogRef<AuthorListDialog>);
-  private dialog = inject(MatDialog);
-  private snackBar = inject(MatSnackBar);
-  protected readonly dispatch = injectDispatch(authorPageEvents);
-
-  displayedColumns = ['name', 'nationality', 'books', 'actions'];
-  searchTerm = '';
-
-  ngOnInit() {
-    this.dispatch.loadAuthors({ page: 0, size: 10 });
-  }
-
-  onPageChange(event: PageEvent) {
-    this.dispatch.loadAuthors({
-      page: event.pageIndex,
-      size: event.pageSize,
-    });
-  }
-
-  onSearch() {
-    if (this.searchTerm.trim()) {
-      this.dispatch.searchByName({ name: this.searchTerm });
-    } else {
-      this.dispatch.loadAuthors({ page: 0, size: 10 });
-    }
-  }
-
-  clearSearch() {
-    this.searchTerm = '';
-    this.dispatch.loadAuthors({ page: 0, size: 10 });
-  }
-
-  openCreateDialog() {
-    const dialogRef = this.dialog.open(AuthorForm, { width: '560px' });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.dispatch.createSubmitted(result);
-        this.snackBar.open('Author created successfully', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  openEditDialog(author: Author) {
-    const dialogRef = this.dialog.open(AuthorForm, { width: '560px', data: author });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.dispatch.updateSubmitted(result);
-        this.snackBar.open('Author updated successfully', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  confirmDelete(author: Author) {
-    if (confirm(`Delete ${author.name}?`)) {
-      this.dispatch.deleteConfirmed({ id: author.id! });
-      this.snackBar.open('Author deleted successfully', 'Close', { duration: 3000 });
-    }
-  }
-
-  close() {
-    this.dialogRef.close();
-  }
-}
-```
-
-在模态框模板 `author-list-dialog.html` 中绑定响应式 Signals：
-
-```html
-<h2 mat-dialog-title>Manage Authors</h2>
-<mat-dialog-content class="app-modal-content-static">
-  <div class="app-modal-toolbar">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Search by name</mat-label>
-      <input
-        matInput
-        [(ngModel)]="searchTerm"
-        (keyup.enter)="onSearch()"
-        placeholder="Enter author name..."
-      />
-      @if (searchTerm) {
-        <button matSuffix mat-icon-button (click)="clearSearch()">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-  </div>
-
-  @if (store.loading()) {
-    <div class="app-modal-loading">
-      <mat-spinner diameter="40"></mat-spinner>
-    </div>
-  }
-
-  @if (store.error()) {
-    <div class="app-modal-error">
-      <mat-icon>error</mat-icon>
-      {{ store.error() }}
-    </div>
-  }
-
-  @if (store.hasAuthors() && !store.loading()) {
-    <div class="app-modal-scroll-x">
-      <table mat-table [dataSource]="store.authors()" class="authors-table app-table">
-        <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
-          <td mat-cell *matCellDef="let author">{{ author.name }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="nationality">
-          <th mat-header-cell *matHeaderCellDef>Nationality</th>
-          <td mat-cell *matCellDef="let author">{{ author.nationality }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="books">
-          <th mat-header-cell *matHeaderCellDef>Books</th>
-          <td mat-cell *matCellDef="let author">{{ author.books?.length ?? 0 }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef class="actions-col">Actions</th>
-          <td mat-cell *matCellDef="let author" class="actions-col">
-            <button
-              mat-icon-button
-              class="edit-btn"
-              aria-label="Edit author"
-              (click)="openEditDialog(author)"
-            >
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button
-              mat-icon-button
-              class="delete-btn"
-              aria-label="Delete author"
-              (click)="confirmDelete(author)"
-            >
-              <mat-icon>delete</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-      </table>
-    </div>
-
-    @if (!store.isSearching()) {
-      <mat-paginator
-        [length]="store.totalElements()"
-        [pageSize]="store.pageSize()"
-        [pageIndex]="store.currentPage()"
-        [pageSizeOptions]="[5, 10, 25]"
-        (page)="onPageChange($event)"
-      >
-      </mat-paginator>
-    }
-  }
-
-  @if (!store.hasAuthors() && !store.loading()) {
-    <div class="app-modal-empty">
-      <mat-icon>person_off</mat-icon>
-      <p>No authors found. Click "Add Author" to create one.</p>
-    </div>
-  }
-</mat-dialog-content>
-
-<mat-dialog-actions class="app-modal-actions-end">
-  <button mat-button (click)="close()">Close</button>
-  <button mat-raised-button color="primary" (click)="openCreateDialog()">
-    <mat-icon>add</mat-icon>
-    Add Author
-  </button>
-</mat-dialog-actions>
-```
-
-在图书列表页顶部工具栏中加入入口按钮：
-
-```html
-<button mat-stroked-button (click)="openAuthorManagement()">
-  <mat-icon>people</mat-icon>
-  Authors
-</button>
-```
-
-运行效果如图所示，在同一路由下即可完成作者列表查看、动态分页、增删改查全流程：
-
-![作者管理弹窗与嵌套 CRUD 交互](/media/posts/spring-boot-angular/img-09117.png)
-
----
-
-## 四、第二阶段：图书领域 CRUD 闭环与跨 Store 联动
-
-掌握了标准范式后，图书模块（Book）的构建遵循完全相同的状态驱动体系。本节重点攻克其与作者模块的**级联选择交互**。
-
-### 4.1 级联下拉重构：从文本输入到响应式 `<mat-select>`
-
-在早期的静态原型中，图书表单中的作者字段为手动输入的字符串 `authorName`。而在生产接口中，后端持久化需要关联真实的 `authorId`。
-
-修改 `src/app/features/books/components/book-form/book-form.ts`，直接注入 `AuthorStore`：
+## 3. 跨 Store 响应式级联选择与不对称契约适配
 
 ```typescript
 import { Component, inject } from '@angular/core';
-import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { MatSelectModule } from '@angular/material/select';
+import { FormBuilder, Validators } from '@angular/forms';
 import { injectDispatch } from '@ngrx/signals/events';
 import { AuthorStore } from '../../store/author-store/author.store';
 import { authorPageEvents } from '../../store/author-store/author.events';
+import { Book, BookRequest } from '../../../shared/models/book';
 
 export class BookForm {
   private fb = inject(FormBuilder);
   readonly authorStore = inject(AuthorStore);
   private readonly dispatch = injectDispatch(authorPageEvents);
 
-  // 表单控件调整为 authorId
+  // 表单仅持有标量外键 authorId
   bookForm = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
     isbn: ['', [Validators.required]],
@@ -721,88 +172,235 @@ export class BookForm {
     price: [0, [Validators.required, Validators.min(0)]],
     genre: ['', [Validators.required]],
     published: this.fb.control<Date | null>(null, [Validators.required]),
-    description: [''],
-    pageCount: this.fb.control<number | null>(null),
-    coverImageUrl: [''],
   });
 
-  constructor() {
-    // 弹窗开启时，按需预加载备选作者（支持前 100 条）
+  initForm(data?: Book) {
+    // 预加载作者选项（活信号）
     this.dispatch.loadAuthors({ page: 0, size: 100 });
 
-    // 编辑模式下的不对称性适配：从嵌套的 author 对象中提取 id 填入控件
-    if (this.data) {
+    // 读写不对称性适配：读数据包含嵌套 author 对象，回填时解构取 author.id
+    if (data) {
       this.bookForm.patchValue({
-        title: this.data.title,
-        isbn: this.data.isbn,
-        authorId: this.data.author.id ?? null,
-        price: this.data.price,
-        genre: this.data.genre,
-        published: this.data.published ? new Date(this.data.published) : null,
-        description: this.data.description ?? '',
-        pageCount: this.data.pageCount ?? null,
-        coverImageUrl: this.data.coverImageUrl ?? '',
+        title: data.title,
+        isbn: data.isbn,
+        authorId: data.author.id ?? null,
+        price: data.price,
+        genre: data.genre,
+        published: data.published ? new Date(data.published) : null,
       });
     }
+  }
+
+  toPayload(): BookRequest {
+    const raw = this.bookForm.getRawValue();
+    return {
+      title: raw.title,
+      isbn: raw.isbn,
+      authorId: raw.authorId!,
+      price: raw.price,
+      genre: raw.genre,
+      published: raw.published ? raw.published.toISOString().split('T')[0] : '',
+    };
   }
 }
 ```
 
-在模板 `book-form.html` 中，使用 Angular 22 的新版 `@for` 流程控制直接遍历 `authorStore.authors()`：
+## 4. CRUD 状态跃迁与变更新鲜度管线拓扑
 
-```html
-<mat-form-field appearance="outline">
-  <mat-label>Author</mat-label>
-  <mat-select formControlName="authorId">
-    @for (author of authorStore.authors(); track author.id) {
-      <mat-option [value]="author.id">
-        {{ author.name }}
-      </mat-option>
-    }
-  </mat-select>
-  @if (bookForm.get('authorId')?.touched && bookForm.get('authorId')?.hasError('required')) {
-    <mat-error>Author is required.</mat-error>
-  }
-  @if (bookForm.get('authorId')?.touched && bookForm.get('authorId')?.hasError('min')) {
-    <mat-error>Please select an author.</mat-error>
-  }
-</mat-form-field>
+```mermaid
+flowchart TD
+    UI["用户界面 (UI / Dialog)"] -->|提交事件 createSubmitted| E_MAP["exhaustMap (防止并发重发)"]
+    E_MAP -->|POST /inventory/api/authors| SVR["后端库存微服务"]
+    SVR -->|201 Created| SUCCESS["派发 createSuccess"]
+    
+    SUCCESS -->|触发状态跃迁| REDUCER["withReducer (loading: false)"]
+    SUCCESS -->|触发自动重载流水线| RELOAD["reloadAfterCreate$ 流"]
+    
+    RELOAD -->|派发 loadAuthors(当前页码, 页大小)| S_MAP["switchMap (自动取消过时读)"]
+    S_MAP -->|GET /inventory/api/authors/paged| SVR
+    SVR -->|200 OK PaginatedResponse| LOAD_SUCC["派发 loadSuccess"]
+    LOAD_SUCC -->|更新 SignalStore 数据| SIGNALS["authors() / totalElements() 活信号"]
+    SIGNALS -->|局部刷新 DOM 依赖节点| UI
 ```
 
-当表单提交时，调用 `bookForm.getRawValue()` 并转换为 `BookRequest` 格式。由于 `authorStore.authors()` 是响应式的活 Signal（Live Signal），即便用户刚刚在作者管理弹窗中新增了一位作者，在打开图书弹窗时也能立刻看到最新选项。
+## 5. CRUD 治理避坑清单 (Do's & Don'ts)
 
-实际运行效果如图所示：
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 在写操作成功后，手动将新对象 append 到本地数组。 | 触发声明式重新加载管线（`reloadAfterMutation$`），让数据库统一仲裁排序与总数。 |
+| 在搜索输入和快速分页时使用 `mergeMap` 或 `concatMap`。 | 使用 `switchMap` 处理读查询，自动废弃过时的在途请求，防止网络乱序污染视图。 |
+| 在提交和删除操作中使用普通处理函数，导致按钮多次连击产生重复写入。 | 使用 `exhaustMap` 拦截重复事件，在上一次异步网络请求终结前抑制新的动作。 |
+| 前端创建实体时将整个嵌套的关联对象整体向后端提交。 | 实行读写不对称性契约：查询读取展示对象，创建更新仅传递标量外键 `authorId`。 |
+| 跨组件级联选择时每个弹窗内部独立发起全量数据请求。 | 直接复用全局 `AuthorStore` 的活信号状态，实现跨弹窗跨组件的低开销实时感知。 |
 
-![图书创建表单中的响应式作者下拉选择](/media/posts/spring-boot-angular/img-09119.png)
+<!-- split -->
 
----
+# 原著完整参考：状态管理驱动的完整 CRUD 交互闭环
 
-## 五、架构级进阶剖析与性能优化
+在企业级全栈开发中，数据管理与交互闭环并非简单的 RESTful 接口调用，而是涵盖数据契约对齐、不对称实体治理、异步并发流控制以及状态时效性保障的综合工程体系。
 
-### 5.1 为什么采用「声明式重新加载」而非「本地 Reducer 数组剪裁」？
+本文基于 Spring Data JPA 服务端分页契约，通过 NgRx SignalStore 与 Events 插件构建工业级图书与作者 CRUD 响应式闭环，攻克复杂搜索防抖、读写不对称性及级联模态框交互难点。
 
-传统 Redux / NgRx 开发者习惯在 `createSuccess` 时将新对象 `[...state.items, newItem]` 追加到本地状态。但这在服务端分页与复杂检索场景下存在致命缺陷：
-1. **排序断裂**：后端通常按 `updated_at DESC` 或 `id DESC` 排序，前端本地 append 无法保证多端一致的排序逻辑；
-2. **总计数脱节**：前端本地数组改变后，`totalElements` 和 `totalPages` 无法精确推算（尤其包含服务端过滤时）；
-3. **关联聚合失效**：作者关联的 `books.length` 统计必须由数据库聚合得出。
+:::en
+> **Original**: Production-grade CRUD workflows demand rigorous synchronization between backend pagination contracts and fine-grained frontend reactive state, guaranteeing consistency across mutations.
 
-因此，我们在 `withEventHandlers` 中采用 `reloadAfterCreate$` 触发 `loadAuthors`。虽然多消耗一次轻量分页网络请求，却能确保客户端视图与数据库具备绝对的一致性。
+**📌 核心术语与语境解析**：
+- **CRUD Operations** [krʌd ˌɑːpəˈreɪʃnz]：*增删改查操作*。创建（Create）、读取（Read）、更新（Update）与删除（Delete）四种核心持久化操作的总称。
+- **Contract Alignment** [ˈkɑːntrækt əˈlaɪnmənt]：*契约对齐*。前后端数据载荷、请求参数与状态码严格符合预定义 Schema 约定的设计规范。
+:::
 
-### 5.2 大数据量级联的性能考量
+## 1. 微服务后端 API 契约与分页对齐
 
-在当前实现中，我们在图书表单初始化时拉取了 `size: 100` 的作者列表。如果企业级业务中作者数量达到数万条：
-- 静态 `<mat-select>` 渲染会导致 DOM 节点爆炸；
-- 生产级优化方案是将 `<mat-select>` 演进为 `<mat-autocomplete>`，并依托 `searchByName(name)` 配合 RxJS `debounceTime(300)` 实现服务端防抖模糊联想。
+业务请求统一经由 Spring Cloud Gateway 反向代理（前缀 `/packt`）转发至库存微服务（`inventory-service`）。所有请求已由 `authInterceptor` 自动挂载 Bearer JWT。
 
----
+### 1.1 服务端分页契约模型：PaginatedResponse
 
-## 六、总结与下篇展望
+Spring Data JPA 的分页返回对象包含丰富的元数据。前端需构建对等契约接口 `src/app/shared/models/paginated.ts`：
 
-在本文中，我们彻底打通了 Spring Boot 4 + Angular 22 在核心业务领域的完整交互闭环：
-- **规范契约落地**：通过 `PaginatedResponse<T>` 与 `BookRequest` 完美解决了服务端分页和读写不对称性设计；
-- **响应式状态管理**：依托 NgRx SignalStore 与 Events 插件，实现了读操作自动取消（`switchMap`）、写操作防重（`exhaustMap`）以及突变后自动重载（`reloadAfterMutation$`）；
-- **跨组件协同**：在图书表单中直接桥接 `AuthorStore`，实现了优雅的响应式级联选择与模态框嵌套交互。
+```typescript
+export interface PaginatedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number; // 当前页码（0 索引）
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+```
 
-至此，我们的图书管理系统在客户端与服务端之间已具备了完整的鉴权体系和生产级 CRUD 治理能力。
+:::en
+> **Original**: Spring Data's `Page<T>` representation supplies essential structural pagination metadata, allowing frontend controls to configure total element indices seamlessly.
 
-在下一篇中，我们将进入现代 Web 架构的高阶领域——**Angular 22 混合渲染（SSR/SSG）与性能优化实战**。我们将重新激活服务端预渲染，深入解析鉴权页面与公开首屏的隔离策略，为企业级上线做好最后的性能与 SEO 冲刺。
+**📌 核心术语与语境解析**：
+- **Pagination Metadata** [ˌpædʒɪˈneɪʃn ˈmetədeɪtə]：*分页元数据*。描述分页列表整体结构的信息（如总记录数、总页数、当前页索引），而非具体业务条目本身。
+- **Zero-indexed Pagination** [ˈzɪroʊ ˈɪndekst ˌpædʒɪˈneɪʃn]：*从零开始的分页索引*。Spring Boot 默认页码计数从 0 起始，前端展示层需进行 +1 映射转换。
+:::
+
+### 1.2 读写模型不对称性：Book 与 BookRequest
+
+在领域驱动与关系存储中，数据的展示与提交流程存在固有不对称性：
+- `Book` 用于 **读取展示**：包含完整的 `Author` 嵌套对象，满足视图层富文本呈现；
+- `BookRequest` 用于 **写提交**：仅包含后端外键所需的标量字段 `authorId: number`，避免网络冗余与实体持久化级联风险。
+
+```typescript
+export interface Book {
+  id?: number;
+  title: string;
+  isbn: string;
+  author: Author;
+  price: number;
+  genre: string;
+  published: string;
+}
+
+export interface BookRequest {
+  title: string;
+  isbn: string;
+  authorId: number;
+  price: number;
+  genre: string;
+  published: string;
+}
+```
+
+:::en
+> **Original**: Read-write model asymmetry distinguishes presentation payloads containing nested objects from mutation payloads carrying scalar foreign keys, preserving relational boundaries.
+
+**📌 核心术语与语境解析**：
+- **Read-Write Asymmetry** [riːd raɪt eɪˈsɪmətri]：*读写不对称性*。查询视图所用数据契约与命令修改所用输入契约在字段结构上的差异化设计。
+- **Scalar Foreign Key** [ˈskeɪlər ˈfɔːrən kiː]：*标量外键*。仅使用单一数值型或字符串 ID 表示关联对象身份，而非传递完整嵌套对象。
+:::
+
+## 2. Author 领域闭环与状态机跃迁
+
+### 2.1 服务层抽象与 TypeScript 严格约束
+
+在 `AuthorService` 中，新增操作的实体 ID 由数据库序列自增分配，入参严格约束为 `Omit<Author, 'id'>`，杜绝未持久化对象携带空 ID 提交：
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class AuthorService {
+  private http = inject(HttpClient);
+  private baseUrl = `${environment.apiUrl}/inventory/api/authors`;
+
+  getPaged(page: number, size: number): Observable<PaginatedResponse<Author>> {
+    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    return this.http.get<PaginatedResponse<Author>>(`${this.baseUrl}/paged`, { params });
+  }
+
+  create(author: Omit<Author, 'id'>): Observable<Author> {
+    return this.http.post<Author>(this.baseUrl, author);
+  }
+}
+```
+
+:::en
+> **Original**: TypeScript utility types like `Omit<T, K>` enforce compile-time validation, guaranteeing that auto-generated identifiers are omitted from creation payloads.
+
+**📌 核心术语与语境解析**：
+- **Utility Type** [juːˈtɪləti taɪp]：*实用工具类型*。TypeScript 提供的用于对既有类型进行属性摘取、排除或标记可选的高阶类型转换算子。
+- **Auto-generated Identifier** [ˈɔːtoʊ ˈdʒenəreɪtɪd aɪˈdentɪfaɪər]：*自增唯一标识符*。由数据库自增主键序列或分布式发号器生成的持久化唯一键。
+:::
+
+### 2.2 事件编排与操作符调度
+
+在 SignalStore 状态编排中，依据操作语义严格区分调度操作符：
+- **读操作（`switchMap`）**：自动取消上一轮在途查询。当用户连续翻页或快速键入检索字符时，较早发出的网络请求立即被 abort 取消，避免乱序响应覆写最新状态；
+- **写操作（`exhaustMap`）**：在当前网络调用完成前，抑制新产生的重复事件，杜绝用户连击提交表单引发的多重写入；
+- **变更新鲜度管线（`reloadAfterMutation$`）**：监听写成功事件，自动派发当前分页参数的重载指令，确保多端并发场景下排序与关联统计的绝对准确。
+
+:::en
+> **Original**: Differentiating operator semantics between `switchMap` for query cancellations and `exhaustMap` for mutation idempotence prevents UI race conditions and duplicate submissions.
+
+**📌 核心术语与语境解析**：
+- **Idempotence** [aɪˈdempətəns]：*幂等性*。多次执行同一操作对系统产生的业务副作用与单次执行完全一致的特性。
+- **Stale Request Cancellation** [steɪl rɪˈkwest ˌkænsəˈleɪʃn]：*过时请求取消*。当新的查询条件就绪时，主动中断已无意义的旧异步请求以释放系统与网络资源。
+:::
+
+## 3. 模态框嵌套交互与 Dialog Stacking
+
+作者管理属于图书领域的辅助支撑域，将其内嵌于 `MatDialog` 模态框中，并在其中进一步嵌套 `AuthorForm`（模态框堆叠），在单一页面路由下完整收敛作者的查阅、检索与维护流程。
+
+模板通过绑定 `store.authors()`、`store.loading()` 与 `store.totalElements()` 活信号，结合 `@if` 和 `@for` 流程控制，实现无死角的状态骨架与空态展示。
+
+:::en
+> **Original**: Dialog stacking isolates auxiliary domain workflows within modular overlays, avoiding route sprawl while maintaining localized state management.
+
+**📌 核心术语与语境解析**：
+- **Dialog Stacking** [ˈdaɪəlɔːɡ ˈstækɪŋ]：*对话框/模态框堆叠*。在上层模态框内部进一步调起子模态框的分层交互模式。
+- **Route Sprawl** [ruːt sprɔːl]：*路由蔓延*。将次要或辅助功能过度拆分为独立顶级路由导致应用导航结构松散臃肿的现象。
+:::
+
+## 4. 图书 CRUD 闭环与跨 Store 响应式级联
+
+在图书表单组件（`BookForm`）中，直接注入 `AuthorStore`：
+- 初始化阶段调用 `loadAuthors({ page: 0, size: 100 })` 预拉取候选作者数据；
+- 模板利用 Angular 22 的 `@for (author of authorStore.authors(); track author.id)` 渲染 `<mat-select>` 选项；
+- 由于消费的是响应式活信号（Live Signal），用户在作者弹窗中新增或修改作者后，图书表单下拉菜单无需刷新整页即可即时感知最新选项。
+
+:::en
+> **Original**: Injecting cross-domain stores directly into form components allows live signal streams to populate cascading selectors without redundant network traffic.
+
+**📌 核心术语与语境解析**：
+- **Cascading Selector** [kæˈskeɪdɪŋ sɪˈlektər]：*级联下拉选择器*。下一级可选范围由上一级选定值或关联领域模型动态约束的联动选择控件。
+- **Live Signal** [laɪv ˈsɪɡnəl]：*响应式活信号*。与依赖图绑定的反应式节点，其值变更时能够即刻自动触发依赖组件局部重绘。
+:::
+
+## 5. 声明式重载流水线 vs 本地数组剪裁的权衡
+
+传统状态管理常采用在客户端本地数组直接 push/splice 的做法。但在服务端分页与复杂检索场景下，这一做法存在严重缺陷：
+1. **排序断裂**：无法还原数据库的多字段混合排序规则；
+2. **总数脱节**：前端本地修改无法准确推算服务端真实 `totalElements`；
+3. **关联聚合失效**：关联实体的聚合统计字段无法本地推演。
+
+声明式重载管线以一次极轻量的网络请求为代价，换取了客户端与数据库全量状态的强一致性。
+
+:::en
+> **Original**: Declarative reload pipelines trade a lightweight network roundtrip for absolute state consistency, eliminating client-side sorting drift and aggregate miscalculations.
+
+**📌 核心术语与语境解析**：
+- **State Consistency** [steɪt kənˈsɪstənsi]：*状态一致性*。客户端视图呈现与底层数据库存储状态在业务语义与数据细节上保持高度吻合。
+- **Sorting Drift** [ˈsɔːrtɪŋ drɪft]：*排序漂移*。客户端本地插入新元素时无法准确契合服务端复杂排序逻辑而产生的位置错乱。
+:::

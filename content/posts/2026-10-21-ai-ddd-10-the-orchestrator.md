@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（十）：编排器：构建协调智能体"
 date: 2026-10-21T10:00:00Z
-description: "把专家智能体之间的任务交接转化为可执行控制平面，涵盖资格检查、类型化消息、合法状态转换、人工审批关卡、持久化与重放，驱动完整的 BrewUp 闭环。"
+description: "双栏独立滚动工作台：把专家智能体交接转化为确定性控制平面，涵盖资格检查、类型化信封、状态机、人工审批关卡与重放追踪。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -12,7 +12,166 @@ tags:
   - "工作流编排"
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。全专栏共 12 篇，覆盖大语言模型心智模型、事件风暴与 AI 协作、提示词规则手册、限界上下文精炼，以及专家智能体与编排器的完整工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
+
+# 核心实战精炼：构建协作编排器与多智能体状态机
+
+## 1. 架构选型与决策矩阵
+
+下表对比了构建多智能体系统时四种核心控制平面的技术选型与权衡：
+
+| 架构维度 | 自由对话流 (Unstructured Chat) | 自主控制大模型 (LLM Controller) | 静态工作流引擎 (Hardcoded Pipeline) | **确定性协议状态机编排器 (Deterministic Protocol Orchestrator)** |
+| :--- | :--- | :--- | :--- | :--- |
+| **控制平面本质** | 纯文本 Prompt 串联（自然语言提示） | 另一个具备最高决策权的 Agent 进行协调 | 外部硬编码脚本（如 Bash / Python DAG） | **强类型应用服务 + 有限状态机（FSM）+ 契约信封** |
+| **推进决策机制** | 基于大语言模型理解“Looks good”推进 | 模型自行评估质量并自主推进 | 依据退出码或文件存在推进 | **严格前置资质检查（Eligibility Check）+ 人工关卡决策记录** |
+| **工件传递形态** | 裸 Markdown 或自由文本上下文 | 自由格式 JSON / 聊天历史 | 裸文件路径传递 | **类型化信封（Artifact Envelope：元数据、哈希、出处、未决列表）** |
+| **失误与容错** | 错误隐蔽累积，下游全盘崩溃 | 模型无依据臆断修正，产生二次幻觉 | 阶段报错则整链失败重启 | **局部打回修正（Refer Back & In-place Loop），保留历史对照** |
+| **知识完整性** | 未决问题在多轮对话中被悄然遗漏 | 模型自动替业务闭环策略 | 无法感知业务未决状态 | **代码级阻断：已采纳工件若遗漏未决条目（Unresolved ID）立即驳回** |
+
+## 2. 编排器核心架构与状态转换拓扑图
+
+编排器充当**协调者（Facilitator）而非控制者（Controller）**。编排器仅对状态转移、前置依赖、工件信封以及人类关卡签字进行机械校验，绝不进行领域推论：
+
+```mermaid
+stateDiagram-v2
+    [*] --> Running: 启动工作流实例 (Init)
+    
+    Running --> AwaitingReview: Specialist 发送 CandidateProduced
+(校验路由/发送者/证据引用/Attempt)
+    
+    state "AwaitingReview (等待人工关卡)" as AwaitingReview {
+        [*] --> InReview: 人类架构师审查候选条目
+    }
+    
+    AwaitingReview --> Running: GateAccepted (人工采纳)
+[验证哈希/前序候选/未决继承] ➔ StageIndex++
+    AwaitingReview --> CorrectionRequired: GateReferred (打回修正)
+[记录人类修改建议] ➔ Attempt++
+    AwaitingReview --> Stopped: GateRejected (彻底否决)
+[持久化否决原因，终止本实例]
+    
+    CorrectionRequired --> AwaitingReview: Specialist 发送修正后的 CandidateProduced
+(带因果链路与递增 Attempt)
+    
+    Running --> Stopped: AuthorityRequired
+(当遭遇证据完全缺失且现场无人能裁决时触发)
+    
+    Running --> Completed: 全部 4 阶段完成且关卡全部签署通过
+    
+    Stopped --> [*]
+    Completed --> [*]
+```
+
+## 3. 治理自治框架：类型化协议与信封模式
+
+### 3.1 工件信封结构（Artifact Envelope）
+跨智能体流转的任何产物均被打包进强类型信封，杜绝裸数据流转：
+```yaml
+# ArtifactEnvelope 结构
+workflow_id: "brewup-stock-01"            # 工作流唯一追踪标识
+producer: "eventstormer"                   # 产出该工件的专家标识
+kind: "candidate-facts"                    # 工件类型（candidate-* 或 accepted-*）
+path: "specs/001/accepted-facts.md"        # 文件存放物理相对路径
+evidence_refs: ["QUOTE-13", "QUOTE-15"]    # 原始证据引用清单
+unresolved: ["ES-17"]                      # 必须显式继承的未决问题 ID 列表
+attempt: 1                                 # 当前阶段的尝试轮次（打回修正则递增）
+content_sha256: "0f62f5949c7e..."          # 工件正文内容 SHA256 哈希
+human_decision_sha256: "a4b7c12d..."       # 人工关卡审批决策单 SHA256 哈希
+source_artifact_sha256: ["e2f891b0..."]    # 上游前序依赖工件的 SHA256 哈希清单
+```
+
+### 3.2 协议交互消息与处理语义矩阵
+
+| 消息类型 (`ProtocolMessageKind`) | 发送方主体 | 触发前置状态 | 编排器处理动作与后置状态 | 架构约束 |
+| :--- | :--- | :--- | :--- | :--- |
+| `CandidateProduced` | Specialist | `Running` / `CorrectionRequired` | 校验发送者权限与工件信封，状态转为 `AwaitingReview` | 严禁直接触发下游专家，必须等待关卡 |
+| `GateAccepted` | Human Reviewer | `AwaitingReview` | 验证人类决策哈希、前序候选哈希与未决完整性，推进 `StageIndex++` | **若遗漏任何 `Unresolved` 项立即 Block 阻断** |
+| `GateReferred` | Human Reviewer | `AwaitingReview` | 记录打回原因，状态转为 `CorrectionRequired` | 保持当前阶段不变，仅递增 `Attempt` 计数 |
+| `GateRejected` | Human Reviewer | `AwaitingReview` | 记录否决原因，状态转为 `Stopped` | 终止该工作流实例，禁止擅自回退状态 |
+| `AuthorityRequired` | Specialist / Gate | `Running` / `AwaitingReview` | 发现业务关键规则缺失且无权裁决，转为 `Stopped` | 必须由外部真实业务权威介入重新启动关联流 |
+
+### 3.3 编排器三大绝对不变量 (Orchestrator Invariants)
+1. **资格不变量 (Eligibility Invariant)**：下游专家（如 Storyteller）绝不可直接消费上游专家的候选产物（如 `candidate-facts`），必须且只能消费经人工关卡签署的 `accepted-facts`。
+2. **未决继承不变量 (Unresolved Retention Invariant)**：已采纳工件信封中的 `Unresolved` 列表必须完整包含当前候选工件中的全部未决 ID，严禁通过文本忽略隐式解决。
+3. **因果与防篡改不变量 (Causation & Tamper-proof Invariant)**：每条消息必须携带前序消息的 `CausationId`；工件内容与关卡审批必须附带 SHA256 哈希，任何离线篡改均导致流程崩溃拒绝。
+
+## 4. 生产级编排器核心实现 (C# 范式)
+
+### 4.1 核心状态机与消息分发逻辑
+```csharp
+public ProtocolResult Handle(ProtocolState state, ProtocolMessage message)
+{
+    // 1. 幂等去重检查
+    if (state.ProcessedMessageIds.Contains(message.MessageId))
+        return Ignored(state, $"Message {message.MessageId} was already applied.");
+
+    // 2. 基础合法性与因果链校验
+    if (message.WorkflowId != state.WorkflowId)
+        return Blocked(state, "Workflow ID mismatch.");
+    if (message.Recipient != "orchestrator")
+        return Blocked(state, "Protocol messages must target the orchestrator.");
+    if (message.CausationId != state.LastMessageId)
+        return Blocked(state, $"Expected causation {state.LastMessageId}, got {message.CausationId}.");
+    if (state.Status is ProtocolStatus.Stopped or ProtocolStatus.Completed)
+        return Blocked(state, $"Workflow is already {state.Status}.");
+
+    // 3. 严格受限的状态转移分发
+    return message.Kind switch
+    {
+        ProtocolMessageKind.CandidateProduced => RecordCandidate(state, message),
+        ProtocolMessageKind.GateAccepted     => AcceptCandidate(state, message),
+        ProtocolMessageKind.GateReferred     => ReferCandidate(state, message),
+        ProtocolMessageKind.GateRejected     => StopFromGate(state, message),
+        ProtocolMessageKind.AuthorityRequired=> StopForAuthority(state, message),
+        _ => Blocked(state, "Unsupported message kind.")
+    };
+}
+```
+
+### 4.2 采纳推进时的未决问题防护检查
+```csharp
+private ProtocolResult AcceptCandidate(ProtocolState state, ProtocolMessage message)
+{
+    var accepted = message.Artifact;
+    
+    // 强制防篡改与出处追溯校验
+    if (!IsSha256(accepted.HumanDecisionSha256))
+        return Blocked(state, "Human decision SHA256 signature is missing or invalid.");
+    if (!accepted.SourceArtifactSha256.Contains(state.Candidate.ContentSha256))
+        return Blocked(state, "Accepted artifact does not cite the candidate under review.");
+    if (accepted.Attempt != state.Candidate.Attempt)
+        return Blocked(state, "Accepted artifact attempt number mismatch.");
+
+    // 刚性未决问题继承防护：严禁在未获人类书面决策前遗漏任何未决议题
+    var lost = state.Candidate.Unresolved.Except(accepted.Unresolved).ToArray();
+    if (lost.Length > 0)
+        return Blocked(state, $"Accepted artifact drops unresolved issues: {string.Join(", ", lost)}");
+
+    var next = AppliedState(state with
+    {
+        StageIndex = state.StageIndex + 1,
+        Status = state.StageIndex + 1 >= state.Routes.Length ? ProtocolStatus.Completed : ProtocolStatus.Running,
+        AcceptedArtifacts = state.AcceptedArtifacts.Add(accepted),
+        Candidate = null
+    }, message);
+
+    return new(next, true, $"APPLIED: Accepted {accepted.Kind}. Advanced to stage {next.StageIndex}.");
+}
+```
+
+## 5. 架构避坑清单 (Do's & Don'ts)
+
+| 场景维度 | 严禁做法 (Don't) | 推荐做法 (Do) |
+| :--- | :--- | :--- |
+| **编排器定位** | 赋予编排器大模型思考能力，让其在工件缺失时“智能推断”替代输入。 | **保持编排器为纯确定性薄控制平面**，仅校验资格与合法状态转移；业务思考留在专家与人类端。 |
+| **消息流转** | 采用聊天窗口（Free-form Chat）传递指令，依赖大模型自我汇报进度。 | **采用强类型协议消息与工件信封（Envelope）**，通过哈希与因果链追踪唯一事实来源。 |
+| **流程被打回** | 某阶段审查未通过时，将整条多智能体链路推倒从头全部重新运行。 | **支持就地局部修正（In-place Correction）**，保持上游已采纳工件不变，仅在当前阶段递增 Attempt。 |
+| **未决问题处理** | 认为“工作流完成（Completed）”代表所有业务问题已彻底澄清并闭环。 | **区分流程完成与领域澄清**：工作流完成仅代表控制流走通，未决问题清单必须作为工件显式交付。 |
+| **异常拦截** | 遇到非法消息或权限缺失时，强行让工作流继续推进以维持系统可用性。 | **及时阻断（BLOCKED / STOPPED）**：在证据或权限缺失时，停止流转才是最正确的系统响应。 |
+
+<!-- split -->
+
+# 原著完整参考：编排器：构建协调智能体
 
 *第 9 章*围绕一条共享规则构建了四个有界专家智能体：每个专家智能体都可以将已被接受的素材转换为候选成果，但只有人工关卡才能决定什么可以作为下一阶段的权威输入。记录下来的 BrewUp 链路让这些边界清晰可查，但各环节之间的交接仍然依赖手动协调。
 
@@ -26,6 +185,13 @@ tags:
 - 如何将多智能体交互建模为类型化消息与合法状态转换。
 - 如何在交接过程中完整保留因果关系、出处追溯、未决知识以及人类权威。
 - 如何运行、修正、暂停、持久化和恢复执行完整的 BrewUp 专家智能体链路。
+:::en
+> **Original**: In this chapter, you learned how to: Define the orchestrator's decision rights without turning it into another modeling specialist. Model multi-agent exchanges as typed messages and legal state transitions. Preserve causation, provenance, unresolved knowledge, and human authority across handoffs. Run, correct, stop, persist, and resume the complete BrewUp specialist chain.
+
+**📌 核心术语与语境解析**：
+- **Decision rights** [dɪˈsɪʒn raɪts]：*决策权边界*。编排器守住程序性协调权，人类守住领域裁决权，专家守住推演提议权。
+:::
+
 - 如何在有仓储支持的前提下验证完成状态，同时不把工作流的完成误当作每个领域问题都已解决的证明。
 
 ## 技术要求
@@ -39,8 +205,24 @@ tags:
 我们从面向 BrewUp 库存管理（Stock Management）的最小可用协调器开始。协调器将判定 Storyteller 是否具备运行资格、在缺失关卡时拒绝状态转换、记录人类决策，并重新评估同一个请求。该示例使用了 EventStormer 和 Storyteller。这两个名称是来自*第 9 章*的专家智能体名称，而非 C# 类名；本章引入的 C# 类型是协调器及其协议。后续章节将把该机制扩展至完整的链路。
 
 该协调器强制执行了来自*第 9 章*的一条不变量：在人工关卡记录下 Storyteller 可消费的已接受事实（accepted-facts）工件之前，候选事实绝不能成为 Storyteller 的输入。如果这种状态转换依然保持隐式，引入更多智能体只会掩盖故障。
+:::en
+> **Original**: The coordinator enforces one invariant from *Chapter 9*: candidate facts do not become Storyteller input until a human gate records the accepted-facts artifact that Storyteller might consume. If this transition remains implicit, adding agents hides the failure.
+
+**📌 核心术语与语境解析**：
+- **Invariant** [ɪnˈveəriənt]：*不变量*。在系统所有合法状态转换中必须始终得到满足的刚性约束条件。
+- **Implicit transition**：*隐式状态转换*。未经严格校验而在系统内部私自推进的步骤，极易掩盖智能体产出的质量缺陷。
+:::
+
 
 上一章结尾所强调的区别，在本节中被转化为可执行的代码：协调与权威。编排器可以强制执行工作流不变量，例如检验已接受工件是否具备作为输入的资格，以及模式（schema）、出处追溯（provenance）和必要关卡是否完备。但它绝对不能做的是：擅自推断出足以让一个已被阻止的转换重新生效的领域决策。
+:::en
+> **Original**: The last chapter ended on the distinction this section makes executable: coordination versus authority. An orchestrator might enforce workflow invariants, such as that accepted artifact is eligible as input and whether schema, provenance, and a required gate are intact. What it cannot do is infer the domain decision that would make a stopped transition valid.
+
+**📌 核心术语与语境解析**：
+- **Coordination versus authority**：*协调权与权威决策权分离*。编排器只负责按规则流转工件，绝无权替业务推断缺失的领域规则。
+- **Workflow invariants** [ˈwɜːkfləʊ ɪnˈveəriənts]：*工作流不变量*。工件类型匹配、出处追溯完备、前置关卡具备签名等结构性先决条件。
+:::
+
 
 ### 创建编排工作区
 
@@ -252,6 +434,14 @@ Passed! - Failed: 0, Passed: 4, Skipped: 0, Total: 4
 ### 从运行示例中提炼通用边界
 
 这个运行示例让这条边界变得清晰具体。编排器可以挑选符合资格的状态转换、组装已接受的输入、验证声明的条件、记录拒绝原因，并向前传递未决标识符。但编排器不能创建关卡、不能将 Referred（转交修正）擅自更改为 accepted（已接受），也不能丢弃 ES-17。
+:::en
+> **Original**: The working example makes this boundary concrete. The orchestrator can select an eligible transition, assemble accepted input, validate declared conditions, record a refusal, and carry unresolved identifiers forward. The orchestrator cannot create a gate, change Referred to accepted, or drop ES-17.
+
+**📌 核心术语与语境解析**：
+- **Eligible transition** [ˈelɪdʒəbl trænˈzɪʃn]：*具备资质的状态转换*。满足全部前置工件与关卡要求、被允许执行的下一阶段转换。
+- **Carry unresolved identifiers forward**：*向前透传未决标识符*。确保上游发现的业务疑难问题在下游流水线中始终保留，严禁隐式吞没。
+:::
+
 
 *表 10.1* 对这个精简程序中所行使的决策权进行了提炼，将*第 9 章*中“协调与权威”的边界转化为逐行的操作规范。每一行代表一项操作和三个答案：编排器可以机械化地执行什么、唯有专家智能体可以执行什么、唯有人类权威才能决定什么。这些行经过了刻意的具体化设计：在完整的工作流中，每一行日后都可以转化为一个函数、验证规则、持久化记录或人工操作。
 
@@ -270,6 +460,13 @@ Passed! - Failed: 0, Passed: 4, Skipped: 0, Total: 4
 > **注意：何时停止工作流才是正确的结果**
 >
 > 当缺失证据、工件或必要的决策时，盲目继续执行才是一种缺陷。编排器的可靠性，既取决于它能执行合法的转换，同样也取决于它能拒绝非法的转换。
+:::en
+> **Original**: When evidence, an artifact, or a required decision is missing, continuation is the defect. The orchestrator's reliability depends on refusing invalid transitions as well as performing valid ones.
+
+**📌 核心术语与语境解析**：
+- **Continuation is the defect**：*强行继续流转即是系统缺陷*。在关键决策或证据缺失时，盲目让工作流继续推进只会放大幻觉并产生毒化产物；及时阻断才是可靠系统的标准行为。
+:::
+
 
 其最终成果是一个轻量化的控制平面。确定性的代码负责检查资格、工件类型、关卡记录、标识符和出处追溯。有界专家智能体负责转换领域素材，人类评审员则负责接受、转交修正或拒绝候选成果。任何新的综合归纳工作都必须指派给另一个订立了明确契约的专家智能体，而不能隐匿在协调器内部。
 
@@ -278,6 +475,14 @@ Passed! - Failed: 0, Passed: 4, Skipped: 0, Total: 4
 ## 设计多智能体对话
 
 资格检查决定了专家智能体能否启动。但资格检查并不负责管控候选成果产出之后的流程：评审、修正、接受、拒绝、重复投递，或在缺失权威时暂停。`ConversationProtocol` 用类型化消息、发送者权限、证据要求以及合法状态转换，取代了对对话记录的主观解释。专家智能体专注于生成性工作，而人工关卡始终保有最终决定权。
+:::en
+> **Original**: Multi-agent systems often start with unstructured chat. Unstructured chat works well for brainstorming, but it does not tell you why progress stopped, who made a decision, or which inputs an agent read. That uncertainty becomes acute when you try to trace a defect through multiple steps.
+
+**📌 核心术语与语境解析**：
+- **Unstructured chat** [ʌnˈstrʌktʃəd tʃæt]：*无结构对话*。依赖自然语言 Prompt 驱动的多智能体交互，缺乏确定性状态边界与审计追溯能力。
+- **Defect traceability**：*缺陷可追溯性*。当模型产物出错时，能够准确定位到是哪一次转换、哪份输入、哪个人类关卡批准导致的责任闭环能力。
+:::
+
 
 ### 从自由形式的闲聊到显式协议
 
@@ -313,6 +518,13 @@ Storyteller: I will write the scenario.
 ### 定义工件封套
 
 协议位于应用项目的 `ConversationProtocol.cs` 中。协议从为每个候选或已接受工件定义封套开始：
+:::en
+> **Original**: The protocol lives in `ConversationProtocol.cs` in the application project. The protocol starts with an envelope for every candidate or accepted artifact:
+
+**📌 核心术语与语境解析**：
+- **Artifact envelope** [ˈɑːtɪfækt ˈenvələʊp]：*工件信封*。对生成数据、元数据、SHA256 哈希、出处引用及未决状态进行统一封装的强类型结构体。
+:::
+
 
 ```csharp
 public sealed record ArtifactEnvelope(
@@ -487,6 +699,13 @@ public ProtocolResult Handle(
 ```
 
 被阻止的消息（BLOCKED）会使状态保持不变。被阻止的消息与“已停止”（STOPPED）不同。BLOCKED 意味着尝试发送的消息是不合法的，因此从未成为对话的一部分。STOPPED 状态则是一个已应用的协议结果，它记录了工作流无法继续的原因。操作员在决定是修复投递问题还是获取领域决策时，需要明确这一区别。*表 10.3* 用两行进行了说明。
+:::en
+> **Original**: A blocked message leaves state unchanged. A blocked message is different from Stopped. BLOCKED means that the attempted message was not legal and therefore never became part of the conversation. The STOPPED state is an applied protocol outcome that records why the workflow cannot continue. Operators need that distinction when deciding whether to fix a delivery or obtain a domain decision. *Table 10.3* states it in two rows.
+
+**📌 核心术语与语境解析**：
+- **BLOCKED versus STOPPED**：*被驳回与已停止的区别*。BLOCKED 是通信层面的非法消息（系统状态未变）；STOPPED 是领域层面的终态结果（工作流因缺失必要权威而受控挂起并持久化）。
+:::
+
 
 | 结果 | 发生了什么 | 工作流状态 | 操作员该做什么 |
 |---|---|---|---|
@@ -524,6 +743,14 @@ return new(next, true,
 ### 接受候选成果并推进
 
 接受是唯一能推进 `StageIndex` 的消息。接受操作需要人类评审员身份、预期的已接受工件类型、经过验证的内容与决策哈希值、引用受审候选成果的出处追溯、匹配的尝试次数，以及完整保留的未决标识符：
+:::en
+> **Original**: Acceptance is the only message that advances `StageIndex`. Acceptance requires the human reviewer, the expected accepted artifact kind, verified content and decision hashes, provenance that cites the candidate under review, a matching attempt, and preserved unresolved identifiers:
+
+**📌 核心术语与语境解析**：
+- **Stage advancement** [steɪdʒ ədˈvɑːnsmənt]：*阶段推进*。工作流向下一位专家推进的唯一合法途径是人工关卡的正式 `GateAccepted` 签署，任何模型自评均无效。
+- **Preserved unresolved identifiers**：*存续的未决标识符*。验收检查强制比对未决列表，防止模型在转换中悄悄消除业务疑义。
+:::
+
 
 ```csharp
 if (!IsSha256(accepted.HumanDecisionSha256))
@@ -549,18 +776,42 @@ ES-17 并不需要永远保持未决，但解决它需要记录在案的人类�
 ### 转交候选成果进行修正而不推进阶段
 
 转交修正保持相同的阶段和已接受输入，记录人类给出的原因，并将状态更改为 `CorrectionRequired`。专家智能体必须回复一条因果关联的消息，并附带更高的 Attempt。其修正后的候选成果重新回到 `AwaitingReview`，从而让当前阶段形成循环回路，同时避免赋予其自我接受的权限。
+:::en
+> **Original**: A referral keeps the same stage and accepted input, records the human reason, and changes the status to `CorrectionRequired`. The specialist must answer with a causally linked message and a higher Attempt. Its corrected candidate returns to `AwaitingReview`, so the stage can loop without granting self-acceptance.
+
+**📌 核心术语与语境解析**：
+- **Referral (打回/驳回)** [rɪˈfɜːrəl]：*针对当前阶段的就地修正要求*。保持既有上游事实输入不变，递增轮次并提供人类反馈，避免推倒重来。
+- **Correction loop**：*修正循环*。受控的有界重试闭环，严禁智能体跳过人工直接“自证通过”。
+:::
+
 
 ### 在缺失权威时停止工作流
 
 团队无法通过修正来解决所有的阻碍。假设 `EventStormer` 能够证明库存排查演练中存在不一致的“缺货少件（short-quantity）”行为，但没有任何有权限的负责人能够决定未来的业务场景应当遵循何种策略。如果要求 `EventStormer` 做出选择，就会把一个证据专家智能体硬变成策略权威。盲目重试只会围绕同一个缺失的决策生成更多的废话文本。
 
 使用 `AuthorityRequired` 来表示这种状况。这是一个已应用的协议结果：状态变为 `Stopped`，且 `StopReason` 成为持久化快照和追踪记录的一部分。
+:::en
+> **Original**: Some obstacles the team cannot resolve through correction. Suppose `EventStormer` can prove that the Stock walkthrough contains inconsistent short-quantity behavior, but no authorized owner can decide which policy should govern future scenarios. Asking `EventStormer` to choose would convert an evidence specialist into a policy authority. Retrying would produce more text around the same missing decision.
+
+**📌 核心术语与语境解析**：
+- **Policy authority conversion**：*擅自转变为策略制定权威*。在缺乏业务方定论时逼迫大模型做决定，会将其由“客观证据提取者”异化为“越权决策者”。
+- **AuthorityRequired**：*需要权威介入*。协议中的明确终态信号，提示系统已到达业务知识盲区，必须人类利益相关者裁决。
+:::
+
 
 STOPPED 对当前协议实例而言是终态。继续工作需要明确的操作动作，例如记录下缺失的决策并启动一个因果关联的工作流。将 Stopped 硬性修改回 Running 会抹杀掉让该停止机制值得信赖的边界。
 
 ### 测试协议不变量
 
 测试套件重点关注可能破坏编排状态的故障：重复投递、过期的因果链、有损交接、断裂的候选链接以及伪造的出处追溯。重新投递相同的工作成果绝不能创造出第二种解释。
+:::en
+> **Original**: The suite focuses on failures that can corrupt orchestration state: duplicate delivery, stale causation, lossy handoffs, broken candidate linkage, and fabricated provenance. Redelivering the same work must not create a second interpretation.
+
+**📌 核心术语与语境解析**：
+- **Orchestration state corruption**：*编排状态损坏*。重复投递、陈旧因果链、丢失未决问题或伪造出处导致的流程逻辑失控。
+- **Idempotency** [ˌaɪdəmˈpəʊtənsi]：*幂等性*。重复投递相同消息不产生副作用，直接安全忽略。
+:::
+
 
 重复消息会被忽略，因为其效果已经生效；因果关联错误的消息会被阻止，因为它们不属于当前对话的时间点。这两种情况都不是领域层面的故障，因此都不会导致工作流停止。
 
@@ -775,6 +1026,14 @@ storyteller cannot start until this gate records one.
 在仓储重放中，这些已接受工件来自*第 9 章*已验证的交接凭据，带有其确切的内容哈希、源输出哈希和人类决策哈希。
 
 每个阶段都遵循相同的节奏：产出候选工件、暂停等待评审，并且仅在 `GateAccepted` 之后推进。`JsonWorkflowStore` 以原子方式持久化状态、当前输入、已处理命令以及追踪记录，以便另一个进程无需解读对话记录即可恢复执行。
+:::en
+> **Original**: Building the loop around the protocol... The orchestration loop brings the pieces together: the capability registry, the state machine, the artifact envelopes, and the human gates. It coordinates the execution of the specialist chain while keeping every step attributable and inspectable.
+
+**📌 核心术语与语境解析**：
+- **Orchestration loop** [ˌɔːkɪˈstreɪʃn luːp]：*编排循环*。调度能力注册表、驱动状态机转移、装配工件信封并阻断等待人工审批的主执行引擎。
+- **Attributable and inspectable**：*可归因且可审查*。每一步动作都有明确的责任主体、输入依据与校验记录。
+:::
+
 
 > **注意：框架视角 – Spec Kit：什么代表阶段回退？**
 >
@@ -783,6 +1042,13 @@ storyteller cannot start until this gate records one.
 ### 修正单个阶段而无需重启链路
 
 第一个 Storyteller 候选工件过于草率地终结了缺货少件的故事。评审员以“*将观察到的缺货与补货策略区分开*”为由将其转交修正。这次调用记录了将观察到的缺货与补货策略区分开的转交操作：`GateReferred` 将状态更改为 `CorrectionRequired`，但将 `StageIndex` 保留在 Storyteller，并保留了为第 1 次尝试提供输入的已接受事实。
+:::en
+> **Original**: When an artifact is referred back, the loop allows in-place correction without restarting the entire chain. The correction produces a new version of the artifact, linked to the original by provenance, while earlier accepted stages remain valid.
+
+**📌 核心术语与语境解析**：
+- **In-place correction**：*就地局部修正*。仅要求被驳回的当前专家针对反馈重跑，前序已确认阶段保持冻结，极大节省成本与时间。
+:::
+
 
 ```csharp
 var referred= loop.ReferCurrent(
@@ -811,6 +1077,13 @@ Assert.Equal(2, loop.State.Candidate!.Attempt);
 ### 持久化可重放的运行追踪记录
 
 仅凭最终状态无法解释工作流是如何到达该状态的。记录每个已应用的状态转换，并附带足够的信息以便对其进行排序、关联其成因、定位其工件，以及检查跨越边界的不确定性。将该追踪记录与恢复执行所需的状态一同持久化：
+:::en
+> **Original**: A run trace records every event in the execution: dispatches, candidate outputs, gate decisions, corrections, and stops. Because every artifact is hashed and every transition is typed, the trace can be replayed to verify that the result matches the recorded path.
+
+**📌 核心术语与语境解析**：
+- **Replayable run trace** [rɪˈpleɪəbl rʌn treɪs]：*可重放运行追踪*。以确定性时序日志记录所有事件与哈希，使外部审计人员可随时精确复现推演全过程。
+:::
+
 
 ```csharp
 public sealed record WorkflowSnapshot(
@@ -850,6 +1123,13 @@ Assert.Empty(resumedRunner.Invocations);
 ### 仅在最终人工关卡之后完成
 
 Context Mapper 的候选工件依然让工作流停留在 `AwaitingReview`。正常路径测试证明，`ConversationProtocol` 仅在应用了最终的 `GateAccepted` 消息后才会达到 Completed 状态：
+:::en
+> **Original**: Workflow completion is a statement about the control plane, not about the domain. The workflow completes when all declared stages have finished and all required gates have recorded decisions. It does not prove that every domain question has been answered, or that the resulting model is free of contradictions.
+
+**📌 核心术语与语境解析**：
+- **Control plane completion**：*控制平面完成*。流程合规走通的标志，绝不代表业务领域中所有矛盾均已平息，未决问题依然必须被严肃跟进。
+:::
+
 
 ```text
 Assert.Equal(ProtocolStatus.Completed, loop.State.Status);

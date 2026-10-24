@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（二十）：前端生产级构建与 Node SSR 容器化打包
 date: 2026-10-23T00:20:00Z
-description: 实战 Angular 生产级构建优化，编写多阶段 Node.js Dockerfile 容器化 SSR 服务，配置反向代理打通前后端通信契约。
+description: 双栏独立滚动对照：实战 Angular AOT 生产构建优化，编写多阶段 Node.js Dockerfile 容器化 SSR 服务，配置 Express 反向代理打通前后端通信契约。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -12,282 +12,282 @@ tags:
   - 生产构建
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Spring Boot 4 & Angular 22 全栈微服务实战》](/columns/spring-boot-angular)。全专栏共 22 篇，深度覆盖 Java 26 微服务拆分、Spring Cloud 网关与安全鉴权、Angular 22 Signals 状态治理以及端到端容器化交付的全链路工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
-在前面的章节中，我们借助 Server-Sent Events（SSE）为书店系统注入了实时推送能力，至此前端涵盖了完整的数据交互范式：常规 CRUD 的请求-响应模型、针对 SEO 与首屏性能的服务端渲染（SSR），以及用于即时状态同步的 SSE 长连接。
+## 1. 前端构建与容器化打包决策矩阵
 
-功能开发圆满落幕后，我们的重心转向生产交付阶段——将 Angular 前端应用打包并容器化。正如在第十章为 Spring Boot 微服务编写 Dockerfile 一样，本章我们将深入探究 Angular 生产构建产物的内部机理，解决 SSR 在容器内部调用网关 API 的路由转发痛点，打造精炼可靠的多阶段 Node.js Docker 镜像，为最终的全栈联合编排奠定坚实基石。
+| 技术维度 | 选型方案 | 替代方案 | 决策依据 |
+| :--- | :--- | :--- | :--- |
+| **产物交付形态** | 混合双层输出（`browser/` 静态资源 + `server/` Node 入口） | 纯前端静态 HTML/JS 包 | SSR 渲染需要 Node 运行时常驻执行动态计算，无法仅靠静态 Nginx 托管。 |
+| **容器分层构建** | 多阶段构建（`node:24-alpine` Builder + Runtime） | 单一阶段直接保留全量开发工具 | 剥离 TypeScript 编译器与构建缓存，减小最终镜像攻击面与分发体积。 |
+| **SSR 内部代理** | Express 集成 `http-proxy-middleware` 拦截 `/packt` | SSR 期间硬编码绝对路径或直连微服务 | 统一前后端相对路径 `/packt` 契约，使容器无论在边缘代理下还是独立排查均具备自愈能力。 |
+| **路径剥离修复** | 显式配置 `pathRewrite: (path) => '/packt' + path` | 依赖默认前缀截断 | Express 挂载中间件默认会裁减匹配前缀，必须补齐前缀以命中 Spring Cloud Gateway 断言。 |
+| **主机标头加固** | `AngularNodeAppEngine({ allowedHosts: ['localhost', '127.0.0.1'] })` | 允许任意 Host Header 通过 | 严格限制请求 Host 头，阻断恶意伪造导致服务端请求伪造（SSRF）与缓存投毒。 |
 
----
-
-## 1. 深度剖析 Angular 生产级构建产物
-
-在动手容器化之前，我们首先需要搞清楚 Angular 生产构建（Production Build）究竟生成了什么，以及它与 Spring Boot 生成的可执行 JAR 包存在哪些根本性差异。
-
-在前端项目根目录下执行以下构建命令：
-
-```bash
-npm run build
-```
-
-该命令底层调用了 `ng build`，默认激活生产环境配置（`production` configuration）。这会触发一系列深度优化：
-1. **AOT 编译（Ahead-of-Time）**：在构建期而非浏览器运行时将 Angular 模板编译为高度优化的高效 JavaScript 代码；
-2. **Tree-Shaking（摇树优化）**：分析 ES 模块依赖图谱，彻底剔除最终 Bundle 中未被使用的多余代码；
-3. **Minification（代码混淆与压缩）**：缩短变量名、剥离空白字符与注释，最大限度压缩静态资源体积；
-4. **环境文件替换（fileReplacements）**：激活此前配置的替换规则，将 `environment.ts` 无缝替换为 `environment.prod.ts`，从而将生产 API 相对前缀 `/packt` 固化注入到编译输出中。
-
-构建完成后，在 `dist/` 目录下将生成如下双层产物拓扑结构：
-
-```text
-dist/chapter-20/
-├── browser/              # 纯静态资源：JS、CSS、预渲染静态 HTML
-│   ├── index.html        # 客户端渲染（CSR）路由的 Fallback 骨架
-│   ├── privacy/
-│   │   └── index.html    # 构建期预渲染产物（Pre-rendered）
-│   ├── terms/
-│   │   └── index.html    # 构建期预渲染产物（Pre-rendered）
-│   └── *.js, *.css       # 带有内容哈希（Content Hash）的静态 Bundle
-└── server/
-    └── server.mjs        # Node.js SSR 运行态入口
-```
-
-### 产物两重性的运行逻辑
-- **`browser/` 目录**：包含供终端浏览器下载和执行的全部静态资源。带有散列值的文件名（如 `main-abc123.js`）天然支持强缓存策略：一旦代码更新，哈希即变，浏览器自动加载新版本。其中 `privacy/` 与 `terms/` 是我们在构建期预渲染好的纯 HTML，无需任何服务端动态计算即可直接分发。
-- **`server/` 目录**：核心为 `server.mjs`，即由 `src/server.ts` 编译而来的原生 Node.js 入口。它内嵌了 Express 实例与 Angular SSR 渲染引擎（`AngularNodeAppEngine`），常驻在服务端接收请求并动态执行组件渲染。
-
-这正是前端容器化最核心的认知分水岭：**`browser/` 是纯静态的，而 `server/` 是动态的 Node 服务**。我们的 Docker 容器内部必须运行 Node 运行时来启动 `server.mjs`，同时还要由该 Express 实例对外提供 `browser/` 静态文件的托管服务。
-
-> 🔄 **与 Spring Boot 容器化的类比**：
-> - 在 Spring Boot 中，`mvn clean package` 打包出一个“自包含”的 Fat JAR，其内嵌了 Undertow 或 Tomcat，只需一条 `java -jar app.jar` 即可启动。
-> - 在 Angular 中，`ng build` 输出的静态与服务端混合包必须挂载在 Node.js 运行时之上，由其内嵌的 Express 引擎驱动。两者的交付物形态虽异，但容器化职责高度对齐。
-
----
-
-## 2. 改造 SSR 引擎：内嵌 API 代理与防护策略
-
-在生产环境配置中，我们将 API 基准地址配置为相对路径：`apiUrl: '/packt'`。
-
-- 在**浏览器客户端**中，相对路径自动以当前页面域名为基准解析（如 `http://localhost/packt/...`），后续由反向代理统一转发；
-- 然而在 **服务端渲染（SSR）** 期间，Node.js 运行在独立进程内部，当 `BookService` 调用 `HttpClient.get('/packt/inventory/api/books')` 时，它会默认以 Node 服务自身的监听源为基准进行解析——即 `http://localhost:4000/packt/...`。
-
-由于 Angular Express 服务器自身根本没有定义 `/packt/*` 的业务处理接口，这一 SSR 渲染请求在容器内部必将直接触发 404 或连接失败！
-
-### 为什么在 Express 内部配置反向代理？
-或许有同学会问：既然生产架构最外层有 Nginx 反向代理，为什么不在 Nginx 上集中处理？
-
-> [!NOTE] 架构分层的必然选择
-> SSR 期间 Node 进程发起的 HTTP 抓取属于**容器内部回环请求**，它压根不会流出容器外部，因而永远不可能到达边缘 Nginx 代理层。为了让前端容器无论是在 Docker 网络中受 Nginx 代理，还是在隔离环境下独立排查，都能具备完整的自愈渲染能力，在 Node.js SSR 服务器内部集成 API 代理是业界标准模式。
-
-首先在前端项目中安装 `http-proxy-middleware`：
-
-```bash
-npm install http-proxy-middleware
-```
-
-接着修改 `src/server.ts`，在静态资源托管中间件与通配路由之前挂载 API 代理中间件，并强化 SSR 引擎的主机名白名单防护：
+## 2. 生产级 SSR 服务内嵌反向代理与安全加固范式
 
 ```typescript
-// ... 既有模块导入
+import {
+  AngularNodeAppEngine,
+  createNodeRequestHandler,
+  isMainModule,
+  writeResponseToNodeResponse,
+} from '@angular/ssr/node';
+import express from 'express';
+import { join } from 'node:path';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
+const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 
-// 1. SSR 引擎安全加固：严格限制允许的主机名
+// 1. SSR 引擎安全加固：严格白名单校验 Host 标头，防御 SSRF
 const angularApp = new AngularNodeAppEngine({
   allowedHosts: ['localhost', '127.0.0.1'],
 });
 
-// 2. 内嵌 API 代理：拦截 /packt/* 并在 SSR 期间直接穿透到后端网关
+// 2. 内嵌 API 反向代理：解决 SSR 在 Node 进程内部发起的相对路径请求回环问题
 app.use(
   '/packt',
   createProxyMiddleware({
     target: process.env['API_URL'] || 'http://localhost:8080',
     changeOrigin: true,
+    // 关键修正：防止 Express 默认剥离挂载前缀导致网关 404
     pathRewrite: (path) => `/packt${path}`,
   }),
 );
 
-// ... 既有 express.static 与 /** Angular 捕获处理逻辑保持不变
+// 3. 静态资产托管：长效缓存 JS/CSS/图片，关闭默认 index.html 由 SSR 动态接管
+app.use(
+  express.static(browserDistFolder, {
+    maxAge: '1y',
+    index: false,
+    redirect: false,
+  }),
+);
+
+// 4. 路由分发管道：交由 Angular 引擎处理动态组件渲染
+app.use((req, res, next) => {
+  angularApp
+    .handle(req)
+    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
+    .catch(next);
+});
+
+if (isMainModule(import.meta.url) || process.env['pm_id']) {
+  const port = process.env['PORT'] || 4000;
+  app.listen(port, (error) => {
+    if (error) throw error;
+    console.log(`[SSR] Angular Node Express listening on port ${port}`);
+  });
+}
+
+export const reqHandler = createNodeRequestHandler(app);
 ```
 
-### 关键配置深度解析
-
-#### 1. Express 路径剥离陷阱与 `pathRewrite`
-当 Express 匹配到挂载在 `/packt` 前缀上的中间件时，**Express 默认行为会在将请求转交给中间件前剥离匹配前缀**！
-也就是说，一个原本请求 `/packt/inventory/api/books/paged?page=0&size=10` 的调用，到达 `createProxyMiddleware` 内部时其路径已被裁减为 `/inventory/api/books/paged?page=0&size=10`。
-
-如果直接转发给 Spring Cloud Gateway，网关将因找不到路由匹配而返回 404（因为网关的路由谓词精确匹配 `/packt/inventory/**`）。
-因此，我们必须显式声明 `pathRewrite: (path) => '/packt' + path`，将前缀补全回来。利用 `pathRewrite` 还可以保持 `target` 参数的纯粹（仅为协议与主机端口），便于从环境变量 `API_URL` 动态注入。
-
-#### 2. `allowedHosts` 防御 Host Header 注入攻击
-`AngularNodeAppEngine` 在接收到渲染请求时会核验 HTTP `Host` 请求头。若未显式配置白名单，恶意调用方伪造 `Host` 头可能诱导 SSR 渲染器生成指向黑客服务器的绝对路径资源链接，从而引发 **SSRF（服务端请求伪造）** 或缓存投毒风险。
-后续架构中，虽然 Nginx 通过 `upstream` 挂载前端容器，但配置了 `proxy_set_header Host $host` 透传了客户端原始头（`localhost`），且 Docker 健康检查同样以 `localhost` 访问容器。在此配置 `['localhost', '127.0.0.1']` 可完美兼顾安全与代理通配。
-
-#### 3. 动态目标与流式支持
-- `target` 优先读取 `process.env['API_URL']`。在单容器调试时回退至 `http://localhost:8080`；在全栈 Compose 编排时，我们将注入容器网络别名 `http://gateway-server:8080`；
-- `changeOrigin: true` 会自动将代理发出的请求头 `Host` 改写为目标网关的主机地址，防止后端网关产生域名匹配异议；
-- `http-proxy-middleware` 原生支持流式传输（Streaming），即使未来 SSR 场景需要中继流式响应亦能透明支撑。
-
----
-
-## 3. 编写多阶段构建 Dockerfile
-
-明确了产物结构与运行时需求后，我们采用 Docker 多阶段构建（Multi-stage Build）机制，将庞大的依赖安装与编译环境同轻量的运行环境严格分离。
-
-首先在项目根目录下创建 `.dockerignore`，排除无关干扰：
-
-```text
-node_modules
-.angular
-dist
-.git
-*.md
-```
-
-这能够极大缩减 Docker 客户端向 Docker Daemon 传输构建上下文（Build Context）的时间，并避免宿主机的本地产物或缓存干扰容器内部编译。
-
-接着在根目录下编写 `Dockerfile`：
+## 3. 生产级多阶段 Node.js Dockerfile 范式
 
 ```dockerfile
 # ==========================================
-# 阶段 1：编译构建环境（Builder）
+# 阶段 1：编译构建环境 (Builder)
 # ==========================================
 FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# 利用 Docker 层缓存（Layer Cache）：仅在依赖描述变更时重新执行 npm ci
+# 利用 Docker 层缓存：依赖文件未变动时跳过重新下载
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# 复制前端工程源码并执行生产构建
+# 复制工程源码并执行 AOT 生产构建
 COPY . .
 RUN npm run build
 
 # ==========================================
-# 阶段 2：生产运行环境（Runtime）
+# 阶段 2：生产运行环境 (Runtime)
 # ==========================================
 FROM node:24-alpine
 
 WORKDIR /app
 
-# 从构建阶段按需提取产物与运行期依赖
+# 仅从 Builder 提取运行时所必需的双层产物与生产依赖
 COPY --from=builder /app/dist/chapter-20 ./dist/chapter-20
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
-# 暴露端口与环境变量
+# 暴露端口与默认环境变量
 EXPOSE 4000
 ENV PORT=4000
 
-# 启动 Node.js SSR 生产服务器
+# 启动 Node.js 原生 SSR 生产服务器
 ENTRYPOINT ["node", "dist/chapter-20/server/server.mjs"]
 ```
 
-### 多阶段构建的核心要点
+## 4. 容器内 SSR 渲染与边缘代理流量流向拓扑
 
-1. **构建依赖与源码隔离缓存**：
-   先拷贝 `package.json` 与 `package-lock.json` 执行 `npm ci`，再拷贝其余源码执行编译。当开发者仅修改组件或样式代码时，Docker 会直接复用已缓存的 `node_modules` 层，构建提速显著。
-2. **Node.js 与 Java 运行时的显著区别**：
-   在 Spring Boot 容器中，我们只需要将编译出的一个 Fat JAR 拷入运行时镜像，因为 Java 已经将所有依赖打入 JAR 包；
-   但 Node.js 并非自包含单文件，`server.mjs` 启动时必须动态引用 `node_modules` 下的 Express、Angular SSR 核心运行时等。因此运行时阶段必须同步提取 `node_modules`。
-3. **直启编译产物**：
-   容器的 `ENTRYPOINT` 直接以 Node 执行编译好的 `server.mjs`，这是完全脱离 Angular CLI 开发脚手架（`ng serve`）的原生高性能生产态。
+```mermaid
+flowchart TD
+    CLIENT["外部客户端 (浏览器 / 爬虫)"] -->|HTTP 请求| NGINX["Nginx 边缘网关 (Port 80)"]
+    
+    NGINX -->|/packt/* 客户端 API 请求| GW["Spring Cloud Gateway (Port 8080)"]
+    NGINX -->|/* 页面导航与静态资产| SSR_CONTAINER["ng-bookstore 前端容器 (Port 4000)"]
+    
+    subgraph FRONTEND_CONTAINER ["Angular SSR 前端容器 (Node.js)"]
+        EXPRESS["Express Server (server.mjs)"]
+        STATIC["静态资源托管 (browser/)"]
+        PROXY["内嵌代理中间件 (http-proxy-middleware)"]
+        ENGINE["AngularNodeAppEngine 渲染引擎"]
+        
+        EXPRESS -->|静态文件命中| STATIC
+        EXPRESS -->|/packt/* 渲染期内部请求| PROXY
+        EXPRESS -->|SSR 路由导航| ENGINE
+        ENGINE -.->|组件请求 /packt/inventory/*| PROXY
+    end
+    
+    PROXY -->|容器内部网络直接穿透| GW
+    GW -->|微服务路由转发| SERVICES["后端业务微服务集群 (User / Inventory)"]
+```
 
-> [!TIP] 生产体积优化拓展
-> 上述两阶段镜像为了直观演示，直接完整复制了 `node_modules`（约 600MB）。在更严格的企业级规范中，推荐引入第三阶段或使用 `npm ci --omit=dev` 单独生成仅包含 Production 依赖的精简 `node_modules`，镜像体积可压缩至 150MB 以内。
+## 5. 前端构建与容器化避坑清单 (Do's & Don'ts)
 
----
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 将开发环境的 `node_modules` 与本地 `dist` 直接打包进 Docker 镜像。 | 配置 `.dockerignore` 排除无关文件，在容器构建阶段执行纯净 `npm ci`。 |
+| 在 Express 挂载代理中间件时省略 `pathRewrite` 导致路由前缀被自动截断。 | 显式声明 `pathRewrite: (path) => '/packt' + path`，确保网关断言路径完整。 |
+| 单阶段镜像打包，将源码、测试文件与开发依赖全部保留在最终镜像中。 | 采用 Docker 多阶段构建（Multi-stage Build），仅将构建产物与运行时依赖拷贝至生产镜像。 |
+| 在生产部署中依赖动态变动的 `:latest` 镜像标签。 | 遵循语义化版本规范（Semantic Versioning），为镜像显式标注具体发布版本号（如 `v0.0.1`）。 |
+| 在 SSR 渲染引擎中完全不校验 `allowedHosts` 允许任意主机头。 | 严格显式配置 `['localhost', '127.0.0.1']` 白名单，从根源规避 Host 头投毒与 SSRF 风险。 |
 
-## 4. 容器构建、独立运行与行为验证
+<!-- split -->
 
-镜像配置就绪，我们先在本地对前端容器进行独立打包并运行自测。
+# 原著完整参考：前端生产级构建与 Node SSR 容器化打包
 
-### 1. 构建镜像
+现代前端全栈工程的终局是交付高度可靠、自包含且具备弹性伸缩能力的容器化单元。当前端应用融合了服务端渲染（SSR）与静态预渲染（SSG）后，其交付形态已由传统的纯静态资源转变为动态 Node.js Web 服务的复合体。
+
+本文深入剖析 Angular 生产级构建产物的底层拓扑，解决服务端渲染期间 Node 进程内部回环网络路由穿透难题，并通过多阶段构建打造工业级前端 Docker 镜像。
+
+:::en
+> **Original**: Containerizing modern SSR applications requires dual topology management: serving static browser bundles efficiently while hosting a dynamic Node.js rendering process.
+
+**📌 核心术语与语境解析**：
+- **Dual Topology** [ˈduːəl təˈpɑːlədʒi]：*双重拓扑架构*。指同一应用交付物由纯静态客户端资源（CSS/JS/图片）与常驻动态服务端运行时（Node.js/Express）构成的复合体系。
+- **Self-contained Container** [self kənˈteɪnd kənˈteɪnər]：*自包含容器*。内置了运行所需完整代码、依赖库与轻量运行环境，脱离宿主机环境后仍能独立稳定启动的容器单元。
+:::
+
+## 1. 深度剖析 Angular 生产级构建产物与 AOT 优化
+
+在前端根目录执行生产构建：
+
+```bash
+npm run build
+```
+
+该命令底层调用 `ng build --configuration production`，触发核心工程优化：
+1. **Ahead-of-Time (AOT) 编译**：在构建期将 Angular HTML 模板与组件声明编译为高效的高性能 JavaScript 代码，消除浏览器运行时的模板解析开销；
+2. **Tree-Shaking（摇树优化）**：基于 ES 模块静态依赖分析，移除未引用的冗余代码分块；
+3. **Minification 与混淆**：去除注释与空白字符，缩短标识符，极大压缩静态资产体积；
+4. **环境文件替换（fileReplacements）**：将 `environment.ts` 无缝替换为 `environment.prod.ts`，固化生产 API 前缀 `/packt`。
+
+编译完成后在 `dist/chapter-20/` 输出双层拓扑结构：
+- **`browser/` 目录**：包含供浏览器加载的静态 JS Bundle、CSS 与预渲染静态 HTML 文件；
+- **`server/` 目录**：核心为 `server.mjs`，由 `src/server.ts` 编译生成的原生 Node.js 服务端入口。
+
+:::en
+> **Original**: Production compilation executes Ahead-of-Time template generation and dead-code elimination, outputting segregated browser static assets and server execution bundles.
+
+**📌 核心术语与语境解析**：
+- **Ahead-of-Time (AOT)** [əˈhed əv taɪm]：*预先编译*。在代码构建打包阶段直接将模板编译为原生执行代码的编译技术。
+- **Dead-code Elimination** [ded koʊd ɪˌlɪmɪˈneɪʃn]：*死代码消除/摇树优化*。编译器通过静态依赖图分析剔除永远不可能被执行到的多余逻辑的优化手法。
+:::
+
+## 2. 改造 SSR 引擎：内嵌 API 代理与防护策略
+
+在生产环境配置中，API 基准地址采用同源相对路径 `apiUrl: '/packt'`：
+- 在浏览器客户端中，相对路径自动以当前页面域名解析，由最外层 Nginx 统一转发；
+- 在服务端渲染（SSR）期间，Node.js 运行在独立进程中，发起网络调用时默认以自身回环地址解析（如 `http://localhost:4000/packt/...`）。
+
+由于 Angular Express 服务器自身未定义业务接口，内部请求将直接触发 404 或连接拒绝。
+
+在 Node.js SSR 服务器内部集成 API 代理中间件 `http-proxy-middleware`，能够将服务端抓取请求直接代理转发至后端网关，使前端容器无论是在边缘代理后方还是单机隔离调试，都具备完整自愈的渲染能力。
+
+:::en
+> **Original**: Embedding an API proxy within the Express SSR server guarantees loopback request resolution, ensuring server-side data fetching functions independently of edge proxies.
+
+**📌 核心术语与语境解析**：
+- **Loopback Request** [ˈluːpbæk rɪˈkwest]：*回环请求*。服务在本地进程或容器内部直接向自身绑定的地址或网络栈发起的内部网络调用。
+- **Edge Proxy** [edʒ ˈprɑːksi]：*边缘代理*。部署在系统最外层、负责接收公网流量并执行 TLS 终结与路由分发的反向代理（如 Nginx）。
+:::
+
+## 3. Express 路径剥离陷阱与 pathRewrite 补全机制
+
+当 Express 匹配到挂载在 `/packt` 路径上的中间件时，其默认行为会在将请求转交给子中间件前**剥离掉匹配路径前缀**。
+
+例如原本请求 `/packt/inventory/api/books`，传递给代理中间件时路径已被截断为 `/inventory/api/books`。如果直接透传给网关，Spring Cloud Gateway 将因断言谓词匹配失败而返回 404。
+
+必须显式声明路径重写规则：
+
+```typescript
+pathRewrite: (path) => `/packt${path}`,
+```
+
+将前缀重新补齐，同时配合 `changeOrigin: true` 改写 Host 标头，保证后端网关准确识别路由。
+
+:::en
+> **Original**: Express middleware strips mount path prefixes by default; the proxy configuration must explicitly prepend the required route prefix using `pathRewrite`.
+
+**📌 核心术语与语境解析**：
+- **Mount Path Stripping** [maʊnt pæθ ˈstrɪpɪŋ]：*挂载路径剥离*。Web 中间件框架在将请求转交至命名挂载路由处理程序时默认裁减前缀的处理特性。
+- **Path Rewrite** [pæθ ˈriːraɪt]：*路径重写*。反向代理在将请求转发至上游服务之前，依据规则动态修改请求 URI 路径的机制。
+:::
+
+## 4. 编写多阶段构建 Dockerfile 与缓存优化
+
+多阶段构建（Multi-stage Build）是工业级容器交付的标准模式：
+1. **阶段 1（Builder）**：基于 `node:24-alpine`，先拷贝 `package.json` 与锁文件执行 `npm ci`，充分利用 Docker 层缓存（Layer Cache）；随后拷贝源码执行编译；
+2. **阶段 2（Runtime）**：拉起纯净的 `node:24-alpine` 运行时镜像，仅拷贝编译产物 `dist/` 与运行必需的 `node_modules`。
+
+由于 Node.js 并非像 Java 那样将依赖打入单个自包含 Fat JAR 中，`server.mjs` 启动依赖 Express 与渲染库，因此运行时镜像必须同步提取 `node_modules`。
+
+:::en
+> **Original**: Multi-stage Docker builds isolate compilation tooling from minimal runtime environments, leveraging layer caching to accelerate continuous deployment pipelines.
+
+**📌 核心术语与语境解析**：
+- **Multi-stage Build** [ˈmʌlti steɪdʒ bɪld]：*多阶段构建*。在单一 Dockerfile 中使用多个 `FROM` 指令分别完成构建与运行镜像剥离的容器打包技术。
+- **Layer Cache** [ˈleɪər kæʃ]：*镜像层缓存*。容器引擎依据前后指令与文件哈希值复用未变动镜像层以缩短构建时长的机制。
+:::
+
+## 5. 容器构建、独立运行与无后端行为验证
+
+在本地对镜像进行独立验证：
 
 ```bash
 docker build -t bookstore/ng-bookstore:v0.0.1 .
-```
-
-该命令将顺序执行 Builder 阶段与 Runtime 阶段，生成名为 `bookstore/ng-bookstore:v0.0.1` 的镜像。
-
-### 2. 独立启动容器
-
-```bash
 docker run -d -p 4000:4000 --name ng-bookstore bookstore/ng-bookstore:v0.0.1
 ```
 
-- `-d`：后台静默运行（Detached Mode）；
-- `-p 4000:4000`：将宿主机 4000 端口映射到容器内 Node 服务的 4000 端口。
+- 探测根路径 `curl -i http://localhost:4000` 验证 HTTP 302 重定向；
+- 探测预渲染路径 `curl http://localhost:4000/privacy` 验证无动态计算的静态 HTML 秒下发；
+- 在无后端挂载时访问 `/books`，页面呈现完整表格骨架且不崩溃，控制台返回代理超时的 `504 Gateway Timeout`，证明前端容器各层生命周期运转正常。
 
-### 3. 连通性与 SSR 渲染验证
+:::en
+> **Original**: Independent container verification tests edge-case behaviors such as graceful degradation and gateway timeouts in the absence of upstream backend services.
 
-通过 `curl` 探测根路径：
+**📌 核心术语与语境解析**：
+- **Upstream Service** [ˈʌpstriːm ˈsɜːrvɪs]：*上游服务*。位于反向代理后方实际承担业务计算与数据持久化的后端服务节点。
+- **Gateway Timeout (504)** [ˈɡeɪtweɪ ˈtaɪmaʊt]：*网关超时*。代理服务器在规定时间内未能从上游目标服务器获得响应时返回的 HTTP 标准状态码。
+:::
 
-```bash
-curl -i http://localhost:4000
-```
+## 6. 镜像发布与语义化版本标签规范
 
-由于根路径重定向到了 `/books`，控制台将返回 HTTP `302 Found` 重定向响应及 `Location: /books` 响应头，表明 Express 服务运转正常。
+在生产交付管线中，严禁在自动化编排与生产配置中直接依赖可变的 `:latest` 标签。动态标签容易引发镜像漂移与不可重现的发布事故。
 
-测试构建期预渲染的隐私条款静态页：
+为镜像同时打上具体版本标签与 `latest` 标签：
+- `latest` 仅用于开发期便捷拉取；
+- 生产环境强制声明固定语义化版本（如 `v0.0.1`），确保部署具有绝对确定性。
 
-```bash
-curl http://localhost:4000/privacy
-```
+:::en
+> **Original**: Production orchestration requires explicit semantic version tagging, strictly discouraging mutable `latest` tags to ensure deterministic and reproducible deployments.
 
-终端将立即吐出预渲染的完整 HTML 内容，完全无需任何后端数据库或 API 支持，验证了静态静态路由分发机制完好。
-
-### 4. 理解无后端挂载时的“静默空数据”现象
-
-此时若在浏览器打开 `http://localhost:4000/books`，你会观察到一个有趣的现象：**页面正常渲染了书籍目录的表格头部，但没有任何数据行，且页面上也没有弹出报错框**。
-
-为什么会这样？
-- 在独立启动容器且未指定 `API_URL` 时，内嵌代理默认将请求转发给 `http://localhost:8080`；
-- 在容器内部的网络隔离沙箱中，`localhost:8080` 指向的是当前容器自己的回环网络，而容器内显然没有监听 8080 的服务；
-- SSR 服务器在服务端发起抓取失败后，Angular 优雅降级并输出了初始状态下的空白表格骨架。
-
-如果我们主动探测被代理的接口路径：
-
-```bash
-curl -i "http://localhost:4000/packt/inventory/api/books/paged?page=0&size=10"
-```
-
-终端将明确返回 `504 Gateway Timeout`。这清晰地证明：**前端自身从构建、服务端渲染到代理转发链路一切正常，唯独缺少后端真实网关的响应**。这正是下一章我们将通过 Docker Compose 全链路联调解决的核心任务。
-
-测试完毕后清理临时容器：
-
-```bash
-docker stop ng-bookstore && docker rm ng-bookstore
-```
-
----
-
-## 5. 镜像推送与标签版本规范
-
-在多服务编排场景下，通常需要将镜像推送到私有或公共镜像仓库（如 Docker Hub、Harbor 或 ACR）。我们为镜像打上双重标签：
-
-```bash
-# 请将 <dockerhub-username> 替换为你的真实仓库命名空间
-docker tag bookstore/ng-bookstore:v0.0.1 <dockerhub-username>/ng-bookstore:v0.0.1
-docker tag bookstore/ng-bookstore:v0.0.1 <dockerhub-username>/ng-bookstore:latest
-
-docker push <dockerhub-username>/ng-bookstore:v0.0.1
-docker push <dockerhub-username>/ng-bookstore:latest
-```
-
-> [!IMPORTANT] 镜像标签战略规范
-> - `latest` 标签主要为本地快速编排（`docker compose pull`）提供便利；
-> - 在严肃的生产环境中，**严禁在编排文件中长期依赖 `:latest`**。因为 `latest` 是动态浮动的指针，极易引发不可复现的发布漂移与回滚灾难。显式使用 Semantic Versioning（如 `v0.0.1`）是保障生产环境确定性的基本准则。
-
----
-
-## 6. 本章总结
-
-在本章中，我们完成了 Angular 现代化前端迈向生产环境的关键跃迁：
-- 剖析了 `ng build` 生产构建输出的双层拓扑：负责客户端动态渲染与强缓存分发的 `browser/` 目录，以及负责服务端动态渲染的 `server/` Node 入口；
-- 针对 SSR 服务端请求在容器内部路由迷失的架构难题，在 Express 管道首部集成了 `http-proxy-middleware` 反向代理，利用 `pathRewrite` 解决了 Express 路径剥离陷阱，并利用 `allowedHosts` 固化了 SSRF 安全防御；
-- 编写了基于 `node:24-alpine` 的多阶段 `Dockerfile`，实现了层缓存优化与干净的运行时镜像剥离；
-- 验证了独立容器化前端在有/无后端通信时的不同行为表现，完成了镜像发布准备。
-
-至此，我们的前端与后端各自具备了高度标准化的容器封装。在下一篇终局章节中，我们将使用 Docker Compose 构建包含数据库、认证中心、注册中心、微服务集群、网关以及 Nginx 边缘代理的完整全栈拓扑，实现一键生产部署与全链路端到端联调！
+**📌 核心术语与语境解析**：
+- **Semantic Versioning (SemVer)** [sɪˈmæntɪk ˈvɜːrʒənɪŋ]：*语义化版本控制*。遵循 `主版本号.次版本号.修订号` 结构严格表达兼容性与功能变更的版本管理准则。
+- **Deterministic Deployment** [dɪˌtɜːrmɪˈnɪstɪk dɪˈplɔɪmənt]：*确定性部署*。在任何时间、任何集群节点上执行部署指令均能生成完全一致运行态的可靠发布范式。
+:::

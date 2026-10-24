@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十）：后端多微服务容器化构建与 Docker Compose 统一编排
 date: 2026-10-23T00:10:00Z
-description: 基于分层 JAR 与多阶段 Dockerfile 构建轻量化后端微服务容器镜像，利用 Docker Compose 编排数据库、网关与微服务全栈集群。
+description: 双栏独立滚动对照：基于分层 JAR 与多阶段 Dockerfile 构建轻量化后端微服务容器镜像，利用 Docker Compose 编排数据库、网关与微服务全栈集群。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -12,117 +12,350 @@ tags:
   - 生产部署
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Spring Boot 4 & Angular 22 全栈微服务实战》](/columns/spring-boot-angular)。全专栏共 22 篇，深度覆盖 Java 26 微服务拆分、Spring Cloud 网关与安全鉴权、Angular 22 Signals 状态治理以及端到端容器化交付的全链路工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
+
+## 1. 容器化构建与编排技术决策矩阵
+
+### 1.1 Java 打包交付形态演进对比
+
+| 交付形态 | 打包产物 | 运行时依赖 | 环境一致性与隔离级别 |
+| :--- | :--- | :--- | :--- |
+| **传统 WAR 时代** | `.war` 归档文件 | 强依赖外部应用服务器（Tomcat/WebLogic） | 极差；易受宿主容器版本与共享类加载器干扰 |
+| **Fat JAR 革命** | `.jar` 自包含归档 | 内嵌 Web 容器，但依赖宿主机 JRE | 良好；业务自包含，但仍依赖宿主 OS 动态库与 JVM |
+| **不可变容器镜像** | OCI / Docker Image | 仅需底层容器运行时引擎（containerd） | **极致**；将最小根文件系统、JRE 与代码完全封装，无环境漂移 |
+
+### 1.2 镜像构建工具选型对比
+
+| 工具方案 | 是否依赖 Docker Daemon | 构建分层与缓存优化 | 适用场景与选型依据 |
+| :--- | :--- | :--- | :--- |
+| **多阶段 Dockerfile (推荐)** | 是 | 人工基于指令精确控制缓存命中 | **团队通用标准**：对基础镜像、系统包与探针拥有完全定制自由度 |
+| **Google Jib** | **否 (可在无 Docker 的 CI 运行)** | 智能字节码级别深度分层 | CI/CD 流水线提速首选，无需守护进程与特权构建模式 |
+| **Spring Boot Buildpacks** | 是 | 自动分析分层与动态 JVM 参数计算 | 适合完全遵循 Spring Boot 标准约定的团队 |
 
 ---
 
-在前几章中，我们使用现代 Java 技术栈（Java 26、Spring Boot、Spring Data、Spring Security 与 Spring WebFlux）逐步构建起了 Bookstore（书店系统）微服务后端体系。我们先后落地了库存微服务（Inventory Service）、用户微服务（User Service）以及 API 网关与分布式可观测性设施。
+## 2. 生产级多阶段 Dockerfile 与分层构建范式
 
-然而，软件工程的生命周期绝不会终止于“代码在本地能成功编译”。在由多个甚至几十个微服务组成的现代化分布式架构中，如何将异构服务可靠、可预测、自包含地打包并发布到各类运行时环境，是贯穿 CI/CD 与 DevOps 交付链条的核心基石。
+通过多阶段构建将 **Maven 编译环境** 与 **极简 JRE 生产运行环境** 彻底解耦，并集成 Actuator 健康探针与非 root 权限运行：
 
-本文将带领大家系统化走通后端微服务从代码到容器交付的全流程：从 Java 后端打包演化史切入，深入容器化底层的 Linux 隔离机制与镜像分层哲学；接着运行 PostgreSQL、MongoDB 与 Zipkin 等支撑基础设施容器；随后为 Spring Boot 微服务编写生产级多阶段 Dockerfile，并深入探讨 Spring Boot Cloud Native Buildpacks 与 Google Jib 自动化镜像构建工具；最后，通过 Docker Compose 声明式编排整个微服务拓扑，实现一键拉起全栈微服务后端。
+```dockerfile
+# ==========================================
+# 第一阶段：编译构建阶段（Builder Stage）
+# ==========================================
+FROM maven:3.9-eclipse-temurin-26 AS builder
+WORKDIR /app
+
+# 1. 优先拷贝 POM 文件并下载依赖，最大化利用 Docker 镜像层缓存
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# 2. 拷贝源码并打包，跳过单元测试以加快镜像构建速度
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# ==========================================
+# 第二阶段：生产运行阶段（Runtime Stage）
+# ==========================================
+FROM eclipse-temurin:26-jre
+WORKDIR /opt/bookstore
+
+# 声明维护元数据
+LABEL maintainer="bookstore-platform"
+LABEL description="Bookstore Inventory Microservice"
+
+# 安全强化：创建非 root 专属运维系统账户
+RUN groupadd -r appgroup && useradd -r -g appgroup -m -d /opt/bookstore appuser
+
+# 仅从构建阶段拷贝最终打包 JAR
+COPY --from=builder --chown=appuser:appgroup /app/target/inventory-ms-*.jar app.jar
+
+# 切换为非特权用户
+USER appuser
+
+# 声明服务端口
+EXPOSE 8081
+
+# 集成针对 Spring Boot Actuator 的健康探针
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8081/inventory/actuator/health || exit 1
+
+# 采用 Exec 数组格式启动，保证 Java 进程作为 PID 1 正确接收 SIGTERM 信号
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+```
+
+---
+
+## 3. 全栈微服务 Docker Compose 声明式编排范式
+
+通过声明式编排文件管理中间件依赖、微服务启停时序、持久化存储卷与容器互联桥接网桥：
+
+```yaml
+version: '3.8'
+
+services:
+  # 1. Eureka 服务发现中心
+  discovery-server:
+    image: bookstore/discovery-server:v1.0.0
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  # 2. 关系型数据库 (PostgreSQL 17)
+  postgres:
+    image: postgres:17
+    container_name: bookstore-postgres
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: bookstore
+      POSTGRES_PASSWORD: bookstore123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  # 3. 文档型数据库 (MongoDB 7)
+  mongodb:
+    image: mongo:7
+    container_name: bookstore-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  # 4. 链路追踪服务 (Zipkin)
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: bookstore-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  # 5. 身份认证中心 (Keycloak)
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: bookstore-keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8090
+    ports:
+      - "8090:8090"
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  # 6. 库存微服务
+  inventory-service:
+    image: bookstore/inventory-service:v1.0.0
+    container_name: inventory-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+    depends_on:
+      - postgres
+      - discovery-server
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  # 7. 用户微服务
+  user-service:
+    image: bookstore/user-service:v1.0.0
+    container_name: user-service
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/userdb
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      - mongodb
+      - keycloak
+      - discovery-server
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  # 8. API 网关服务 (对外唯一流量入口)
+  gateway-server:
+    image: bookstore/gateway-server:v1.0.0
+    container_name: gateway-server
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      - discovery-server
+      - inventory-service
+      - user-service
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+networks:
+  bookstore-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mongo-data:
+```
+
+---
+
+## 4. 全栈微服务容器拓扑架构图
+
+```mermaid
+flowchart TD
+    ExternalClient["外部客户端 / Angular SPA"] -->|HTTP / 8080| GW["API Gateway (8080)"]
+    
+    subgraph CoreBridgeNetwork["Docker 自定义桥接网桥 (bookstore-network)"]
+        GW -->|lb://discovery-server| Eureka["Eureka Server (8761)"]
+        GW -->|lb://inventory-service| Inv["Inventory Service (8081)"]
+        GW -->|lb://user-ms| User["User Service (8082)"]
+        
+        Inv -->|JDBC 5432| PG[("PostgreSQL 17<br/>Volume: postgres-data")]
+        User -->|Mongo Protocol 27017| Mongo[("MongoDB 7<br/>Volume: mongo-data")]
+        
+        User -.->|Admin API 8090| Keycloak["Keycloak (8090)"]
+        GW -.->|JWKS 8090| Keycloak
+        
+        Inv -.->|Spans 上报 9411| Zipkin["Zipkin Collector (9411)"]
+        GW -.->|Spans 上报 9411| Zipkin
+    end
+```
+
+---
+
+## 5. 架构避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 在生产镜像中使用 root 用户运行 Java 进程。 | 在 Dockerfile 中创建专属低特权系统用户并切换，防范潜在提权漏洞。 |
+| 使用 Shell 格式 `ENTRYPOINT java -jar app.jar`。 | 必须使用 Exec 格式 `ENTRYPOINT ["java", "-jar", "app.jar"]`，确保容器 PID 1 正常接收系统优雅下线信号。 |
+| 生产数据库容器未配置挂载外部卷（Volume）。 | 数据库目录强制挂载宿主机或外部 Docker Volume，确保容器销毁重建后数据不丢失。 |
+| Dockerfile 编写时将源码拷贝置于 `pom.xml` 依赖下载之前。 | 优先拷贝 `pom.xml` 执行依赖下载，最大化复用本地依赖层缓存，避免重复下载数百兆依赖包。 |
+| 生产发布使用 `latest` 镜像标签。 | 严格使用语义化版本或 Git Commit SHA 标签（如 `v1.2.0`），保证构建可溯源且故障时可稳定回滚。 |
+
+<!-- split -->
+
+# 原著完整参考：后端多微服务容器化构建与 Docker Compose 统一编排
+
+在现代软件工程中，系统生命周期绝不仅限于代码在本地环境编译通过。在由多个异构微服务、数据库与分布式基础设施共同构成的企业级微服务体系中，如何将应用可靠、一致且可预测地打包与部署，是 DevOps 交付流水线的核心任务。
+
+本文系统梳理从源码到云原生交付的全流程：从 Java 打包交付历史演变切入，深入剖析 Linux 原生容器隔离机制与镜像分层技术；随后运行 PostgreSQL、MongoDB 与 Zipkin 等支撑基础设施；为微服务编写生产级多阶段 Dockerfile，并横向对比 Buildpacks 与 Google Jib 自动化构建方案；最终通过 Docker Compose 声明式编排整个微服务拓扑，实现一键拉起全栈微服务后端。
+
+:::en
+> **Original**: Containerization packages applications with their exact runtime dependencies into immutable images, ensuring behavioral parity across local development, staging environments, and production clusters.
+
+**📌 核心术语与语境解析**：
+- **Immutable Infrastructure** [ɪˈmjuːtəbl ˈɪnfrəstrʌktʃər]：*不可变基础设施*。一旦构建打包即不再就地修改，所有变更均通过生成并部署新版本镜像进行替代的运维理念。
+- **Containerization** [kənˌteɪnərəˈzeɪʃn]：*容器化*。依托操作系统内核特性将应用进程及其全部依赖项打包封装为自包含运行单元的技术。
+:::
 
 ---
 
 ## 1. 后端打包策略的演进脉络
 
-在 Java 企业级架构演进的数十年历程中，应用的打包交付模式经历了三次标志性跃迁。理解这一技术变迁，有助于我们看清现代云原生标准背后的本质诉求。
+Java 企业级打包模式经历了三次标志性跃迁：
 
 ### 1.1 传统企业级 WAR 包时代
 
-在传统单体架构时期，Java 应用通常被打包为 **WAR**（Web Application ARchive）包，并部署到外部应用服务器（如 Apache Tomcat、JBoss、WebLogic、WebSphere）中：
+在传统单体架构时期，Java 应用通常被打包为 **WAR**（Web Application ARchive）包，并部署于独立的外部应用服务器（Tomcat、JBoss、WebLogic）中：
 
 ```xml
 <packaging>war</packaging>
 ```
 
-在这种模式下，应用服务器充当基础运行容器并管理连接池、线程池与 JVM 参数，WAR 包内仅包含业务类与静态资源。当面向微服务架构时，WAR 模型的弊端暴露无遗：
-- **强耦合应用服务器**：部署行为严重依赖宿主服务器的版本、类加载器配置及全局全局类库，容易发生环境漂移；
-- **扩缩容颗粒度过大**：弹性伸缩往往需要整体复制应用服务器实例，资源开销沉重；
-- **依赖升级协同困难**：共享应用服务器难以支持多个子模块采用不同版本的底层组件。
+该模式存在明显的工程弊端：
+- **强耦合应用服务器环境**：部署高度依赖宿主服务器的版本、类加载器配置及全局类库，极易发生环境漂移；
+- **资源颗粒度粗放**：弹性扩缩容需要复制整套重量级应用服务器；
+- **组件版本升级困难**：共享运行时难以支持不同子模块采用异构依赖版本。
 
 ### 1.2 Spring Boot 可执行 Fat JAR 革命
 
-Spring Boot 彻底颠覆了上述交付形态。它倡导 **“嵌入式容器”** 理念，将应用所需的 Servlet 引擎（如 Tomcat）或反应式容器（如 Netty）直接内嵌到应用自身中。
-
-当通过 Maven 打包时：
+Spring Boot 倡导“嵌入式容器”理念，将 Web 容器（Tomcat/Netty）直接封装进应用内部。通过 Maven 执行打包：
 
 ```bash
 mvn clean package
 ```
 
-构建结果是在 `target/` 目录下生成一个独立的 Fat/Uber JAR：
-
-```text
-target/inventory-ms-0.0.1-SNAPSHOT.jar
-```
-
-该可执行 JAR 包含了编译后的业务代码、所有第三方依赖库、内嵌 Web 容器以及应用配置，只需一行命令即可启动：
+在 `target/` 目录下生成可执行 Fat/Uber JAR，仅需一行命令即可运行：
 
 ```bash
 java -jar inventory-ms-0.0.1-SNAPSHOT.jar
 ```
 
-这种自包含交付模式极大降低了部署复杂性，使得每个微服务能够独立运行、独立演进与独立扩缩。然而，Fat JAR 依然未能彻底摆脱对宿主机运行环境的依赖：目标服务器必须预装匹配的 JVM 版本、C 标准库以及系统级工具链。
+这种自包含交付模式极大降低了部署复杂性。但 Fat JAR 依然未彻底脱离对宿主机环境的依赖：目标机器必须预先安装特定版本的 JRE 与动态依赖库。
 
 ### 1.3 面向微服务的容器化交付
 
-容器化技术将“自包含”的理念推向了极致：**容器不仅打包了应用程序本身，还将操作系统最小文件系统、特定版本的 JRE 运行时、动态链接库、应用配置与启动脚本全部打包进一个只读且不可变的镜像文件中**。
+容器化技术将“自包含”推进至操作系统层面：**不仅打包应用程序本身，还将最小 Linux 根文件系统、特定版本的 JRE 运行时、动态链接库与启动配置整体封装为不可变镜像**。
 
-容器镜像具备天然的不可变性（Immutability）：在本地构建并验证通过的镜像，可以在集成测试、预发布环境和生产 Kubernetes 集群中实现毫无偏差的同构运行，彻底解决了“在我机器上好好的，为什么上线就崩”的配置漂移顽疾。
+本地验证通过的镜像，可以在预发布环境与生产 Kubernetes 集群中实现毫无偏差的同构运行，彻底终结了“在本地能跑但上线就崩”的配置漂移问题。
 
 ---
 
 ## 2. 容器化底层核心原理与生命周期
 
-在动手编写 Docker 命令前，我们必须从系统层面厘清容器的工作方式。
+### 2.1 容器与虚拟机的架构差异
 
-### 2.1 容器与虚拟机的架构对比
+传统虚拟机依赖 Hypervisor 硬件虚拟化技术，每个虚拟机内必须运行完整的 Guest OS，导致启动耗时达数分钟，磁盘与内存开销沉重。
 
-传统虚拟机（VM）采用 Hypervisor 硬件虚拟化技术，每个虚拟机内都需要运行完整的 Guest OS（客户操作系统内核、系统服务），这导致 VM 启动需要数分钟，内存与磁盘占用通常高达数吉字节。
+相比之下，容器是**基于 Linux 内核的原生进程级隔离技术**：
+- **Namespaces（命名空间）**：实现进程视图的六重隔离，涵盖 PID（进程号）、NET（网络栈与端口）、MNT（文件系统挂载点）、IPC（进程间通信）、UTS（主机名）与 USER（用户映射）；
+- **Control Groups（cgroups）**：实现物理资源的硬性配额与度量（限制 CPU 核心、内存使用上限与 I/O 带宽）；
+- **共享宿主内核**：所有容器直接复用宿主 Linux 内核，毫秒级启停，单机可高密度运行数百个微服务实例。
 
-相比之下，容器并非硬件虚拟化，而是**基于 Linux 内核的原生进程级隔离技术**：
-- **Namespaces（命名空间）**：实现进程视图的六重隔离，包括 PID（进程树）、NET（网络栈与端口）、MNT（挂载点/文件系统）、IPC（进程间通信）、UTS（主机名）与 USER（用户映射）；
-- **Control Groups（cgroups）**：实现物理资源的硬性配额与度量，包括 CPU 核心数、内存使用上限、磁盘 I/O 带宽与进程数控制；
-- **共享宿主内核**：所有容器直接复用宿主机的 Linux 内核，没有客体操作系统的损耗，启动时间以毫秒级计，单机可高密度运行数百个微服务实例。
+### 2.2 镜像分层与联合文件系统（OverlayFS）
 
-### 2.2 镜像分层与联合文件系统（Layered Filesystem）
+容器镜像由多层只读层堆叠而成，底层依托联合文件系统实现：
+- Dockerfile 中的每条关键指令均生成一个新的只读镜像层；
+- 镜像启动为容器时，存储驱动在只读层之上附加一个可写容器层（Container Layer）；
+- 所有写操作均通过写时复制（Copy-on-Write）进行，修改文件仅在可写层产生副本，绝不破坏基础镜像。
 
-容器镜像由多层只读层堆叠而成，底层由联合文件系统（如 OverlayFS）支撑：
-- Dockerfile 中的每一条指令（`FROM`、`RUN`、`COPY` 等）都会生成一个新的只读镜像层；
-- 当镜像启动为容器时，存储驱动会在所有只读层之上附加一个薄薄的**可写容器层**（Container Layer）；
-- 所有读写操作均通过写时复制（Copy-on-Write）机制进行：修改文件时仅在可写层生成副本，绝不破坏底层镜像。
+分层机制带来了显著优势：
+1. **构建缓存**：基础层无变化时直接命中缓存，显著加速构建；
+2. **跨镜像共享**：多个微服务可共享相同的基础 JRE 镜像层，宿主机仅需拉取并存储一份基础数据。
 
-分层存储带来了极高的分发与构建性能：
-1. **构建缓存**：若前几层未发生变动，构建时会直接命中本地缓存，仅需重新编译变动层；
-2. **跨镜像共享**：Inventory Service 与 User Service 可以共用完全相同的基础 Java 运行时镜像层，宿主机只需拉取与存储一次基础镜像。
+:::en
+> **Original**: Linux namespaces partition kernel resources to give each container its own isolated system view, while control groups (cgroups) enforce hard limits on CPU, memory, and I/O consumption.
 
-### 2.3 容器生命周期全景
+**📌 核心术语与语境解析**：
+- **Linux Namespaces** [ˈlɪnəks ˈneɪmspeɪsɪz]：*Linux 命名空间*。内核提供的一种资源隔离机制，为各容器提供独立的进程树、网络设备与挂载点。
+- **Control Groups (cgroups)** [kənˈtroʊl ɡruːps]：*控制组*。Linux 内核用于限制、记录与隔离进程组物理资源（CPU、内存、I/O）的使用量的机制。
+:::
 
-容器化标准工作流涵盖了构建、发布、运行与治理全流程：
+### 2.3 容器全生命周期工作流
 
 ![容器全生命周期工作流](/media/posts/spring-boot-angular/img-09037.png)
 
-1. **Build（构建）**：开发者基于 Dockerfile 或构建插件将源码编译并组装为镜像；
-2. **Push（发布）**：将携带规范版本标签（Tag）的镜像推送到中央镜像仓库（Container Registry）；
-3. **Pull（拉取）**：目标节点按需从仓库拉取镜像层；
-4. **Run（运行）**：容器运行时（Docker、Podman、containerd 等）解析镜像并创建隔离沙箱实例；
-5. **Monitor & Terminate（监控与回收）**：采集健康指标，完成停止或销毁。
+1. **Build（构建）**：基于 Dockerfile 将源码编译为镜像；
+2. **Push（发布）**：为镜像打上语义化标签并推送到中央镜像仓库；
+3. **Pull（拉取）**：目标节点按需拉取镜像层；
+4. **Run（运行）**：容器引擎启动隔离实例；
+5. **Monitor & Terminate（监控与回收）**：健康探针监控，优雅终止或自动重启。
 
 ---
 
 ## 3. 本地支撑基础设施容器化部署
 
-在 Bookstore 系统中，微服务依赖于数个后端支撑组件：
-- **PostgreSQL 17**：作为 Inventory Service 的关系型数据持久层（Spring Data JPA）；
-- **MongoDB 7**：作为 User Service 的文档型持久层（Spring Data MongoDB）；
-- **Zipkin**：作为分布式可观测性组件，采集全链路请求 Tracing 跨服务追踪数据。
-
-我们无需在本地安装繁重且容易冲突的独立软件包，直接拉取官方就绪镜像并运行容器。
+书店系统依赖的后端支撑组件：
+- **PostgreSQL 17**：Inventory Service 的关系型数据持久层；
+- **MongoDB 7**：User Service 的文档型持久层；
+- **Zipkin**：分布式链路追踪集中展示看板。
 
 ### 3.1 拉取并验证官方镜像
-
-通过 `docker pull` 从 Docker Hub 获取基础软件镜像：
 
 ```bash
 docker pull postgres:17
@@ -130,19 +363,17 @@ docker pull mongo:7
 docker pull openzipkin/zipkin
 ```
 
-镜像下载后，可通过 `docker images` 检查本地镜像缓存：
+检查本地镜像缓存：
 
 ```bash
 docker images postgres
 ```
 
-输出显示仓库名、Tag、镜像 ID、创建时间及物理占用大小：
-
 ![查看本地 PostgreSQL 镜像](/media/posts/spring-boot-angular/img-09038.png)
 
-### 3.2 启动 PostgreSQL 数据库容器
+### 3.2 启动 PostgreSQL 与 MongoDB 容器
 
-启动支撑库存服务的关系型数据库实例：
+启动关系型数据库：
 
 ```bash
 docker run -d \
@@ -154,15 +385,7 @@ docker run -d \
   postgres:17
 ```
 
-**参数技术解析**：
-- `-d`（Detached mode）：后台守护进程模式运行，释放终端控制台；
-- `--name bookstore-postgres`：显式指定易读容器名称，便于后续状态追踪与管理；
-- `-e`：注入环境变量，配置默认数据库名、账密凭据；
-- `-p 5432:5432`：宿主机端口与容器内部端口映射（`host_port:container_port`），使得宿主机上的 Spring Boot 应用能够通过 `localhost:5432` 正常连接。
-
-### 3.3 启动 MongoDB 与 Zipkin 容器
-
-启动用户服务的文档数据库：
+启动文档型数据库：
 
 ```bash
 docker run -d \
@@ -171,7 +394,7 @@ docker run -d \
   mongo:7
 ```
 
-启动分布式追踪可视化服务端 Zipkin：
+启动 Zipkin 分布式追踪服务：
 
 ```bash
 docker run -d \
@@ -180,36 +403,23 @@ docker run -d \
   openzipkin/zipkin
 ```
 
-容器启动后，在浏览器直接访问 `http://localhost:9411`，即可进入 Zipkin UI 监控看板。
+### 3.3 容器状态巡检
 
-### 3.4 容器巡检、排错与资源管理
-
-执行 `docker ps` 查看所有活跃容器状态：
+执行 `docker ps` 查看所有活跃容器：
 
 ```bash
 docker ps
 ```
 
-控制台将输出容器 ID、镜像、启动命令、运行时长、端口映射及容器名：
-
 ![查看活跃容器清单](/media/posts/spring-boot-angular/img-09040.png)
-
-常用管理排错命令：
-- **查看停止与异常容器**：`docker ps -a`
-- **查看实时输出日志**：`docker logs bookstore-postgres`（可加 `-f` 实时跟踪）
-- **优雅停止容器**：`docker stop bookstore-postgres`（向容器 PID 1 进程发送 `SIGTERM`，超时后再发送 `SIGKILL`）
-- **销毁已停止容器**：`docker rm bookstore-postgres`
-- **清理本地无用镜像**：`docker rmi postgres:17`
 
 ---
 
 ## 4. Spring Boot 微服务自定义容器镜像构建
 
-基础中间件准备就绪后，核心任务是为我们编写的 Spring Boot 微服务打造生产级自定义容器镜像。
+### 4.1 单阶段 Dockerfile 局限性
 
-### 4.1 基础单阶段 Dockerfile
-
-在库存服务根目录下，最基础的 Dockerfile 编写方式如下：
+最基础的单阶段构建将宿主机打包好的 JAR 复制进镜像：
 
 ```dockerfile
 FROM eclipse-temurin:26-jdk
@@ -220,96 +430,61 @@ EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "inventory-service.jar"]
 ```
 
-**指令拆解说明**：
-- `FROM eclipse-temurin:26-jdk`：采用 Adoptium 官方维护的 Eclipse Temurin Java 26 镜像，保证安全补丁与现代 JVM 兼容性；
-- `LABEL`：写入镜像元数据（作者、版本、维护者等）；
-- `WORKDIR /opt/bookstore`：指定工作目录，后续的 `COPY`、`RUN`、`ENTRYPOINT` 均以此目录为相对路径；
-- `COPY`：将宿主机 Maven 打包好的 JAR 拷贝至镜像文件系统中；
-- `EXPOSE 8081`：声明容器对外暴露的网络端口（元数据声明，便于运维排查）；
-- `ENTRYPOINT`：容器启动的默认可执行程序（采用 Exec 格式 `["java", "-jar", "..."]`，保证 Java 进程作为 PID 1 接收操作系统系统信号）。
-
-构建该镜像：
-
-```bash
-# 1. 宿主机 Maven 编译
-mvn clean package
-
-# 2. 构建 Docker 镜像
-docker build -t bookstore/inventory-service:v0.0.1 .
-```
-
-启动并验证：
-
-```bash
-docker run -d -p 8081:8081 --name inventory-service bookstore/inventory-service:v0.0.1
-```
+该方式存在两项缺陷：
+1. 依赖宿主机环境预先安装特定版本的 Maven 与 JDK；
+2. 若在镜像内部安装构建工具，会导致产物镜像极其臃肿（动辄数百 MB 乃至 1GB 以上），并引入不必要的安全漏洞。
 
 ### 4.2 生产级多阶段构建（Multi-Stage Builds）
 
-基础 Dockerfile 存在明显的工程隐患：
-1. 依赖宿主机环境预装特定版本的 Maven 与 JDK；
-2. 若在镜像内部包含构建工具（如同时装有 Maven、源码、编译器），会导致最终产物镜像极其臃肿（动辄数百 MB 乃至 1GB 以上），并引入不必要的攻击面。
-
-**多阶段构建**（Multi-Stage Builds）能够将**编译构建环境**与**极简生产运行时**彻底解耦：
+多阶段构建将编译环境与生产运行环境彻底解耦：
 
 ```dockerfile
-# ==========================================
-# 第一阶段：编译构建阶段（Builder Stage）
-# ==========================================
+# 第一阶段：编译构建阶段
 FROM maven:3.9-eclipse-temurin-26 AS builder
 WORKDIR /app
-
-# 优先拷贝 POM 文件并下载依赖，充分利用 Docker 缓存层
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
-
-# 拷贝源码并打包，跳过单元测试
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# ==========================================
-# 第二阶段：生产运行阶段（Runtime Stage）
-# ==========================================
+# 第二阶段：生产运行阶段
 FROM eclipse-temurin:26-jre
 WORKDIR /app
-
-# 仅从第一阶段产物中拷贝最终的可执行 JAR
 COPY --from=builder /app/target/inventory-ms-*.jar app.jar
-
 EXPOSE 8081
-
-# 采用非 root 用户与精细化 JVM 容器参数（可选进阶）
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-**多阶段构建的核心收益**：
-- **极致体积裁剪**：最终镜像基于极简的 `eclipse-temurin:26-jre`（或 Alpine 衍生版），剔除了 Maven 编译器、源码、本地依赖缓存仓库（`~/.m2`），镜像体积通常缩减 60% 以上；
-- **环境绝对一致**：宿主机无需安装任何 Maven 或 Java 环境，仅需 Docker 即可完成从源码到镜像的全部流水线；
-- **攻击面降到最低**：生产环境中不存在编译构建工具，防范远程代码注入或提权攻击。
+收益包括：
+- **体积缩减**：生产镜像仅包含精简版 JRE 与应用 JAR，剔除编译器与依赖缓存，体积缩减 60% 以上；
+- **构建环境一致**：宿主机仅需安装 Docker 即可完成从源码到镜像的全部构建；
+- **攻击面最小化**：运行环境中无任何编译工具链，降低安全风险。
 
-### 4.3 自动化镜像构建工具：Buildpacks 与 Google Jib
+:::en
+> **Original**: Multi-stage builds decouple the compile-time SDK and Maven dependencies from the production runtime image, yielding minimal, hardened container artifacts suitable for production.
 
-在大型微服务研发团队中，如果让每位开发者都手工维护十几个服务的 Dockerfile，容易发生语法不规范、基础镜像不统一的问题。现代 Java 生态提供了两种高效的自动化镜像生成技术。
+**📌 核心术语与语境解析**：
+- **Multi-Stage Build** [ˈmʌlti steɪdʒ bɪld]：*多阶段构建*。在单个 Dockerfile 中使用多个 FROM 指令，选择性将构建产物传递至最终轻量运行镜像的技术。
+- **Hardened Image** [ˈhɑːrdnd ˈɪmɪdʒ]：*安全加固镜像*。剔除不必要系统工具、依赖库与 root 权限，降低受攻击暴露面的生产镜像。
+:::
 
-#### 方案一：Spring Boot 官方 Cloud Native Buildpacks
+### 4.3 自动化构建工具：Buildpacks 与 Google Jib
 
-Spring Boot 原生集成了 CNCF Cloud Native Buildpacks。无需编写任何 Dockerfile，仅需执行：
+在大型工程中，除手写 Dockerfile 外，生态还提供了两种自动化方案：
+
+#### 方案 A：Spring Boot 官方 Cloud Native Buildpacks
+
+无需编写 Dockerfile，直接执行：
 
 ```bash
 mvn spring-boot:build-image
 ```
 
-**工作机制**：
-- 自动探测 Spring Boot 项目特征与 Java 版本；
-- 运用分层技术，将应用拆解为：第三方依赖层、Spring Boot Loader 引导层、应用代码层；
-- 自动根据容器内存资源限制计算 JVM 最佳参数（`-XX:MaxRAMPercentage`、元空间限制等）；
-- 当代码微调时，仅重建体积最小的应用代码层，极大加速构建与推送。
+自动解析项目依赖结构，将应用拆解为依赖层、Spring Boot Loader 层与应用代码层，并根据容器内存限制智能计算 JVM 参数。
 
-#### 方案二：Google Jib 纯 Java 构建器
+#### 方案 B：Google Jib 纯 Java 构建器
 
-Google Jib 是专门面向 Java 优化的容器镜像构建利器。**其最大的杀手锏是：构建镜像完全不依赖宿主机的 Docker 守护进程（Docker Daemon）！**
-
-在 `pom.xml` 中引入 Jib 插件：
+Google Jib 最大特点是**构建镜像完全不依赖宿主机的 Docker 守护进程**：
 
 ```xml
 <plugin>
@@ -319,84 +494,31 @@ Google Jib 是专门面向 Java 优化的容器镜像构建利器。**其最大�
 </plugin>
 ```
 
-构建命令：
+在 CI/CD 中直接将字节码编译结果组装为 OCI 镜像并直推远程仓库：
 
 ```bash
-# 本地构建（若本地存在 Docker）
-mvn compile jib:dockerBuild
-
-# CI/CD 场景：直接编译并直推远程仓库（无需 Docker Daemon）
 mvn compile jib:build -Dimage=your-registry.io/inventory-ms:v0.0.1
 ```
 
-#### 构建方案横向对比矩阵
-
-| 对比维度 | 手写 Dockerfile (含多阶段) | Spring Boot Buildpacks | Google Jib |
-| :--- | :--- | :--- | :--- |
-| **是否依赖本地 Docker** | 是 | 是 | **否（可在无 Docker 的 CI 执行）** |
-| **可控与定制自由度** | **最高（完全控制系统包）** | 中等（依赖 Pack 规则） | 中等（针对 Java 深度优化） |
-| **分层优化与增量速度** | 需人工精细化编写指令 | 自动分层，表现优秀 | **极致智能（字节码级分层）** |
-| **典型适用场景** | 底层环境有特殊 OS 扩展需求 | 遵循标准 Spring Boot 的团队 | 强调极速构建的 CI/CD 自动化流水线 |
-
 ---
 
-## 5. 镜像仓库发布与版本分发治理
+## 5. 容器运行时高级治理能力
 
-构建好的镜像需要发布至中央镜像仓库（Container Registry），如 Docker Hub、GitHub Packages（GHCR）、Harbor、AWS ECR 或阿里云 ACR。
-
-### 5.1 镜像打标（Tagging）与语义化版本
-
-镜像标签并非生成副本，而是对底层镜像 Layer 建立新的引用指针。格式通常为 `[仓库地址/][命名空间/]仓库名:版本号`：
-
-```bash
-docker tag bookstore/inventory-service:v0.0.1 ansgohar/inventory-ms:v0.0.1
-```
-
-> [!TIP]
-> 生产环境严禁仅依赖 `latest` 标签！必须采用**显式语义化版本**（如 `v1.0.0`、Git Commit SHA 或构建号），确保发布历史可溯源，且出现故障时能够精确回滚。
-
-### 5.2 认证、推送与拉取
-
-```bash
-# 1. 登录认证
-docker login
-
-# 2. 推送镜像至远程仓库
-docker push ansgohar/inventory-ms:v0.0.1
-
-# 3. 在任何目标测试/生产节点拉取
-docker pull ansgohar/inventory-ms:v0.0.1
-
-# 4. 基于拉取的镜像启动服务
-docker run -d -p 8081:8081 ansgohar/inventory-ms:v0.0.1
-```
-
----
-
-## 6. 容器运行时高级治理能力
-
-运行在生产环境的容器，绝非仅靠一条 `docker run` 就能长期稳定工作。我们需要为容器注入可靠的运行时策略。
-
-### 6.1 容器自动重启策略（Restart Policies）
-
-当容器发生内存溢出（OOM）或应用闪退时，重启策略决定了运行时引擎的处理动作：
+### 5.1 容器自动重启策略
 
 ```bash
 docker run -d \
   --restart=unless-stopped \
   -p 8081:8081 \
   --name inventory-service \
-  ansgohar/inventory-ms:v0.0.1
+  bookstore/inventory-service:v0.0.1
 ```
 
-- `no`：默认策略，容器退出后绝不重启；
-- `on-failure[:max-retries]`：非正常退出（退出码非 0）时触发重启，可限制最大重试次数；
-- `always`：只要容器处于停止状态便无条件自动重启；
-- `unless-stopped`：生产推荐选项，只要容器不是被管理员显式执行 `docker stop`，在 Docker 守护进程重启或容器崩溃时均自动拉起。
+`unless-stopped` 策略确保容器在崩溃或 Docker 守护进程重启时自动复活，除非被管理员显式手动停止。
 
-### 6.2 容器持久化存储：Volumes
+### 5.2 存储卷持久化（Volumes）
 
-容器的文件系统本质是临时的（Ephemeral）。一旦容器被销毁，容器内部的数据将永久丢失。数据库容器必须挂载外部存储卷（Volume）：
+容器销毁时内部临时数据将永久丢失。数据库容器必须挂载外部存储卷：
 
 ```bash
 docker run -d \
@@ -406,93 +528,74 @@ docker run -d \
   postgres:17
 ```
 
-`-v pgdata:/var/lib/postgresql/data` 创建了名为 `pgdata` 的 Docker 托管卷，并将其挂载到 PostgreSQL 的数据存储目录。即使执行 `docker rm -f bookstore-postgres`，数据卷依然完整保留，重新创建的新容器再次挂载该卷即可无缝恢复所有业务数据。
+即使执行 `docker rm -f bookstore-postgres`，`pgdata` 卷依然完整保存在宿主机中，重新挂载即可无损恢复数据。
 
-### 6.3 健康检查机制（Health Checks）
+### 5.3 健康检查机制（Health Checks）
 
-“进程存活”并不等同于“服务健康”。应用可能发生线程死锁或无法连接数据库。在 Dockerfile 中集成针对 Spring Boot Actuator 的健康检查探针：
+在 Dockerfile 中集成针对 Spring Boot Actuator 的健康检查探针：
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8081/inventory/actuator/health || exit 1
 ```
 
-- `--interval=30s`：每 30 秒执行一次探针检测；
-- `--timeout=3s`：超时阈值；
-- `--start-period=40s`：应用启动宽限期（在此期间检测失败不计入错误计数）；
-- `--retries=3`：连续失败 3 次后将容器置为 `unhealthy` 状态，触发编排平台告警或重启。
+:::en
+> **Original**: Periodic health checks execute non-invasive probes against application endpoints, enabling container runtimes to detect deadlocks and restart unhealthy instances automatically.
 
-### 6.4 容器网络互通（Bridge Network）
-
-容器默认处于独立的网络命名空间。为了让各微服务与数据库能够通过**服务名称**直接寻址互通，必须建立专属的自定义桥接网络（User-defined Bridge Network）：
-
-```bash
-# 1. 创建网络
-docker network create bookstore-network
-
-# 2. 将容器接入该网络
-docker run -d --network bookstore-network --name bookstore-postgres postgres:17
-docker run -d --network bookstore-network --name inventory-service ansgohar/inventory-ms:v0.0.1
-```
-
-接入同一网络后，Inventory Service 可以直接使用 `jdbc:postgresql://bookstore-postgres:5432/inventory` 作为连接字符串，Docker 内置 DNS 服务器会自动完成容器名到内部 IP 的动态解析。
+**📌 核心术语与语境解析**：
+- **Health Check Probe** [helθ tʃek proʊb]：*健康检查探针*。周期性探测容器内部应用真实服务能力的检测指令或 HTTP 端点。
+- **Graceful Shutdown** [ˈɡreɪsfl ˈʃʌtdaʊn]：*优雅停机*。应用在接收到终止信号后停止接收新流量、处理完在途请求并释放数据库连接后再退出的机制。
+:::
 
 ---
 
-## 7. 基于 Docker Compose 统一编排微服务集群
+## 6. 基于 Docker Compose 统一编排微服务集群
 
-至此，我们已经掌握了单个容器的构建与运行。但面对 Bookstore 全栈体系（API Gateway、Inventory、User、Eureka、Zipkin、Keycloak、Postgres、Mongo），手动执行数十条 `docker run` 命令不仅繁琐，且无法保障启动依赖顺序。
+在全栈体系中，手动运行数十条命令难以保障依赖拓扑与配置协同。**Docker Compose** 提供了声明式的一键多容器编排规范。
 
-**Docker Compose** 提供了声明式的统一多容器编排规范。
+### 6.1 全栈拓扑架构图
 
-### 7.1 全栈拓扑架构图
-
-通过 Docker Compose，全栈服务在统一网络中紧密协同：
+通过 Docker Compose，全栈微服务在统一网桥中协同运行：
 
 ![Docker Compose 运行时微服务集群架构](/media/posts/spring-boot-angular/img-09042.png)
 
-- **API Gateway (8080)**：系统外部唯一统一流量入口；
-- **Eureka Server (8761)**：提供微服务实例注册与发现；
-- **Keycloak**：统一身份鉴权与 OAuth2/OIDC 认证服务；
-- **Inventory & User Services**：无状态后端业务微服务；
+- **API Gateway (8080)**：统一流量入口；
+- **Eureka Server (8761)**：服务注册与发现；
+- **Keycloak (8090)**：身份认证中心；
+- **Inventory & User Services**：业务微服务；
 - **PostgreSQL & MongoDB**：持久化数据存储；
-- **Zipkin (9411)**：全链路链路追踪遥测汇总看板。
+- **Zipkin (9411)**：分布式链路监控看板。
 
-### 7.2 一键就绪开发环境工作流
-
-在团队协作中，开发上手体验（Onboarding Experience）至关重要。一个现代工程项目应该做到让新成员拉取代码后“一行命令启动全套依赖环境”：
+### 6.2 一键就绪开发环境工作流
 
 ```bash
-# 1. 获取后端工程及编排配置
-git clone https://github.com/PacktPublishing/Spring-Boot-and-Angular-2E_Backend.git
+# 1. 切换至编排目录
 cd Spring-Boot-and-Angular-2E_Backend/containerization
 
-# 2. 提前拉取所有声明的容器镜像
+# 2. 预先拉取所有基础镜像
 docker compose pull
 
-# 3. 后台一键编排启动整个全栈集群
+# 3. 后台一键拉起全栈集群
 docker compose up -d
 
-# 4. 实时观察集群启动健康状态
+# 4. 查看集群容器健康状态
 docker compose ps
 ```
 
-所有服务就绪后，核心服务控制台入口：
+控制台访问入口汇总：
 - **API 网关入口**：`http://localhost:8080`
 - **Eureka 注册中心**：`http://localhost:8761`
-- **Zipkin 链路监控看板**：`http://localhost:9411`
-- **库存微服务直连端口**：`http://localhost:8081`
+- **Zipkin 链路看板**：`http://localhost:9411`
+- **Keycloak 认证后台**：`http://localhost:8090`
 
 ---
 
-## 8. 本章总结与后续演进
+## 7. 总结与下篇展望
 
 本文系统梳理了现代化 Spring Boot 后端微服务的交付与编排体系：
-1. **交付模型演化**：深刻理解了从传统应用服务器 WAR 包、到自包含可执行 Fat JAR、再到云原生不可变容器镜像的技术必然性；
-2. **底层核心与多阶段构建**：掌握了 Linux 命名空间、cgroups、联合文件系统分层机制，并落地了兼具极简体积与安全性的多阶段 Dockerfile；
-3. **自动化构建矩阵**：剖析了 Spring Boot Buildpacks 与 Google Jib 的技术特性与适用场景；
-4. **运行时进阶与 Compose 编排**：利用 Volume 数据持久化、Actuator 健康检查探针、自定义网桥服务发现，并最终借助 Docker Compose 实现多服务拓扑的一键声明式拉起。
+- **交付模型演进**：理解了从 WAR 包、Fat JAR 到不可变容器镜像的演进脉络；
+- **底层隔离与多阶段构建**：掌握了 Linux 命名空间、cgroups、联合文件系统分层机制，并落地了多阶段 Dockerfile；
+- **自动化构建方案**：横向对比了 Buildpacks 与 Google Jib 的技术特性；
+- **Compose 统一编排**：利用 Volume 持久化、Actuator 探针与自定义网桥，实现了全栈多微服务拓扑的一键声明式拉起。
 
-后端容器化基础设施现已完备且稳固运行，为前端系统提供了标准统一的网关与 API 接口。
-
-在接下来的 **第十一篇** 中，我们将全方位转向前端工程，基于最新的 **Angular 22** 构建现代化单页应用架构：拥抱纯 Standalone 独立组件体系、基于 Signals 的细粒度响应式输入输出、Smart/Dumb 分层设计，并接入基于 Vite 的极速 Vitest 单元测试框架！
+后端容器化基础设施现已稳固就绪。在接下来的 **第十一篇** 中，我们将全方位转向前端工程，基于最新的 **Angular 22** 构建现代化单页应用架构：拥抱纯 Standalone 独立组件体系、基于 Signals 的细粒度响应式输入输出、Smart/Dumb 分层设计，并接入基于 Vite 的极速 Vitest 单元测试框架！

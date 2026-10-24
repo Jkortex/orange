@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十一）：Angular 22 现代脚手架与独立组件架构
 date: 2026-10-23T00:11:00Z
-description: 深入 Angular 22 现代工程体系，落地纯 Standalone 架构、基于 Signals 的输入输出、Smart/Dumb 组件分层与 Vitest 现代测试框架。
+description: 双栏独立滚动对照：深入 Angular 22 现代工程体系，落地纯 Standalone 架构、基于 Signals 的输入输出、Smart/Dumb 组件分层与 Vitest 现代测试框架。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -12,29 +12,269 @@ tags:
   - Vitest
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Spring Boot 4 & Angular 22 全栈微服务实战》](/columns/spring-boot-angular)。全专栏共 22 篇，深度覆盖 Java 26 微服务拆分、Spring Cloud 网关与安全鉴权、Angular 22 Signals 状态治理以及端到端容器化交付的全链路工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
----
+## 1. 前端工程选型决策矩阵
 
-在上一章中，我们通过多阶段构建与 Docker Compose 编排，完成了 Bookstore 后端微服务集群、数据库与网关可观测性设施的容器化交付。后端已经具备了标准化、可预测的 API 输出能力。从本文开始，我们将正式进入全栈体系的另一核心支柱——现代前端工程的建设。
+| 技术维度 | 选型方案 | 传统/替代方案 | 决策依据与工程收益 |
+| :--- | :--- | :--- | :--- |
+| **组件组织范式** | **Standalone 独立组件** | NgModule 模块封装 | 消除中间层样板配置，实现细粒度组件自治与极致 Tree-shaking 剪枝 |
+| **模板控制流** | **原生块级控制流 (`@if`, `@for`, `@switch`)** | 结构型指令 (`*ngIf`, `*ngFor`) | 编译器原生语法支持，严格类型推导，强制显式 `track` 优化 DOM 重排 |
+| **组件通信机制** | **Signal-based `input()` / `output()`** | 装饰器 `@Input()` / `@Output()` | 细粒度响应式信号模型，只读类型安全，解耦 Zone.js 变更检测生命周期 |
+| **依赖注入方式** | **函数式 `inject()` 注入** | 构造函数参数注入 | 允许在字段声明处即时初始化，简化派生类 `super()` 参数传递 |
+| **单元测试体系** | **Vitest 现代测试套件** | Karma + Jasmine | 原生 ESM 解析与 Vite 极速 HMR，测试执行与冷启动速度提升 5~10 倍 |
+| **变更检测模型** | **Zoneless (无 Zone.js) 调度** | Zone.js 全局事件拦截 | 依托 Signals 精确派发局部 DOM 刷新，消除不可预测的全局脏检查开销 |
 
-伴随 Angular 近几个大版本的革新，特别是演进到 **Angular 22**，整个框架的研发体验与底层架构发生了翻天覆地的跃迁：
-- 曾经统治框架多年的 `NgModule` 模式已被彻底弱化为历史遗产，**纯粹的独立组件（Standalone Components）** 成为绝对默认标准；
-- 传统的结构型指令（`*ngIf`、`*ngFor`、`*ngSwitch`）被更优雅、更符合编译器语义且类型安全的**原生控制流语法（`@if`、`@for`、`@switch`）** 取代；
-- 组件间通信全面拥抱细粒度响应式体系，以 **`input()` 和 `output()` 信号函数** 代替老旧的属性装饰器；
-- 单元测试生态彻底淘汰了厚重缓慢的 Karma/Jasmine，全面转向基于 Vite 生态的极致高效单测工具 **Vitest**，并深度整合了无 Zone.js（Zoneless）的现代异步变更检测。
+## 2. Feature-First 生产级工程拓扑
 
-本文将带领大家从零构建一个生产级的 Angular 22 前端项目，深入解析现代核心特性的演进，搭建清晰健壮的 Feature-First 目录规范，实战 Smart/Dumb 组件架构与 Angular Material 现代化集成，并编写第一批基于 Vitest 的高覆盖率响应式单测。
+大型企业级前端项目遵循按业务特性垂直切分（Feature-First）原则，保持业务域高内聚与跨层级单向依赖：
 
----
+```text
+src/
+├── app/
+│   ├── features/               # 业务特性层（按垂直领域边界划分）
+│   │   ├── books/              # 图书目录与管理特性
+│   │   │   ├── pages/          # Smart 容器页面（协调路由与服务状态）
+│   │   │   ├── components/     # 特性专属 Dumb 展示组件（纯输入输出驱动）
+│   │   │   └── books.routes.ts # 特性专属子路由配置
+│   │   ├── auth/               # 认证与用户特性
+│   │   └── orders/             # 订单特性
+│   ├── shared/                 # 跨特性通用层（纯 Dumb 组件、通用模型、管道）
+│   │   ├── layout/             # 布局骨架（Header, Footer, Navigation）
+│   │   └── models/             # 契约模型（严格对齐后端 DTO 接口）
+│   ├── core/                   # 全局单例基础设施（HTTP 拦截器、Guard、Store）
+│   │   └── services/           # 全局单例服务
+│   ├── app.ts                  # 根组件（自包含 Standalone）
+│   ├── app.routes.ts           # 顶层懒加载路由配置
+│   └── app.config.ts           # 全局 Providers 与运行时配置
+```
+
+## 3. Smart/Dumb 响应式组件生产范式
+
+### 契约模型定义 (`shared/models/book.ts`)
+
+```typescript
+export interface Book {
+  title: string;
+  authorName: string;
+  genre: string;
+  price: number;
+  published: string;
+  isbn: string;
+  description?: string;
+  pageCount?: number;
+  coverImageUrl?: string;
+}
+```
+
+### Dumb 展示组件 (`book-list.ts`)
+
+```typescript
+import { Component, input, output } from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
+import { MatTableModule } from '@angular/material/table';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { Book } from '../../../../shared/models/book';
+
+@Component({
+  selector: 'book-list',
+  standalone: true,
+  imports: [CurrencyPipe, MatTableModule, MatIconModule, MatButtonModule],
+  template: `
+    <table mat-table [dataSource]="books()" class="mat-elevation-z2 full-width-table">
+      <ng-container matColumnDef="title">
+        <th mat-header-cell *matHeaderCellDef>书名</th>
+        <td mat-cell *matCellDef="let book">{{ book.title }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="authorName">
+        <th mat-header-cell *matHeaderCellDef>作者</th>
+        <td mat-cell *matCellDef="let book">{{ book.authorName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="genre">
+        <th mat-header-cell *matHeaderCellDef>分类</th>
+        <td mat-cell *matCellDef="let book">{{ book.genre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="price">
+        <th mat-header-cell *matHeaderCellDef>定价</th>
+        <td mat-cell *matCellDef="let book">{{ book.price | currency:'USD':'symbol':'1.2-2' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>操作</th>
+        <td mat-cell *matCellDef="let book">
+          <button mat-icon-button color="primary" (click)="onSelect(book, $event)" aria-label="选择图书">
+            <mat-icon>visibility</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="clickable-row"></tr>
+    </table>
+  `,
+  styles: [`
+    .full-width-table { width: 100%; }
+    .clickable-row:hover { background-color: rgba(0, 0, 0, 0.04); cursor: pointer; }
+  `]
+})
+export class BookList {
+  // 强类型 Signal-based Input 与 Output
+  readonly books = input<Book[]>([]);
+  readonly bookSelected = output<Book>();
+
+  readonly displayedColumns: string[] = ['title', 'authorName', 'genre', 'price', 'actions'];
+
+  onSelect(book: Book, event: MouseEvent): void {
+    event.stopPropagation();
+    this.bookSelected.emit(book);
+  }
+}
+```
+
+### Smart 容器组件 (`list.ts`)
+
+```typescript
+import { Component, signal } from '@angular/core';
+import { Book } from '../../../../shared/models/book';
+import { BookList } from '../../components/book-list/book-list';
+
+@Component({
+  selector: 'books-list-page',
+  standalone: true,
+  imports: [BookList],
+  template: `
+    <section class="page-container p-4">
+      <h2 class="text-xl font-bold mb-4">图书资源总览</h2>
+      <book-list
+        [books]="books()"
+        (bookSelected)="handleBookSelection($event)"
+      />
+    </section>
+  `
+})
+export class BooksListPage {
+  readonly books = signal<Book[]>([
+    {
+      title: 'Designing Data-Intensive Applications',
+      authorName: 'Martin Kleppmann',
+      genre: 'Distributed Systems',
+      price: 49.99,
+      published: '2017-03-16',
+      isbn: '978-1449373320'
+    }
+  ]);
+
+  handleBookSelection(book: Book): void {
+    console.log('[Audit] 用户选中图书:', book.isbn, book.title);
+  }
+}
+```
+
+## 4. Vitest 与 Zoneless 自动化测试范式
+
+在 Zoneless 架构下，变更检测基于微任务调度，测试通过 `await fixture.whenStable()` 确保状态稳定收敛：
+
+```typescript
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { BookList } from './book-list';
+import { Book } from '../../../../shared/models/book';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+describe('BookList Component (Dumb)', () => {
+  let component: BookList;
+  let fixture: ComponentFixture<BookList>;
+
+  const mockBooks: Book[] = [
+    {
+      title: 'Clean Architecture',
+      authorName: 'Robert C. Martin',
+      genre: 'Architecture',
+      price: 34.99,
+      published: '2017-09-20',
+      isbn: '978-0134494166'
+    }
+  ];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [BookList]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BookList);
+    component = fixture.componentInstance;
+  });
+
+  it('应该成功实例化组件并在无数据时稳定渲染', async () => {
+    await fixture.whenStable();
+    expect(component).toBeTruthy();
+  });
+
+  it('设置 Signal Input 后能够驱动视图刷新并同步信号状态', async () => {
+    // 使用 componentRef.setInput 设置响应式输入信号
+    fixture.componentRef.setInput('books', mockBooks);
+    await fixture.whenStable();
+
+    expect(component.books()).toEqual(mockBooks);
+    expect(component.books().length).toBe(1);
+  });
+
+  it('触发操作按钮点击应通过 Output 信号正确发射目标对象', async () => {
+    const selectSpy = vi.fn();
+    component.bookSelected.subscribe(selectSpy);
+
+    fixture.componentRef.setInput('books', mockBooks);
+    await fixture.whenStable();
+
+    component.onSelect(mockBooks[0], new MouseEvent('click'));
+    await fixture.whenStable();
+
+    expect(selectSpy).toHaveBeenCalledWith(mockBooks[0]);
+  });
+});
+```
+
+## 5. 前端架构避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 创建集中式的 `SharedModule` 或 `MaterialModule` 全量打包所有组件。 | 在每个独立组件中仅按需引入模板直接消费的 Material 模块或组件，保障 Tree-shaking 最小产物。 |
+| 在原生 `@for` 循环中使用易变的 `$index` 作为强制 `track` 标识。 | 强制使用稳定的领域唯一主键（如 `track book.isbn`），避免列表变更时的全量 DOM 销毁重建。 |
+| 在 Zoneless 测试中依旧频繁手动调用 `fixture.detectChanges()` 轮询脏检查。 | 使用 `await fixture.whenStable()` 挂起断言，等待 Signals 响应式调度器微任务自然收敛。 |
+| 在 Dumb 展示组件内部通过注入服务直接发起 HTTP 请求或改变全局 Store。 | 严格保持展示组件无状态：仅通过 `input()` 获取展示数据，通过 `output()` 发射交互事件由 Smart 容器处理。 |
+| 使用传统属性装饰器 `@Input()`、`@Output()` 编写混杂类型。 | 全面迁移至类型安全、基于 Signals 的 `input()`、`output()` 现代原生 API。 |
+
+<!-- split -->
+
+# 原著完整参考：Angular 22 现代脚手架与独立组件架构
+
+在现代全栈架构中，前端工程承担着交互编排、视图渲染与用户体验保障的职责。伴随 Angular 框架演进至 **Angular 22**，前端工程体系实现了重大范式转变：
+
+1. `NgModule` 模式退居为兼容性机制，**纯粹的独立组件（Standalone Components）** 成为绝对默认标准；
+2. 传统的结构型指令（`*ngIf`、`*ngFor`、`*ngSwitch`）被更优雅、更符合编译器语义且类型安全的**原生控制流语法（`@if`、`@for`、`@switch`）** 全面替代；
+3. 组件间通信全面拥抱细粒度响应式体系，以 **`input()` 和 `output()` 信号函数** 代替老旧的属性装饰器；
+4. 单元测试生态淘汰了 Karma/Jasmine 方案，全面转向基于 Vite 生态的极致高效单测工具 **Vitest**，并深度整合无 Zone.js（Zoneless）的现代异步变更检测。
+
+本文系统拆解 Angular 22 现代前端工程的核心要素，落地 Feature-First 目录分层、Smart/Dumb 模式与 Vitest 单测矩阵。
+
+:::en
+> **Original**: Angular has evolved towards a streamlined, modern developer experience characterized by standalone components by default, built-in control flow syntax, signal-based reactivity, and first-class Vitest integration.
+
+**📌 核心术语与语境解析**：
+- **Standalone Components** [ˈstændəloʊn kəmˈpoʊnənts]：*独立组件*。无需在 NgModule 中声明即可自包含依赖项并直接引导或导入的组件范式。
+- **Developer Experience (DX)** [dɪˈveləpər ɪkˈspɪriəns]：*开发者体验*。工具链、编译反馈速度以及框架语法设计的易用性与一致性。
+:::
 
 ## 1. 现代化工程脚手架创建与配置
 
-在现代全栈工程中，前端脚手架不仅是一个代码生成器，更是工程化规范（TypeScript 编译选项、代码风格、路由策略、SSR 支持等）的基底。
+前端脚手架不仅是代码生成工具，更是工程化规范（TypeScript 编译选项、代码风格、路由策略与 SSR 支持）的基底。
 
 ### 1.1 环境准备与 Angular CLI v22
 
-确保本地开发环境安装了 **Node.js 24 LTS**（或 22.22.3+ / 26+），随后全局安装最新的 Angular CLI：
+本地开发环境要求安装 **Node.js 24 LTS**（或 22.22.3+ / 26+），随后全局安装最新的 Angular CLI：
 
 ```bash
 npm install -g @angular/cli
@@ -46,7 +286,7 @@ npm install -g @angular/cli
 ng --version
 ```
 
-终端将输出 Angular CLI 22 及其绑定的 Node.js 与 OS 环境信息：
+终端输出 Angular CLI 22 及其绑定的 Node.js 与 OS 环境信息：
 
 ![Angular CLI v22 版本验证](/media/posts/spring-boot-angular/img-09047.png)
 
@@ -58,10 +298,10 @@ ng --version
 ng new ng-bookstore
 ```
 
-脚手架在交互式初始化过程中会提供一系列架构选项：
+脚手架在交互式初始化过程中提供一系列架构选项：
 - **Stylesheet format**：推荐选择 **Sass (SCSS)**，具备嵌套规则、变量与混入能力，便于后续深度定制 UI 主题；
-- **Server-Side Rendering (SSR)**：选择 **Yes**，生成包含客户端与服务端双重运行时配置的高性能模板（后续章节将深入 SSR 与 Hydration 水合机制）；
-- **AI-assisted development configuration**：可根据自身编辑器习惯勾选集成辅助配置。
+- **Server-Side Rendering (SSR)**：选择 **Yes**，生成包含客户端与服务端双重运行时配置的高性能模板；
+- **AI-assisted development configuration**：根据编辑器习惯勾选集成辅助配置。
 
 ![脚手架交互式工程配置](/media/posts/spring-boot-angular/img-09048.png)
 
@@ -84,20 +324,18 @@ npm run start # 等价于 ng serve
 
 ![Angular 默认欢迎界面](/media/posts/spring-boot-angular/img-09054.png)
 
----
-
 ## 2. Angular 22 现代核心特性演进
 
-从传统 Angular 到 Angular 22，框架设计理念经历了由“配置驱动”向“纯净 TypeScript/函数式驱动”的范式转变。理解这些特性是编写高质量前端代码的前提。
+从传统 Angular 到 Angular 22，框架设计理念经历了由“配置驱动”向“纯净 TypeScript/函数式驱动”的范式转变。
 
 ### 2.1 告别 NgModule：纯粹的独立组件（Standalone Components）
 
-在过去的架构中，任何组件、指令或管道都必须显式声明在某个 `@NgModule` 的 `declarations` 数组中，模块之间通过 `imports` 和 `exports` 相互暴露。这不仅带来了冗长繁琐的脚手架样板代码，还经常导致隐式依赖污染与糟糕的 Tree-shaking 表现。
+在过去的架构中，任何组件、指令或管道都必须显式声明在某个 `@NgModule` 的 `declarations` 数组中，模块之间通过 `imports` 和 `exports` 相互暴露。这导致了冗长繁琐的脚手架样板代码，还经常导致隐式依赖污染与糟糕的 Tree-shaking 表现。
 
-在 Angular 22 中，**所有组件默认均为 Standalone 独立组件**（无需手动显式声明 `standalone: true`）：
+在 Angular 22 中，**所有组件默认均为 Standalone 独立组件**：
 
 ```typescript
-// 传统 NgModule 模式（已过时）
+// 传统 NgModule 模式（已废弃范式）
 @NgModule({
   declarations: [BookListComponent],
   imports: [CommonModule],
@@ -117,7 +355,7 @@ export class BookList {
 }
 ```
 
-应用根引导也由繁琐的 `platformBrowserDynamic().bootstrapModule(AppModule)` 彻底转变为直观的函数式引导：
+应用根引导由传统的 `platformBrowserDynamic().bootstrapModule(AppModule)` 彻底转变为直观的函数式引导：
 
 ```typescript
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -129,11 +367,19 @@ bootstrapApplication(App, appConfig)
   .catch(err => console.error(err));
 ```
 
+:::en
+> **Original**: Standalone components streamline the authoring experience by reducing boilerplate, removing the need for intermediary NgModules, and enabling precise per-component dependency graphs for optimal tree-shaking.
+
+**📌 核心术语与语境解析**：
+- **Tree-shaking** [triː ˈʃeɪkɪŋ]：*摇树优化/死码消除*。打包构建工具依据 ES 模块的静态引用分析，移除未使用导出代码的编译优化机制。
+- **Bootstrap Application** [ˈbuːtstræp ˌæplɪˈkeɪʃn]：*应用根引导*。由平台层直接实例化根组件并挂载至宿主 DOM 的入口执行阶段。
+:::
+
 ### 2.2 原生模板控制流语法（Built-in Control Flow）
 
-过去 Angular 依赖于微语法属性指令（Micro-syntax Directives，如 `*ngIf`、`*ngFor`、`*ngSwitch`），开发者必须手动导入 `CommonModule`，且复杂条件下的模板嵌套往往产生大量冗余的 `<ng-container>`。
+过去 Angular 依赖微语法属性指令（如 `*ngIf`、`*ngFor`、`*ngSwitch`），开发者必须手动导入 `CommonModule`，且复杂条件下的模板嵌套往往产生大量冗余的 `<ng-container>`。
 
-Angular 22 全面确立了**原生块级控制流语法**（Built-in Control Flow），这些语法在编译器层面直接支持，具备极佳的类型推断与极速运行时性能：
+Angular 22 全面确立了**原生块级控制流语法**（Built-in Control Flow），这些语法在编译器层面直接支持，具备优良的类型推断与极速运行时性能：
 
 #### 条件分支 `@if` / `@else`
 
@@ -160,7 +406,7 @@ Angular 22 全面确立了**原生块级控制流语法**（Built-in Control Flo
 ```
 
 > [!IMPORTANT]
-> 在原生 `@for` 语法中，`track` 表达式是**强制性要求的**（如 `track book.isbn`）。这迫使开发者必须显式提供对象标识键，使虚拟 DOM 与渲染器在数据变动时仅更新差异项，从根源上杜绝了列表全量重新渲染带来的性能损耗。
+> 在原生 `@for` 语法中，`track` 表达式是**强制性要求的**（如 `track book.isbn`）。这迫使开发者显式提供对象标识键，使渲染器在数据变动时仅更新差异项，从根源上杜绝了列表全量重新渲染带来的性能损耗。
 
 #### 多路条件匹配 `@switch`
 
@@ -178,6 +424,14 @@ Angular 22 全面确立了**原生块级控制流语法**（Built-in Control Flo
 }
 ```
 
+:::en
+> **Original**: Built-in control flow replaces structural directives with native compiler-level blocks, enforcing explicit identity tracking via `track` to minimize DOM reconciliation overhead.
+
+**📌 核心术语与语境解析**：
+- **Built-in Control Flow** [bɪlt ɪn kənˈtroʊl floʊ]：*原生控制流*。由 Angular 模板编译器在词法层支持的声明式逻辑块。
+- **DOM Reconciliation** [diː oʊ em ˌrekənsɪliˈeɪʃn]：*DOM 协调比对*。虚拟节点或抽象状态模型与真实浏览器 DOM 之间进行差异更新的算法过程。
+:::
+
 ### 2.3 属性指令 vs 结构型指令的边界再定
 
 随着原生控制流全面取代旧版结构型指令，指令的职责变得极为纯粹：
@@ -190,7 +444,7 @@ Angular 22 全面确立了**原生块级控制流语法**（Built-in Control Flo
 
 ```typescript
 @Injectable({
-  providedIn: 'root' // 全局单例
+  providedIn: 'root'
 })
 export class BookService {
   private http = inject(HttpClient); // 函数式注入替代构造参数注入
@@ -200,8 +454,6 @@ export class BookService {
   }
 }
 ```
-
----
 
 ## 3. 生产级 Feature-First 目录规范
 
@@ -247,8 +499,6 @@ ng generate service core/services/authentication
 
 生成的布局组件同样为自包含的 Standalone 组件，无需在任何模块中重复声明，需要引用的地方直接加入组件的 `imports: [...]` 即可。
 
----
-
 ## 4. Smart/Dumb 组件分层架构实战
 
 在前端架构设计中，**容器/展示组件模式（Smart / Dumb Components Pattern）** 是保证 UI 稳定性与可测试性的经典法则：
@@ -257,7 +507,7 @@ ng generate service core/services/authentication
 
 ### 4.1 契约驱动：定义与后端 DTO 精确对齐的 TypeScript 接口
 
-全栈开发的核心优势在于前后端契约的一致性。生成前端 `Book` 接口：
+生成前端 `Book` 接口：
 
 ```bash
 ng generate interface shared/models/book
@@ -281,7 +531,7 @@ export interface Book {
 
 ### 4.2 基于 Signal-based `input()` 与 `output()` 实现 Dumb 组件
 
-在 Angular 22 中，彻底摒弃旧版 `@Input()` 与 `@Output()` 装饰器，全面采用信号驱动的 API：
+在 Angular 22 中，全面采用信号驱动的 API 替代旧版 `@Input()` 与 `@Output()` 装饰器：
 
 ```bash
 ng generate component features/books/components/book-list
@@ -342,6 +592,14 @@ export class BookList {
 </table>
 ```
 
+:::en
+> **Original**: Signal-based inputs and outputs establish a deterministic, read-only reactive interface for presentational components, enabling effortless change detection and granular template updates.
+
+**📌 核心术语与语境解析**：
+- **Signal-based Inputs** [ˈsɪɡnəl beɪst ˈɪnpʊts]：*基于信号的输入属性*。以 `InputSignal<T>` 呈现的只读反应式状态源，在父级传值更新时自动激活依赖链路。
+- **OutputEmitterRef** [ˈaʊtpʊt ɪˈmɪtər ref]：*输出发射器引用*。基于函数式 `output<T>()` 创建的现代事件发射句柄。
+:::
+
 ### 4.3 构建 Smart 容器组件
 
 生成图书列表的主页面：
@@ -364,7 +622,6 @@ import { BookList } from '../../components/book-list/book-list';
   styleUrl: './list.scss',
 })
 export class List {
-  // 模拟业务数据（后续对接微服务 API）
   books: Book[] = [
     {
       title: 'Clean Code: A Handbook of Agile Software Craftsmanship',
@@ -386,12 +643,11 @@ export class List {
 
   selectBook(book: Book): void {
     console.log('用户选中图书项:', book.isbn, book.title);
-    // 处理导航跳转或调起侧拉抽屉详情
   }
 }
 ```
 
-页面模板 `list.html` 只需极简地衔接 Dumb 组件：
+页面模板 `list.html` 衔接 Dumb 组件：
 
 ```html
 <section class="page-container">
@@ -462,27 +718,33 @@ export class App {}
 <app-footer />
 ```
 
-此时的目录层次结构与初步渲染效果如下：
+更新后的目录拓扑与渲染效果：
 
 ![更新后的目录拓扑](/media/posts/spring-boot-angular/img-09055.png)
 
 ![原生表格初步渲染效果](/media/posts/spring-boot-angular/img-09059.png)
 
----
+:::en
+> **Original**: Smart/Container components encapsulate business logic and route transitions, delegating pure visual representation to Dumb/Presentational components via unidirectional data binding.
+
+**📌 核心术语与语境解析**：
+- **Smart / Dumb Components** [smɑːrt dʌm kəmˈpoʊnənts]：*智能与哑组件模式*。容器负责状态编排，展示组件负责输入渲染与意图发射的经典分层架构。
+- **Lazy Loading** [ˈleɪzi ˈloʊdɪŋ]：*惰性加载/按需加载*。基于动态路由声明在用户导航至特定路径时才异步拉取对应 JS Chunk 的性能优化机制。
+:::
 
 ## 5. Angular Material 现代化集成与列表重构
 
-为了赋予应用符合现代工业标准的无障碍支持（A11y）、响应式排版与一致的视觉体验，我们将引入 Google 官方的 **Angular Material**。
+为了赋予应用符合工业标准的无障碍支持（A11y）、响应式排版与一致的视觉体验，我们引入官方 **Angular Material**。
 
 ### 5.1 安装与主题配置
 
-通过 CLI Schematic 自动引入 Material 核心组件与 CDK：
+通过 CLI Schematic 引入 Material 核心组件与 CDK：
 
 ```bash
 ng add @angular/material
 ```
 
-在交互提示中选择预置主题（如 `azure-blue` 或经典预置色板），CLI 将自动在 `package.json` 中注入 `@angular/material` 与 `@angular/cdk`，并在 `index.html` 中引入 Roboto 字体与 Material 矢量图标集。
+在交互提示中选择预置主题，CLI 将在 `package.json` 中注入 `@angular/material` 与 `@angular/cdk`，并在 `index.html` 中引入 Roboto 字体与 Material 矢量图标集。
 
 ![配置 Angular Material 主题](/media/posts/spring-boot-angular/img-09061.png)
 
@@ -504,7 +766,7 @@ body {
 
 ### 5.2 Standalone 模式下的精准按需引入
 
-在 Standalone 架构中，严禁建立一个囊括所有 Material 组件的巨型 `MaterialModule`！正确的做法是**在各个独立组件中仅按需引入所需的具体 Material Directive/Component**，以最大限度发挥编译器 Tree-shaking 优化效果。
+在 Standalone 架构中，严禁建立囊括所有 Material 组件的巨型 `MaterialModule`。正确的做法是**在各个独立组件中仅按需引入所需的具体 Material Directive/Component**，最大限度发挥编译器 Tree-shaking 优化效果。
 
 #### 重构 Header 导航组件（`header.ts`）
 
@@ -540,25 +802,6 @@ export class Header {}
 </header>
 ```
 
-样式（`header.scss`）：
-
-```scss
-.main-toolbar {
-  display: flex;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.brand-title {
-  font-weight: 500;
-  margin-left: 0.5rem;
-}
-
-.spacer {
-  flex: 1 1 auto;
-}
-```
-
 #### 重构 Footer 底部组件（`footer.ts`）
 
 ```typescript
@@ -590,7 +833,7 @@ export class Footer {}
 
 ### 5.3 基于 `mat-table` 升级图书展示列表
 
-在 `BookList` 组件中引入 Material 数据表格，提供更丰富的主题色彩、货币管道格式化以及操作按钮插槽：
+在 `BookList` 组件中引入 Material 数据表格：
 
 `book-list.ts`：
 
@@ -634,37 +877,31 @@ export class BookList {
 
 ```html
 <table mat-table [dataSource]="books()" class="mat-elevation-z4 full-width-table">
-  <!-- 书名列 -->
   <ng-container matColumnDef="title">
     <th mat-header-cell *matHeaderCellDef> 书名 </th>
     <td mat-cell *matCellDef="let book"> {{ book.title }} </td>
   </ng-container>
 
-  <!-- 作者列 -->
   <ng-container matColumnDef="authorName">
     <th mat-header-cell *matHeaderCellDef> 作者 </th>
     <td mat-cell *matCellDef="let book"> {{ book.authorName }} </td>
   </ng-container>
 
-  <!-- 分类列 -->
   <ng-container matColumnDef="genre">
     <th mat-header-cell *matHeaderCellDef> 类别 </th>
     <td mat-cell *matCellDef="let book"> {{ book.genre }} </td>
   </ng-container>
 
-  <!-- 定价列（管道货币化） -->
   <ng-container matColumnDef="price">
     <th mat-header-cell *matHeaderCellDef> 定价 </th>
     <td mat-cell *matCellDef="let book"> {{ book.price | currency:'USD':'symbol':'1.2-2' }} </td>
   </ng-container>
 
-  <!-- 出版日期列 -->
   <ng-container matColumnDef="published">
     <th mat-header-cell *matHeaderCellDef> 出版时间 </th>
     <td mat-cell *matCellDef="let book"> {{ book.published }} </td>
   </ng-container>
 
-  <!-- 操作按钮插槽 -->
   <ng-container matColumnDef="actions">
     <th mat-header-cell *matHeaderCellDef class="actions-header"> 操作 </th>
     <td mat-cell *matCellDef="let book">
@@ -682,24 +919,20 @@ export class BookList {
 </table>
 ```
 
-经过 Material 现代化改造后的完整视图呈现出高水准的工业质感：
-
 ![集成 Material 后的整体布局与表格呈现](/media/posts/spring-boot-angular/img-09065.png)
-
----
 
 ## 6. 现代单元测试：拥抱 Vitest 与 Zoneless 异步断言
 
-过去数年，Angular 默认采用基于 Webpack、Karma 与 Jasmine 的单测套件。随着工程规模扩张，Karma 启动庞大真实浏览器以及复杂打包流水线导致单测执行极其缓慢。
+大型前端工程的健康迭代依赖高速稳定的单元测试套件。
 
 ### 6.1 为什么是 Vitest？
 
-Angular 22 默认推荐并内置了基于 **Vitest** 的单元测试体系。
+Angular 22 默认推荐并内置了基于 **Vitest** 的单元测试体系：
 - **原生 ESM 支持**：直接解析 ES 模块，无需漫长的二次全量 Bundle；
-- **毫秒级极速反馈**：借助 Vite 卓越的 HMR 与按需转换能力，测试启动与执行速度提升 5~10 倍；
+- **毫秒级极速反馈**：借助 Vite 的 HMR 与按需转换能力，测试启动与执行速度提升 5~10 倍；
 - **现代 API 对齐**：天然兼容主流现代断言库与快照测试。
 
-构建器在 `angular.json` 中极为纯粹：
+构建器配置：
 
 ```json
 {
@@ -717,11 +950,19 @@ Angular 22 默认推荐并内置了基于 **Vitest** 的单元测试体系。
 
 ### 6.2 解密 Zoneless 测试环境：`await fixture.whenStable()`
 
-在 Angular 22 中，项目已迈向 **Zoneless（无 Zone.js）** 时代，变更检测不再依赖全局拦截异步 API（如 `setTimeout`、`Promise`）的 `zone.js`，而是完全依赖细粒度 Signals 与内部调度器。
+在 Angular 22 中，项目迈入 **Zoneless（无 Zone.js）** 时代，变更检测不再依赖全局拦截异步 API 的 `zone.js`，而是完全依赖细粒度 Signals 与内部微任务调度器。
 
-这一演进深刻改变了测试的编写方式：
-- 传统模式：每次设置变量后必须手工调用 `fixture.detectChanges()`；
+测试断言编写方式也随之演进：
+- 传统模式：每次设置变量后必须手工调用 `fixture.detectChanges()` 轮询；
 - **现代模式**：通过 `await fixture.whenStable()` 等待所有响应式信号求值与异步渲染微任务完全稳定，确保断言在真实渲染结果上执行。
+
+:::en
+> **Original**: Zoneless testing eliminates manual change detection cycles by utilizing `fixture.whenStable()` to await the convergence of asynchronous signal evaluation and microtask queues.
+
+**📌 核心术语与语境解析**：
+- **Zoneless Change Detection** [ˈzoʊnləs tʃeɪndʒ dɪˈtekʃn]：*无 Zone 变更检测*。解耦全局拦截器，通过响应式原语通知调度器执行精准局部更新的高性能渲染模型。
+- **Asynchronous Stabilization** [eɪˈsɪŋkrənəs ˌsteɪbələˈzeɪʃn]：*异步收敛稳定*。等待组件树中所有微任务与信号依赖图计算收敛至终态的过程。
+:::
 
 ### 6.3 编写 App 根组件布局测试
 
@@ -766,8 +1007,6 @@ describe('App Root Layout', () => {
 
 ### 6.4 编写 Dumb 组件响应式信号单测
 
-针对 `BookList` 组件编写全覆盖测试，验证组件实例化、Signal Input 赋值、表格渲染以及 Output 信号向上传递：
-
 编辑 `src/app/features/books/components/book-list/book-list.spec.ts`：
 
 ```typescript
@@ -792,7 +1031,7 @@ describe('BookList Component (Dumb)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BookList], // 独立组件直接导入
+      imports: [BookList],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BookList);
@@ -805,7 +1044,6 @@ describe('BookList Component (Dumb)', () => {
   });
 
   it('用例 2：应正确响应 Signal Input 注入的数据变更', async () => {
-    // 现代方式：使用 componentRef.setInput 设置响应式输入信号
     fixture.componentRef.setInput('books', mockBooks);
     await fixture.whenStable();
 
@@ -816,7 +1054,6 @@ describe('BookList Component (Dumb)', () => {
   it('用例 3：触发行点击应通过 Output 正确发射选中图书', async () => {
     let emittedBook: Book | undefined;
 
-    // 订阅 Output 实例返回的 OutputEmitterRef
     component.book.subscribe((book: Book) => {
       emittedBook = book;
     });
@@ -843,19 +1080,6 @@ npm run test:run
 npm run test:ui
 ```
 
-测试执行以秒级完成，所有用例全部绿灯通过：
+所有用例秒级通过：
 
 ![Vitest 极速单元测试通过](/media/posts/spring-boot-angular/img-09067.png)
-
----
-
-## 7. 本章总结与后续演进
-
-本文系统完成了从 Spring Boot 后端向现代 Angular 22 前端工程的跃迁：
-1. **拥抱现代范式**：全面废弃 NgModule，以自包含的 Standalone 独立组件与 `bootstrapApplication` 作为工程新基底；
-2. **掌握原生控制流**：掌握了编译期强类型推断的 `@if`、`@for (track item.id)` 与 `@switch` 语法，淘汰了旧版结构型指令；
-3. **架构清晰分层**：确立了 Feature-First 目录规范，并实战了基于 `input()` 和 `output()` 响应式信号的 Smart/Dumb 架构模式；
-4. **精细化按需引入**：在保持极致 Tree-shaking 的前提下，借助 Angular Material 与 `mat-table` 打造出生产级 UI；
-5. **构筑测试基石**：搭建了基于 Vitest 的无 Zone.js（Zoneless）单测流水线，利用 `await fixture.whenStable()` 实现了可靠的响应式异步断言。
-
-前端脚手架与基础架构现已稳固就绪。在下一篇中，我们将深入探讨 **AI 辅助全栈开发工作流**，并在此基础上系统攻克 **Angular 响应式表单（Reactive Forms）** 的深度实战！

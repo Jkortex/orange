@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（八）：从提示词到智能体：构建 AI 协作结构"
 date: 2026-10-21T08:00:00Z
-description: "将工作流从单一提示词升级为具备清晰认知边界的专家智能体团队，用规范沉淀领域知识，并借助守卫智能体设立不可逾越的认知边界。"
+description: "双栏独立滚动对照：穿越四层治理环境对比，构建守卫智能体与认知边界，实现领域决策的刚性证明与端到端追溯。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -12,11 +12,233 @@ tags:
   - "DDD"
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。全专栏共 12 篇，覆盖大语言模型心智模型、事件风暴与 AI 协作、提示词规则手册、限界上下文精炼，以及专家智能体与编排器的完整工程实践。
+> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
+
+# 核心实战精炼：从提示词到智能体 (From Prompts to Agents)
+
+## 1. 架构选型与四级治理决策矩阵
+
+在跨限界上下文（销售、支付、仓库）的复杂业务协作中，AI 助手的产出质量取决于环绕在其外部的治理环境。下表对比了四种逐步递进的 AI 协作架构：
+
+| 评估维度 | 运行 1：纯提示词基线 (`no_sdd`) | 运行 2：无守卫规范驱动 (`sdd_without_custom_agents`) | 运行 3：守卫智能体治理 (`sdd-with-harness`) | 运行 4：基于角色协作 (`bmad-solution-with-harness`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **协作形态** | 单一 Prompt 直接生成代码 | 工件流水线（Spec -> Plan -> Tasks -> Code） | 工件流水线 + 专职认知边界守卫智能体 | 专业化角色分工（分析师/架构师/产品/开发者） |
+| **决策出处 (Provenance)** | **完全丢失**：使用消息 `correlationId` 伪造支付授权凭证 | **显式声明**：在规范中指明各方权威，但执行可能偏离 | **刚性阻断**：守卫对照 `BC` 规则核验各步骤出处 | **链路内嵌**：出处随角色交接在工件间严密流转 |
+| **认知边界 (Cognitive Boundary)** | 无（模型凭统计概率随意补全所有未声明决策） | 软约束（依赖人类在 Spec 阶段手动澄清） | **硬约束**（禁止智能体越权推断，违规强制挂起） | **角色约束**（各角色职责严格隔离，禁止代行决策） |
+| **典型失效模式** | **伪 DDD 代码**：语法与对象完备，但业务不变量完全失守 | **行政性完成假象**：任务已勾选，底层核心行为未实现 | 守卫仅能检查静态工件，无法自动提供运行时行为证明 | 分布式交接链路过长，销售与 Saga 最终故事交付可能滞后 |
+| **行为证明机制** | 无针对性测试（仅简单断言消息字段传递） | 浅层测试（断言 CorrelationId 保全，未验证业务流转） | 明确指出测试断层，要求提供反向负例行为测试 | 验收测试与架构适应度函数挂钩 |
+| **维护成本与收益** | 成本极低，但在生产环境中引发严重破坏 | 中等成本，显著提升需求与架构的可审查性 | **高性价比**：在转换源头拦截错误，避免缺陷扩散 | 适用于大型复杂工程，多角色编排管理成本较高 |
+
+## 2. 伪 DDD 失效剖析与决策出处链
+
+### 致命陷阱：格式不变量（Format Invariant）并不等于权威证明（Authority Proof）
+在运行 1（`no_sdd`）中，AI 生成的代码表面上极其契合 DDD 规范：定义了显式强类型标识符、编写了防御性 Guard 断言、并发布了领域事件。然而，系统内部的决策出处（Decision Provenance）已经彻底被掏空。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as 客户端
+    participant Saga as SalesOrderSaga (协调器)
+    participant Sales as SalesOrder 聚合根 (Sales 上下文)
+    participant Payment as Payment 上下文 (真实权威)
+
+    Note over Client,Payment: 🚨 伪 DDD 失效场景 (Run 1: no_sdd)
+    Client->>Saga: 触发订单确认流程 (携带有 CorrelationId)
+    Note over Saga: 收到 CustomerBudgetVerified 事件
+    critical 凭空捏造证据 (Evidence Manufacturing)
+        Saga->>Saga: var paymentAuthId = new PaymentAuthorizationId(correlationId.ToString())
+        Note over Saga: 将临时技术追踪 ID 强转为支付授权凭证！<br/>完全绕过了真正的 Payment 上下文！
+    end
+    Saga->>Sales: ConfirmSalesOrder(paymentAuthId, ...)
+    critical 虚假的不变量保护
+        Sales->>Sales: if (string.IsNullOrWhiteSpace(paymentAuthId.Value)) throw ...
+        Note over Sales: 格式校验顺利通过！聚合误认为已获得合法授权！
+    end
+    Sales-->>Saga: 产生 SalesOrderConfirmed 领域事件 (灾难性误确认)
+```
+
+```csharp
+// 🚨 错误示范：SalesOrderSaga.cs 中的凭空伪造
+internal void MarkCustomerBudgetAsVerified(CustomerJson customer, Guid correlationId)
+{
+    // 致命错误：把消息通信的 technical correlationId 强行包装为业务凭证 PaymentAuthorizationId
+    var paymentAuthorizationId = new PaymentAuthorizationId(correlationId.ToString());
+
+    RaiseEvent(new SagaCustomerBudgetVerified(
+        new CustomerId(_customerId),
+        correlationId,
+        paymentAuthorizationId, // 伪造凭据流入后续决策流
+        customer));
+}
+
+// SalesOrder.cs 内部的虚假防御
+if (string.IsNullOrWhiteSpace(paymentAuthorizationId.Value))
+    throw new ArgumentException("Payment authorization id is required.", nameof(paymentAuthorizationId));
+// 该校验仅验证了字符串非空，根本无法验证该凭证是否由 Payment 上下文合法签发！
+```
+
+> **核心架构原则**：聚合根不仅要守卫参数的语法格式，更必须依赖受信任的集成边界（ACL / Integration Event）来保证决策出处。协调器负责协调外部决策，但绝不能凭空捏造外部决策。
+
+## 3. 生产级销售确认领域载体与守卫智能体模版
+
+### 3.1 销售订单确认领域载体（`domain-carriers/brewup-sales-order-confirmation.md` 节选）
+
+```markdown
+# BrewUp Sales Order Confirmation Domain Carrier
+
+## 1. Domain Authorities
+- **Sales Context**：拥有销售订单（Sales Order）状态跃迁至 Confirmed 的唯一决策权。
+- **Payment Context**：拥有支付授权（Payment Authorization）结果的唯一签发权。
+- **Warehouse Context**：拥有物理库存预留（Stock Reservation）结果的唯一签发权。
+
+## 2. Bounded Context Rules
+- **BC-003**：Payment 拥有支付授权决策的唯一主权。
+- **BC-006**：Stock Reservation 属于外部决策。Sales 仅可存储 StockReservationId 作为 Warehouse 已生成预留结果的凭证；Sales 严禁自行生成预留结果。
+- **BC-009**：外部决策引用（External Decision References），严禁内嵌领域模型。Sales 仅保存引用的强类型 ID，严禁将 Payment 或 Warehouse 的状态机嵌入 Sales 内部。
+- **BC-014**：技术关联标识符（Correlation ID）绝非业务凭据，严禁将其作为支付授权或库存预留 ID 使用。
+
+## 3. Forbidden Assumptions
+- 严禁将客户预算验证（Customer Budget Verified）解释为支付授权。
+- 严禁将现货可用性快照（Beer Availability）作为订单确认的持久证据；必须以持久化 StockReservationId 为准。
+- 协调器（Saga）仅负责跨上下文消息路由，严禁自身代行决策或铸造外部 ID。
+```
+
+### 3.2 认知边界守卫智能体配置模版（`.github/agents/speckit.brewup.boundary-guard.agent.md`）
+
+```markdown
+---
+name: speckit.brewup.boundary-guard
+description: "审查各工件转换节点，设立认知边界，阻断越权推断与证据伪造"
+tools:
+  - run_command
+  - read_file
+---
+
+# Boundary Guard Agent Instruction
+
+你是一名坚守 DDD 边界的架构守卫智能体。你的职责是审查上游生成工件，构筑**认知边界（Cognitive Boundary）**。
+
+## 1. 核心铁律
+1. **禁止代行决策**：你必须依据被认可的 `BC-###` 与 `AR-###` 规则提出质疑，绝不允许自行捏造替代逻辑。
+2. **禁止静默重写**：严禁私自修改工件使其“看起来符合规范”；若发现违规，必须输出 `BLOCKED` 状态并列出证据链。
+3. **出处强制追溯**：核验工件中的每一个依赖引用，必须能追溯至具名上下文发出的合法事件。
+
+## 2. 审查清单
+- [ ] **所有权侵犯审查**：核验 `spec.md` 或 `plan.md` 是否要求 Sales 执行支付扣款或仓库预留。
+- [ ] **证据伪造审查**：检查代码或任务中是否存在从 `correlationId` 构造业务凭据的逻辑。
+- [ ] **策略越权提升审查**：检查提议策略（如幂等性要求、重试策略）是否在未定义所有者的情况下被拔高为强制性需求。
+- [ ] **结构坍缩审查**：核验跨上下文协调组件是否被违规塞入 Sales 模块内部（违反 AR-016）。
+
+## 3. 输出格式
+当发现越权时，必须输出：
+```text
+STATUS: BLOCKED
+VIOLATION_RULE: BC-003 / AR-016
+OFFENDING_SNIPPET: [违规片段]
+REASON: [说明为何该推断超出了当前参与者的合法权限]
+REQUIRED_ACTION: [要求人类专家给出的业务裁决或工件回退动作]
+```
+```
+
+## 4. 从 Prompt 到 Agent 的演进蓝图
+
+从单体提示词迈向受控多智能体协作的演进蓝图，本质上是**将概率性推断逐步压缩至认知边界之内**的过程：
+
+```mermaid
+flowchart TD
+    subgraph S1["1. 纯提示词 (Prompt-Only)"]
+        P1["自然语言请求<br/>'实现订单确认'"] --> C1["大模型自发代码生成<br/>(概率采样填充空白)"]
+        C1 --> Err1["🚨 伪 DDD 代码<br/>CorrelationId 强转为凭据<br/>出处完全伪造"]
+    end
+
+    subgraph S2["2. 规范驱动流水线 (Spec-Driven Pipeline)"]
+        P2["自然语言请求"] --> S2Spec["spec.md (规范生成)"]
+        S2Spec --> S2Clarify["Human Clarification (人类澄清)"]
+        S2Clarify --> S2Plan["plan.md & tasks.md (拆解)"]
+        S2Plan --> Err2["⚠️ 行政性打勾假象<br/>Tasks 标记完成<br/>但测试未验证核心行为"]
+    end
+
+    subgraph S3["3. 守卫智能体治理 (Guarded Agent Harness)"]
+        S3Carrier["领域载体 & 架构记忆<br/>(BC / AR 规则库)"]
+        S3Carrier --> G1{"Domain Guard<br/>认知边界"}
+        G1 -->|拦截越权| S3Spec["合格特性规范"]
+        S3Spec --> G2{"Plan Guard<br/>结构边界"}
+        G2 -->|拦截结构坍缩| S3Tasks["可验证任务分解"]
+        S3Tasks --> G3{"Task Guard<br/>行为断言"}
+        G3 --> SafeCode["✅ 受控交付代码<br/>具备决策出处与负向测试"]
+    end
+
+    subgraph S4["4. 基于角色协同 (BMAD Multi-Agent)"]
+        Analyst["业务分析师"] --> Product["产品经理 (PRD)"]
+        Product --> Architect["架构师 (ADR)"]
+        Architect --> Dev["开发智能体"]
+        Dev --> Reviewer["审查智能体"]
+        Reviewer --> Gate{"验收关卡报告"}
+    end
+
+    S1 -->|引入持久工件| S2
+    S2 -->|引入认知边界| S3
+    S3 -->|引入角色专业化| S4
+
+    style S1 fill:#fee2e2,stroke:#ef4444
+    style S2 fill:#fef3c7,stroke:#f59e0b
+    style S3 fill:#e0f2fe,stroke:#0284c7,stroke-width:2px
+    style S4 fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+```
+
+## 5. 承诺端到端可追溯性与行为验证断层
+
+### 行政性完成（Administrative Claim）vs 行为性证明（Behavioral Proof）
+在工件驱动的工作流中，极易产生一种危险幻觉：**误以为 `tasks.md` 中的复选框被打勾，就等于业务不变量得到了代码保障**。
+
+| 任务承诺条目 (`tasks.md`) | 实际实现代码与生成的测试 | 审查性质判定 | 架构风险与结论 |
+| :--- | :--- | :--- | :--- |
+| **T016**：创建仓库拥有的库存预留契约 `ReserveStock` | 仅在 `BrewUp.Shared` 中生成了空消息契约类；仓库侧处理程序被排除在范围外 | **接口声明非行为交付** | 链路被切断；外部预留结果依赖人工桩数据，未证明真实预留能力。 |
+| **T017**：验证两个外部结果汇合触发且仅触发一次确认 | `SalesOrderSagaConfirmationTests.cs` 仅包含 5 个断言 CorrelationId 保全的浅层测试 | **行政性打勾，行为悬空** | 没有测试能够实例化 Saga 并断言“到达单项不确认、到达两项恰好确认一次”。 |
+| **T008/T009**：确认操作必须具备幂等性 | 生成了重复标识符校验代码，但缺少全系统全局唯一业务判定定义 | **提议策略盲目转正** | 在业务领域未界定“同一次确认”的情况下，盲目固化未经批准的技术方案。 |
+
+```csharp
+// 🚨 浅层测试示例：SalesOrderSagaConfirmationTests.cs
+// 该测试通过了编译，也成功打上了勾，但它仅仅断言了 Guid 没变，完全没有证明业务协调行为！
+[Fact]
+public void PaymentAuthorized_CorrelationId_MustBe_Preserved()
+{
+    var correlationId = Guid.CreateVersion7();
+    SagaPaymentAuthorized @event = new(new IntegrationId(correlationId.ToString()), correlationId, Guid.CreateVersion7().ToString());
+
+    // 仅断言辅助方法能取出相同的 CorrelationId，完全没有触碰 Saga 状态机！
+    Assert.Equal(correlationId, MessageHelpers.GetCorrelationId(@event));
+}
+```
+
+> **刚性要求**：真正的任务完成证明必须是**行为性证明（Behavioral Proof）**——必须编写专门的反向测试用例（Negative Test Case），向系统输入伪造的凭据或单独一项结果，断言系统坚决拒绝确认订单。
+
+## 6. 架构避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| **Don't**：仅凭聚合根内部校验了 `!string.IsNullOrWhiteSpace`，就误认为满足了业务不变量。 | **Do**：强制审查决策出处（Provenance），确保跨上下文凭证源自合法上下文发布的持久事件。 |
+| **Don't**：将消息总线上的技术追踪字段（`CorrelationId`）直接映射包装为业务授权 ID。 | **Do**：严格区分技术追踪标识与业务结果凭证；严禁协调器（Saga）代行业务决策。 |
+| **Don't**：认为 `tasks.md` 任务全部被勾选即代表特性已经完成并可交付。 | **Do**：以端到端行为测试和负向断言作为任务完成的唯一硬性依据。 |
+| **Don't**：允许守卫智能体私下静默重写（Silent Rewrite）违规工件以使其“勉强通过”。 | **Do**：守卫必须以显式编号规则（如 BC-003）阻断流程，将裁决权交还给人类架构师。 |
+| **Don't**：将未经业务批准的技术期望（如幂等性判定机制）直接拔高为强制业务需求。 | **Do**：将其标明为“提议策略（Proposed Policy）”，待领域权威给出唯一定义后再行动。 |
+
+<!-- split -->
+
+# 原著完整参考：从提示词到智能体：构建 AI 协作结构
 
 *第 7 章*以“库存管理（Stock Management）”领域载体收尾：该工件完整保留了限界上下文的目标、其所拥有的概念、已确认的策略、仍处于提议阶段的策略、遗留的开放性问题，以及必须明令禁止的假设。在本章中，你将不再把该载体视为一个孤立的提示词，而是开始将其作为结构化 AI 协作的输入。
 
 该载体此前仅应用于单个上下文。然而订单确认横跨了三个限界上下文：销售（Sales）做出商业承诺，支付（Payment）对交易进行授权，而仓库（Warehouse）保管啤酒库存。因此，本章基于为“销售订单确认（Sales Order Confirmation）”功能所编写的相同结构的载体展开工作。此处所遵循的工程纪律与*第 7 章*所提炼的完全一致，所不同的只是它必须描述的边界更为宽广。
+
+:::en
+> **Original**: Chapter 7 ended with a Stock Management domain carrier: an artifact that preserves the purpose of the context, the concepts it owns, the policies already confirmed, the policies still proposed, the open questions, and the assumptions that must remain forbidden. In this chapter, you stop treating that carrier as a standalone prompt and start using it as input to structured AI collaboration. That carrier applied to a single context. Order confirmation crosses three contexts: Sales makes the commercial commitment, Payment authorizes the transaction, and Warehouse holds the beer. This chapter therefore works from a carrier of the same shape written for the Sales Order Confirmation feature. The discipline is the same one developed in Chapter 7; only the boundary it must describe is wider.
+
+**📌 核心术语与语境解析**：
+- **Structured AI Collaboration**：*结构化 AI 协作*。超越单一会话提示词，通过工件流水线、角色分工与守卫智能体协同推进的工程范式。
+- **Cross-Context Commitment**：*跨上下文承诺*。涉及多个限界上下文（销售、支付、库存）的分布式商业履约协作。
+:::
 
 为了使这一转变清晰可见，我们让同一个刻意保持模糊的销售订单确认**功能请求（feature request）**依次经历四种治理力度逐步递增的环境：纯提示词实现（prompt-only implementation）、**规范驱动开发（specification-driven development）**、辅以**守卫智能体（guard agents）**的相同工件工作流，以及围绕显式职责与交接构建的基于角色的工作流。这种对比提出了一个切中要害的实际问题：当功能请求流转于规范、计划、任务、角色、测试和代码之间时，究竟还能留存多少领域权威？
 
@@ -27,6 +249,14 @@ tags:
 > 本章采用 GitHub Spec Kit 与**敏捷 AI 辅助开发突破法（BMAD，Breakthrough method for Agile AI-Assisted Development）**作为组织 AI 辅助开发的两种具体方式。Spec Kit 将工作组织为一系列持久化工件序列——规范、计划、任务以及实现——以便在每一步转换触及代码之前均可接受审查。BMAD 则将规划与交付分散到各个专业角色中（如分析师、产品经理、架构师、开发者和审查者），使职责划分与交接过程显式化。前三次运行保留了以工件为中心的工作流，同时逐步增加治理手段；第四次运行则改变了协作模型本身。要理解本章内容，你无需安装任何一种工具；正如“技术要求”一节所述，它们生成的工件均已提交至配套代码仓库中。
 >
 > 本专栏并未将这两种框架作为所讨论的 DDD 原则的来源，本章也绝非将它们作为竞品进行对比评测。我们保持功能请求和领域规则恒定不变，进而观察领域知识在何处流动、谁能够质疑缺乏依据的决策，以及每次转换后能够留存哪些证据。本章所考察的原则独立于具体框架：限界上下文对其决策保留最终权威，外部结果需要显式的出处追溯，完成声明需要行为证据的支撑，而人类的最终审批权绝不能委托给任何自动化工作流。
+
+:::en
+> **Original**: Neither framework is presented as the source of the DDD principles discussed in this book, and the chapter does not compare them as competing products. You hold the feature request and domain rules constant, then observe where domain knowledge travels, who can challenge an unsupported decision, and what evidence survives each transformation. The principles under examination remain framework-independent: bounded contexts retain authority over their decisions, external outcomes require explicit provenance, completion claims require behavioral evidence, and human approval cannot be delegated to a workflow.
+
+**📌 核心术语与语境解析**：
+- **Framework-Independent Principles**：*独立于框架的架构原则*。工具链（Spec Kit / BMAD）仅为实现载体，上下文权威、决策出处追溯与行为验证才是核心实质。
+- **Decision Provenance**：*决策出处/渊源*。系统内部状态流转所需的事实必须来自具有合法拥有权的上下文，严禁凭空捏造。
+:::
 
 在本章中，你将学到：
 
@@ -80,6 +310,14 @@ When the order is confirmed, reserve the stock.
 
 这短短几行文本就是**功能请求（feature request）**。在本章中，无论何时提到“*该请求*”，均指代这段文本，绝非指 HTTP 请求或服务总线上的消息。该请求表面看起来十分精确，因为它明确指出了两个条件和一个动作。然而，它却将至关重要的领域决策完全隐去：哪个限界上下文拥有支付授权的归属权、现货可用性是否为持久事实、库存何时必须被预留，乃至被确认的究竟是哪类订单（Order）。这里的信息足以让 AI 生成代码，但远远不足以维护领域模型的完整性与自洽性。
 
+:::en
+> **Original**: That short text is the feature request. Everywhere in this chapter, the request means that text, and never an HTTP request or a message on the bus. The request appears precise because it names two conditions and an action. Yet it leaves the important domain decisions unstated: which bounded context owns payment authorization, whether availability is a durable fact, when stock must be reserved, and even what kind of Order is being confirmed. There is enough information to generate code, but not enough to preserve the domain model.
+
+**📌 核心术语与语境解析**：
+- **Feature Request**：*功能请求*。未经规范细化与边界审定的自然语言需求输入，往往隐含大量未声明的架构空白。
+- **Durable Fact**：*持久事实*。在分布式系统中经过权威上下文确认并持久化落库的领域事件，而非瞬态或假定的中间值。
+:::
+
 该基线运行是*表 8.1* 中所列四次运行中的第一次。我们放任这些模糊之处未予解决，直接要求助手从该功能请求跳跃到仓库中可运行的代码。尽管当时领域载体已经存在，但助手没有收到查阅该载体的指令，没有经历规范制定步骤，也没有设立任何审查关卡。由此生成的实现保留在配套代码仓库的 `no_sdd` 分支上。我们将每个保留下来的分支称为一条**追溯痕迹（trace）**：即单次运行所留存的工件与代码，即便产生它们的对话过程无法重现，事后依然清晰可读。这第一条追溯痕迹记录了一种领域知识明明存在、却从未被引入决策路径的工作流。
 
 生成的代码初看似乎颇具规范纪律。它引入了 `PaymentAuthorizationId` 和 `StockReservationId`，增加了 `ConfirmSalesOrder` 命令，发布了 `SalesOrderConfirmed` 领域事件，并在任一引用为空时阻止销售订单进入 Confirmed 状态：
@@ -104,6 +342,14 @@ RaiseEvent(new SalesOrderConfirmed(
 
 如果孤立地审视，该方法似乎完全符合 DDD 原则：销售（Sales）上下文掌控着向 Confirmed 状态的流转，不变量清晰显式，且状态变更由领域事件明确表达。该方法证明了两个引用的存在；但它无法证明这两个引用确实是由拥有这些决策权的限界上下文所生成的。
 
+:::en
+> **Original**: Viewed in isolation, this method appears aligned with DDD: Sales owns the transition to Confirmed, the invariant is explicit, and a domain event represents the state change. The method proves that two references are present. The method does not prove that the bounded contexts that own those decisions produced them.
+
+**📌 核心术语与语境解析**：
+- **Format Invariant vs. Authority Proof**：*格式不变量 vs. 权威证明*。校验非空字符串仅能证明字段非空，无法证明其背后的业务事实确实由合法上下文产生。
+- **Pseudo-DDD**：*伪领域驱动设计*。代码具备领域驱动设计的命名与对象外壳，但业务不变量保护与上下文边界在实现层面完全失守。
+:::
+
 ### 毫无权威依据凭空捏造的证据
 
 致命问题出现在销售订单 Saga（Sales Order saga）中。当既有工作流报告客户预算已通过验证时，生成的代码竟然直接从消息关联标识符（correlation identifier）凭空构建了一个支付授权引用：
@@ -115,9 +361,7 @@ internal void MarkCustomerBudgetAsVerified(
 {
     var paymentAuthorizationId =
         new PaymentAuthorizationId(correlationId.ToString());
-```
 
-```csharp
     RaiseEvent(new SagaCustomerBudgetVerified(
         new CustomerId(_customerId),
         correlationId,
@@ -127,7 +371,15 @@ internal void MarkCustomerBudgetAsVerified(
 }
 ```
 
-该值虽然满足了聚合的防护断言（guard），但它根本不是由支付（Payment）上下文生成的。关联标识符的作用是在技术层面上关联一次对话中的多条消息；它根本不代表对某一金额的业务授权。通过赋予其 `PaymentAuthorizationId` 类型，该实现将“客户预算验证”公然偷换成了伪造的支付凭证。
+该值虽然满足了聚合的防护断言（guard），但它根本不是由支付（Payment）上下文生成的。关联标识符的作用是在技术层面上关联一次对话中的多条消息；它根本不代表对某一金额的业务授权。通过赋予其 `PaymentAuthorizationId` 类型，该实现将“客户预算验证”公然偷换成了伪造的支付凭据。
+
+:::en
+> **Original**: The generated code satisfied the invariant by manufacturing the value. The aggregate guarded the format of the reference, not the authority behind it. From inside the Sales boundary, the method cannot tell whether the identifier came from Payment or from the correlation identifier of a budget check. The syntax of the model was satisfied; the architecture was hollowed out.
+
+**📌 核心术语与语境解析**：
+- **Manufactured Value**：*伪造/捏造的值*。通过把相关性标识符（Correlation ID）强制转换为业务标识符（PaymentAuthorizationId），虚构出从未发生的支付授权。
+- **Hollowed Out Architecture**：*被掏空的架构*。模型在语法上天衣无缝，但领域语义所有权与真实业务契约完全被架空。
+:::
 
 在同一套生成的代码中，仓库（Warehouse）部分则以另一种形式宣告失败。`RequestBeerAvailablityRaisedEventHandler` 检查了库存可用性的快照，为每个请求的明细行将一条预留命令加入队列，随后直接发布了结果：
 
@@ -177,6 +429,14 @@ them.
 - 可用性并非持久证据；订单确认必须以 `StockReservationId` 为前提。
 - 协调器负责协调外部决策，但绝不拥有也绝不能重新伪造这些决策。）
 
+:::en
+> **Original**: The solution is not to write a more detailed prompt for the next session. The solution is to turn the finding into a rule that future prompts must carry. In the companion repository, that rule becomes part of the Sales Order Confirmation domain carrier: "Sales does not confirm an order without explicit payment authorization from Payment and stock confirmation from Warehouse."
+
+**📌 核心术语与语境解析**：
+- **Promote Finding to Rule**：*将发现晋升为规则*。不依赖每次手动叮嘱，而是将审查出的边界漏洞固化为持久化规则手册与领域载体条目。
+- **Explicit Payment Authorization**：*显式支付授权*。明确规定跨上下文依赖必须源自受信任的外部事件发布源。
+:::
+
 这些规则构成了后续每一次运行的累加基线。规范驱动工作流必须将它们从特性规范一路贯彻至计划与任务中；守卫智能体环境必须利用它们去质疑工件之间缺乏依据的转换；而基于角色的工作流则必须在工作流经分析师、产品经理、架构师、开发者及审查者角色时，完整守护这些规则。
 
 更冗长的提示词或许能在单次交互中阻止助手用关联标识符拼凑 `PaymentAuthorizationId`。但持久规则承载着截然不同的使命：它们确保该决策在后续的每一个阶段中都始终处于可供审查的状态。因此，下一次运行将原始请求与这些规则转化为一份规范，使得其需求、待决的开放性问题以及后续规划在真正开始实现之前就能够被全面审视。
@@ -203,6 +463,14 @@ RequestBeerAvailablityRaisedEventHandler.cs
 该命令是 Spec Kit 的标准入口：它将给定的请求转换为一份可以在任何代码诞生之前接受审查的 `spec.md`。如果你把该请求直接重写为一份详尽的解决方案，你就无法分辨随后的改进究竟归功于工作流本身，还是源于人类在事前所完成的领域建模。原始请求的模糊性依旧存在；发生根本改变的是，它现在必须首先穿透持久的领域知识，而后才能沉淀为代码。
 
 随着工作流的推进，必须始终牢记每个工件的明确职责。宪章定义了代码仓库级别的通用工程约束。领域载体记录了该功能的决策权威归属、已被认可的领域含义以及尚未定论的策略。规范将功能请求与上述数据源转化为可审查的需求和开放性问题。澄清（clarification）步骤将人类专家的决策回填至规范中；随后的计划（plan）将已认可的决策映射到具体方案上；而任务列表（task list）则将这种映射转化为具体实现与测试必须予以证实的断言。每一个工件都在回答不同的问题，并为团队在关键决策节点上提供了又一个审查把关的切入点。
+
+:::en
+> **Original**: A specification is not just documentation written before coding. It is a filter placed between the request and the implementation. The specification takes an ambiguous request, checks it against the domain carrier, and produces a set of reviewable requirements. Decisions that the request left open are resolved by domain authority or surfaced as questions; they are not resolved by model inference during implementation.
+
+**📌 核心术语与语境解析**：
+- **Specification as a Filter**：*作为过滤器的规范*。在自然语言需求与代码生成之间设立的刚性闸门，拦截未经授权的概率推断。
+- **Reviewable Requirements**：*可审查的需求条目*。将散文需求拆解为可逐项比对上下文规则的离散验收标准。
+:::
 
 在本次运行中，宪章贡献了诸如模块化限界上下文、领域纯洁性（domain purity）、测试先行开发（test-first development）以及架构适应度函数（architecture fitness functions）等工程约束。载体则贡献了针对该功能的特定业务规则：销售、支付和仓库保持各自独立的决策权威；支付授权与库存预留属于外部产出的结果；销售上下文决不可伪造其中任何一项；且现货可用性绝非订单确认的持久证据。宪章约束着工程系统的实现规范，而载体则严格规范着该功能的业务语义。
 
@@ -262,6 +530,14 @@ and both references remain recorded as evidence.
 
 澄清机制的宝贵之处在于，这些答复直接固化为持久工件的一部分，而不再仅漂浮在某次对话的临时记忆中。Saga 不再只是编写代码时随意选用的顺手工具，而是经过显式抉择的协调者。销售上下文中缺失补偿逻辑不再是一种疏漏，而是一项深思熟虑的边界决策：支付上下文对其生成的授权保留绝对权威。
 
+:::en
+> **Original**: The clarify phase makes uncertainty visible before code is written. Without this step, the model resolves ambiguities by picking the most probable completion. In an e-commerce domain, the most probable completion is usually a synchronous, monolithic workflow where one service calls another directly. Clarification forces the model to check whether that completion violates the domain carrier.
+
+**📌 核心术语与语境解析**：
+- **Clarification Phase**：*澄清阶段*。在规划与编码前强制暴露假设并与领域载体比对的确认环节。
+- **Monolithic Completion Trap**：*单体同步调用陷阱*。大模型受常见电商代码训练偏置影响，极易默认采用同步 RPC 直连调用，从而破坏异步 Saga 编排与上下文解耦。
+:::
+
 其他决策则被正当地保留为待决的开放性问题。规范依然在追问：是否允许部分预留、预留的有效期是多久、支付提供商超时意味着什么、销售等待仓库的超时阈值是多少、谁负责向客户发送通知、两个外部结果的到达先后次序是否有影响，以及预先批准的账期条款是否可以作为替代证据。这些开放性问题严格约束着后续计划所允许做出的断言范围；若为了推进规划而强行抹去这些问题，只会将真正的业务约束掩盖起来。
 
 行文至此，Spec Kit 产出的成果在安全性上已经显著超越了纯提示词实现。规范准确采用了通用语言，厘清了决策归属权，记录真实的凭据而非凭空捏造，并忠实保留了未决的业务策略。然而，结构化工作流提升的是“可检查性”（inspectability）而非“权威性”（authority）：生成的文本只是变得更容易受到质疑，但工作流本身并不能自动保证其业务正确性。规范依然必须经过一轮严谨的 DDD 审查。
@@ -301,6 +577,14 @@ duplicate stock-reservation request.
 ```
 
 在消息驱动的工作流中，幂等性无疑是一项非常合理的工程属性，该提议极有可能被业务采纳。然而，它既未出现在最初的功能请求中，也未记载于领域载体之内。AI 助手擅自将一项看似合理的工程期望拔高成了强制性的功能需求。DDD 审查不应仅仅因为它是模型自行添加的就直接删除，也不能仅仅因为它是一个好主意就盲目全盘接纳。DDD 审查应当将其归类为“提议中的策略”（proposed policy），并追问哪个组件拥有重复检测的所有权，并在下游任务将其视为定论之前，明确界定什么才算作“同一次确认尝试”。
+
+:::en
+> **Original**: A review prompt does not ask whether the specification is good software design in the abstract. It asks whether the specification respects the boundary defined by the carrier. That difference matters: general design critique encourages the model to add features, while boundary critique keeps the model inside the context.
+
+**📌 核心术语与语境解析**：
+- **Boundary Critique vs. Design Critique**：*边界批判 vs. 宽泛设计评审*。边界批判聚焦于所有权与排他性约束，防止模型以“优化架构”之名擅自扩充范围。
+- **Unsettled Policy**：*未决策略*。仍在提议讨论阶段的业务规则（如幂等性判定机制），严禁被擅自拔高为确定性交付要求。
+:::
 
 需求核对清单（checklist）未能捕获上述任何一个问题。核对清单报告称所有检查项均通过、所有需求均无歧义，且规范已完全准备好进入规划。然而与此同时，`spec.md` 依然被标记为“草稿（Draft）”，并保留着可能彻底改变交互设计的未决问题。核对清单依然值得运行，前提是你必须清醒认识到它到底能证明什么：它证明了必需的章节存在、验收场景齐备，以及载体中具名的约束在文档中有所提及——但绝不能证明每项需求都拥有合法的决策出处，更不能证明两条孤立来看合情合理的需求在决策归属上能够达成自洽。
 
@@ -359,11 +643,19 @@ shared contracts.
 
 *表 8.3 – 规范演进为可执行工作时的可追溯性与 DDD 审查*
 
-现在，请从右至左反向审视同一张表格的各行，追问每一项可执行工作是否都能溯源至已被认可的需求、具名的权威以及坦诚诚实的功能范围。最后两行尤其值得深思：下游工件看起来愈发完备周详，然而底层的业务策略或行为证据却依旧悬而未决。
+现在，请从右至左反向审视同一张表格的各行，追问每一项可执行工作是否都能溯源至已被认可的需求、具名的权威以及清晰明确的功能范围。最后两行尤其值得深思：下游工件看起来愈发完备周详，然而底层的业务策略或行为证据却依旧悬而未决。
 
 ### 可追溯性及其无法证明之物
 
-其中两行揭示了**可追溯性（traceability）**的核心局限。工作流极其自洽地将幂等性从 FR-009 一路追溯至设计决策 D5 以及生成的测试与防护断言中。然而，业务领域自始至终未曾定义究竟什么才算作“同一次确认尝试”，也没有界定谁拥有该唯一标识判定规则的所有权。因此，工作流在方案尚未获得认可之前，就盲目放大了这一看似合理的提议。此时正确的应对方式是回退至规范阶段，将该策略归类为提议中，获取所缺失的领域裁决，随后再行修订计划。
+其中两行揭示了**可追溯性（traceability）**的核心局限。工作流极其自洽地将幂等性从 FR-009 一路追溯至设计决策 D5 以及生成的测试与防护断言中。然而，业务领域自始至终未曾定义究竟什么才算作“同一次确认尝试”，也没有界定谁拥有该唯一标识判定规则的所有权。因此，工作流在方案尚未获得认可之前，就放大了这一看似合理的提议。此时正确的应对方式是回退至规范阶段，将该策略归类为提议中，获取所缺失的领域裁决，随后再行修订计划。
+
+:::en
+> **Original**: Traceability connects each requirement in the specification to a task in the plan and an implementation in the code. Traceability proves that every requirement was addressed. It does not prove that the implementation correctly preserves the domain invariant. A task can be checked off because code was written, while the code itself still fabricates evidence.
+
+**📌 核心术语与语境解析**：
+- **Traceability** [ˌtreɪsəˈbɪləti]：*端到端可追溯性*。将规范需求、实施计划、开发任务与代码提交相互关联的溯源链条。
+- **Traceability vs. Invariant Correctness**：*可追溯性与不变量正确性的分离*。任务被完全追溯并标记完成，并不等同于代码在逻辑上正确守护了业务不变量。
+:::
 
 库存预留则暴露了恰恰相反的问题。在此处，领域载体表达得斩钉截铁：仓库必须产出订单确认前所必需的持久 `StockReservationId`。然而，`research.md` 和 `plan.md` 却直接将仓库侧的生产端排除在外，任务 T016 仅仅止步于一个消息契约：
 
@@ -403,16 +695,22 @@ public class SalesOrderSagaConfirmationTests
         Assert.Equal(correlationId,
             MessageHelpers.GetCorrelationId(@event));
     }
-```
 
-```text
     // [...] 针对 PaymentAuthorizationFailed、StockReserved、
     // StockReservationFailed、SalesOrderReadyToConfirm
     // 的另外 4 个完全相同形态的测试用例
 }
 ```
 
-要直接证实这一断层，只需查阅 `SalesOrderSagaConfirmationTests.cs`，看看其中是否存在哪怕一个能够构建或重构（rehydrate）`SalesOrderSaga`、用两个外部结果驱动它、并验证其确实只发出且仅发出一次 `ConfirmSalesOrder` 的测试用例。一个都没有。同样也不存在任何只输入单一结果或输入失败结果、并断言绝不发出确认的测试用例。因此，该文件仅仅证明了“消息结构的完好保留”，根本没有证明 T017 所承诺的业务行为。然而 T017 却被堂而皇之地打上了勾：测试文件的存在与断言语法的合法性被偷换成了任务的完成，尽管任务所承诺的核心行为依然处于未获证实的悬空状态。
+要直接证实这一断层，只需查阅 `SalesOrderSagaConfirmationTests.cs`，看看其中是否存在哪怕一个能够构建或重构（rehydrate）`SalesOrderSaga`、用两个外部结果驱动它、并验证其确实只发出且仅发出一次 `ConfirmSalesOrder` 的测试用例。一个都没有。同样也不存在任何只输入单一结果或输入失败结果、并断言绝不发出确认的测试用例。因此，该文件仅仅证明了“消息结构的完好保留”，根本没有证明 T017 所承诺的业务行为。然而 T017 却被标记为完成：测试文件的存在与断言语法的合法性被偷换成了任务的完成，尽管任务所承诺的核心行为依然处于未获证实的悬空状态。
+
+:::en
+> **Original**: A checked task is an administrative claim; a passing test is behavioral proof. The danger of artifact-driven development is that teams mistake the administrative claim for the proof. When the plan lists "Implement payment authorization verification" and the task is marked done, the team may assume the invariant is protected. Only a test that attempts to confirm an order with fabricated evidence proves whether the guard holds.
+
+**📌 核心术语与语境解析**：
+- **Administrative Claim vs. Behavioral Proof**：*行政性声明 vs. 行为性证明*。任务列表中的勾选仅仅是执行流程的声明；唯有能够阻断恶意/伪造证据的反向集成测试，才是架构有效的刚性证明。
+- **Negative Test Case**：*负向测试用例*。专门构造伪造 Correlation ID 场景，断言系统必须拒绝确认订单的验证测试。
+:::
 
 T019 则从另一个维度揭示了相同的分歧。该任务描述了派发 `ReserveStock` 以及发送唯一一次 `ConfirmSalesOrder`，然而具体实现却仅仅将 `ReserveStock` 保留为一个空契约，并通过另一条完全不同的消息路径抵达销售上下文。这段代码或许仍然能够支撑某种可行的架构，但那个被勾选的任务却早已不再代表代码的实际行为。
 
@@ -430,13 +728,21 @@ T019 则从另一个维度揭示了相同的分歧。该任务描述了派发 `R
 
 ## 借助守卫智能体设立认知边界
 
-规范驱动运行使得领域决策在规范、计划、任务、测试和代码之间具备了可追溯性。但它同时也揭示了结构化工件单凭自身所无法企及的盲区。一项缺乏支撑的策略一旦溜入链路，后续的每一个工件都能将其精准复述，并使其显得愈发确凿无疑。在上一轮运行中，未经确认的幂等性规则演化成了可执行的工作。仓库生产端从范围中悄然消失，而该功能却依然保留着已预留库存的虚夸声明，被打勾的任务更是夸大了测试所实际证明的行为。工作流使这些失败变得可供检查，却未能确保它们在扩散蔓延之前得到有力的质疑与拦截。
+规范驱动运行使得领域决策在规范、计划、任务、测试和代码之间具备了可追溯性。但它同时也揭示了结构化工件单凭自身所无法企及的盲区。一项缺乏支撑的策略一旦溜入链路，后续的每一个工件都能将其精准复述，并使其显得愈发确凿无疑。在上一轮运行中，未经确认的幂等性规则演化成了可执行的工作。仓库生产端从范围中悄然消失，而该功能却依然保留着已预留库存的虚假声明，被打勾的任务更是夸大了测试所实际证明的行为。工作流使这些失败变得可供检查，却未能确保它们在扩散蔓延之前得到有力的质疑与拦截。
 
-在第三次运行中，我们仅仅改变了审查环境：一套由专业守卫智能体构成的治理框架（harness），在每次生成转换之间设立了显式的审查节点。它们严密检查每一个新生成的工件是否依然遵循被认可的领域权威、是否完整保留了未决决策，以及是否恪守了前序工件所确立的架构边界。这种环境的核心价值在于及时的抗辩与拦截：未获支撑的假设在其潜入工作流的最初源头就会被揪出曝光，赶在后续工件将其常规化为既成事实之前予以阻断。
+在第三次运行中，我们改变了审查环境：一套由专业守卫智能体构成的治理框架（harness），在每次生成转换之间设立了显式的审查节点。它们严密检查每一个新生成的工件是否依然遵循被认可的领域权威、是否完整保留了未决决策，以及是否恪守了前序工件所确立的架构边界。这种环境的核心价值在于及时的抗辩与拦截：未获支撑的假设在其潜入工作流的最初源头就会被揪出曝光，赶在后续工件将其常规化为既成事实之前予以阻断。
 
 ### 认知边界约束了什么
 
 持久化的知识是必不可少的，但仅仅持久化本身并不能确保其得到严格执行。一份生成的规范、计划或任务列表完全可以在表面维持逻辑自洽与形式正确的同时，对宪章、载体及架构记忆进行歪曲解释、削弱甚至暗中无视。治理框架将这些被动的知识源直接拉入审查路径，并将其作为刚性的评估准则。我们将由此构筑的检查关卡称为**认知边界（cognitive boundaries）**。
+
+:::en
+> **Original**: A cognitive boundary is a checkpoint where model inference must stop and explicit authority must take over. Without cognitive boundaries, an AI agent treats every problem as something it should solve by inference. With cognitive boundaries, the agent recognizes when a decision exceeds its authority and either consults an authoritative artifact or halts for human review.
+
+**📌 核心术语与语境解析**：
+- **Cognitive Boundary**：*认知边界*。阻断智能体依据概率自发推断的架构检查点；当超出授权范畴时强制挂起并移交人类专家。
+- **Controlled Delegation**：*受控委托*。只将机械性代码转换与格式校验委托给智能体，决策权始终锚定在领域模型与专家手中。
+:::
 
 该术语在字面上刻意与“限界上下文（bounded context）”保持对仗，但二者绝不可混为一谈。限界上下文约束的是领域模型的语义与所有权：一个术语在何处有效、由哪个模型赋予其含义、哪个权威拥有做出相应决策的权力。而**认知边界（cognitive boundary）**约束的则是 AI 参与者在工作流的特定节点上被允许推断、决策或转换的内容边界。守卫智能体本身既不拥有销售订单的生命周期，也不负责授权支付或预留库存。它的职责是核验生成的工件没有将这些决策权拱手移交给错误的参与者，也没有暗中擅自定夺那些领域故意保留的未决策略。守卫有权叫停工作流；但它绝不能代替真正的所有者去补全领域模型。
 
@@ -469,6 +775,14 @@ AR-002 - Standard module project structure.
 AR-016 - Business authority must not be collapsed into
 another module.
 ```
+
+:::en
+> **Original**: Ownership rules protect bounded context boundaries: they state which context produces a fact and which contexts may only observe it. Structure rules protect the shape of the implementation: they require commands to have handlers, events to be published, references to use typed identifiers, and sagas to remain idempotent. Guard agents enforce both, but the two kinds of rule fail differently when violated.
+
+**📌 核心术语与语境解析**：
+- **Ownership Rules**：*所有权规则*。保护限界上下文边界，判定概念归属与事实生产权。
+- **Structure Rules**：*结构规则*。保护代码架构骨架，强制 CQRS 分离、强类型标识符与 Saga 幂等性。
+:::
 
 两套规则相互结合，使守卫能够沿着两个紧密相连的维度对同一个工件进行严格审查。限界上下文规则检验某项决策是否依然归属于拥有它的上下文；架构规则检验模块、消息与依赖关系是否在代码实现方案中坚守了这种隔离。一项需求可能在字面上正确地将支付上下文指名为权威，而计划却把支付行为安置在销售模块内部。反之，一个物理上独立的支付模块，也绝不能让一条允许销售上下文伪造授权结果的需求合法化。唯有当领域语义与结构表征达成高度统一时，审查才算真正通过。
 
@@ -526,6 +840,14 @@ request.
 
 守卫绝不应该悄悄重写工件以使其看起来符合规范；那样做只会让它沦为一个缺乏问责机制的额外决策黑盒。它的本职工作是引用已被认可的准则，展示相互冲突的证据，并指明在工作流获准继续之前必须做出修改的工件或必须由人类给出的业务裁决。一个 BLOCKED（阻断）的结果意味着后续步骤不应盲目推进，但这并不代表守卫所言就一定完全正确。人类完全可以驳回守卫的审查发现，而这种机制的价值正在于：驳回本身成为了一项显式的、可审计的决策，而非悄然湮没在下一轮生成的输出之中。由于每个钩子（hook）都是可选的，因此这属于一种流程纪律，而非技术上的绝对保证。
 
+:::en
+> **Original**: A guard must not silently rewrite an artifact to make it pass; that only introduces an unaccountable decision-maker. Its job is to cite an accepted rule, point out the conflicting evidence, and name the artifact or human decision needed before the workflow can proceed. A BLOCKED result stops the process, but does not mean the guard is right. A human can overrule the guard, and that override is an explicit, logged decision rather than a silent drift.
+
+**📌 核心术语与语境解析**：
+- **Silent Rewrite Anti-Pattern**：*静默重写反模式*。守卫智能体擅自修改工件使其“看起来合规”，实际上沦为不可审计的黑盒决策者。
+- **Auditable Override**：*可审计的人工驳回*。人类专家否决守卫警报时留下的显式日志，确保架构偏离具备可归责性。
+:::
+
 因此，架构师的核心地位依然坚不可摧：必须有人出面裁决哪些知识源具备权威性，以及哪些审查发现需要求助于领域专家而非单纯的技术修补。此外，守卫只能执行那些已被明确显式化的规则。如果载体对预留的原子性只字未提，没有任何守卫能够凭空知晓哪种部分预留行为才是正确的。在新增守卫之前，务必先追问它到底能够引用哪条公认的规则：一个无规可依的守卫，只不过是挂在钩子上的个人偏见罢了。而团队始终不可或缺的，依然是行为证明：一个被打上勾的复选框，绝非代码实现确实满足了任务所列条件的可靠凭证。
 
 治理框架同样未能补全行为证明的拼图。留存的测试并未涵盖两种到达次序、恰好一次确认、拒绝处理、状态恢复，或者从仓库产出经由 Saga 抵达销售的完整通路。工件的出处追溯能够厘清“必须测试什么”；但它绝不能替代对承诺行为的真实观测。
@@ -582,6 +904,14 @@ as external evidence. It does not embed Payment or Warehouse models.
 PRD 将上述陈述进一步展开为具体需求：支付拥有授权，仓库拥有完整的库存预留，销售必须具备这两项凭证 ID，而 Saga 则按照“支付 -> 仓库 -> 销售”的次序进行协调，且绝不凭空代劳其中任何一项决策。架构决策将这些需求严密绑定到具体模块和依赖方向上。随后，史诗与故事将每项行为附着到具名的测试、路径以及 `BC‑###` 或 `AR‑###` 规则之上。因此，领域知识在由角色所塑造的工件之间穿梭流动，且始终保持高度的可审查性，因为每一次交接都在源头留下了清晰可溯的痕迹。
 
 缺失的证据同样不容忽视。代码仓库中并未包含分析师、产品经理、架构师与开发人员等角色之间的原始对话记录。因此，仓库无法证实各个角色在运行期间究竟阅读了什么、提出了哪些抗辩与反对意见。仓库所能证明的，仅仅是最终生成的工件承载了这些规则，且关卡报告确实对照已提交的权威源对这些工件进行了审查。
+
+:::en
+> **Original**: Changing frameworks changes where the artifacts live and who hands work to whom. It does not change what the domain requires. Whether using Spec Kit, BMAD, or a custom workflow, the fundamental requirements remain: bounded contexts retain authority over their decisions, external facts require explicit provenance, completion claims require behavioral proof, and human approval cannot be delegated to automation.
+
+**📌 核心术语与语境解析**：
+- **Artifact Topology**：*工件拓扑结构*。不同协作框架（BMAD、Spec Kit）组织角色与交付物的方式。
+- **Non-Delegable Human Approval**：*不可委托的人类审批权*。涉及业务核心承诺与不变量的架构把关，决不能转交自动化流程代劳。
+:::
 
 ## 本章小结
 

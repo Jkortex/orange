@@ -162,7 +162,7 @@ describe('EntryView 双栏独立滚动对照模式', () => {
     const body = '# 核心提炼\n\n这是左栏新提炼内容。\n\n<!-- split -->\n\n# 原著参考\n\n这是右栏原著参考文本。'
     const html = await renderToHtml(makeEntry(body))
 
-    expect(html).toContain('双栏独立滚动模式')
+    expect(html).toContain('核心精炼与实战')
     expect(html).toContain('这是左栏新提炼内容。')
     expect(html).toContain('这是右栏原著参考文本。')
     // 容器采用全宽 7xl 栅格

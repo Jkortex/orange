@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（四）：从领域探索到 AI 协作"
 date: 2026-10-21T04:00:00Z
-description: "以事件风暴与领域故事叙述为桥梁，将发散式的业务探索转化为结构化上下文，识别并精炼核心领域事件，在参与者与模型之间建立一致的语言基准。"
+description: "双栏独立滚动工作台：以事件风暴与领域故事叙述为桥梁，将发散式探索转化为结构化上下文，识别并精炼核心领域事件，防范假性一致性与语义漂移。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -12,7 +12,174 @@ tags:
   - "AI 协作"
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。全专栏共 12 篇，覆盖大语言模型心智模型、事件风暴与 AI 协作、提示词规则手册、限界上下文精炼，以及专家智能体与编排器的完整工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
+
+# 核心实战精炼：从领域探索到 AI 协作
+
+## 1. 核心心智模型：领域探索到 AI 协作四阶段演进
+
+与大语言模型协作开展领域驱动设计的前提，是将存在于人类头脑中的隐性知识转化为显式的结构化制品。探索演进严格遵循 **Discover $\to$ Refine $\to$ Name $\to$ Reinforce** 四步流水线：
+
+```mermaid
+flowchart LR
+    D["1. 发现 (Discover)<br/>事件风暴 / 故事叙述<br/>捕获候选事件全景"] --> R["2. 精炼 (Refine)<br/>三维反馈回路<br/>筛选核心事件与边界"]
+    R --> N["3. 命名 (Name)<br/>通用语言工作词汇表<br/>声明排除项与定义"]
+    N --> RF["4. 强化 (Reinforce)<br/>场景化推演检验<br/>固化为版本控制工件"]
+```
+
+- **发现（Discover）**：利用事件风暴与领域故事叙述使碎片化知识全面外显，形成包含疑问与假设的候选全景。
+- **精炼（Refine）**：引入纠正性、补充性与结构性反馈，剔除 UI 与持久化噪声，萃取核心业务事实。
+- **命名（Name）**：消除同义词与歧义词，明确业务状态流转的精确分界，确立词汇排除契约。
+- **强化（Reinforce）**：将固化的工作词汇表注入实际场景中验证，固化为可复用的 Markdown 领域工件。
+
+---
+
+## 2. 架构决策矩阵：探索技术互补性与信息转译决策
+
+### 决策矩阵 1：事件风暴与领域故事叙述的互补维度
+
+| 维度 | 事件风暴 (EventStorming) | 领域故事叙述 (Domain Storytelling) | 架构互补价值 |
+| :--- | :--- | :--- | :--- |
+| **关注视角** | 业务事实全景与系统演化时间线 | 参与者意图、交互场景与行为流转 | 宏观事件骨架与微观叙事因果的闭环校验 |
+| **核心要素** | 事件、命令、策略、读模型、外部系统 | 参与者（Actor）、工作对象（Work Object）、活动 | 补充操作主体与对象，防止模型抹平参与者 |
+| **对 AI 的约束** | 提供候选术语与潜在结构锚点 | 消除因果跨度过大导致的自由推测 | 强力收敛 `OrderSubmitted` 到 `OrderConfirmed` 之间的推演缝隙 |
+| **典型失效** | 容易退化为孤立的事件流水账 | 难以一眼纵览全系统的全局边界 | 结合使用：事件风暴定广度，故事叙述定深度 |
+
+### 决策矩阵 2：转录 (Transcription) vs 转译 (Translation)
+
+| 对比维度 | 机械转录 (Transcription) | 深度转译 (Translation) |
+| :--- | :--- | :--- |
+| **信息捕获** | 仅记录即时贴表面文本与可见顺序 | 提取便签背后的业务意图、被否决的方案与未决问题 |
+| **不确定性处理** | 忽略争论，将模糊条目混入正式事件 | 显式声明 `known_distinctions` 与 `open_questions` |
+| **大模型输入** | 诱发模型用统计常识强行补全空白 | 设立明确的知识终止边界，阻止模型无依据推测填充 |
+| **工程成果** | 白板照片或扁平文本，容易过时 | 可版本控制、可 diff 比对的领域上下文 Markdown 文件 |
+
+---
+
+## 3. 信号萃取与三维反馈循环 (Signal Distillation & 3D Feedback)
+
+模型在初次分类时扮演“快速模式综合器”，架构师必须通过三维反馈引导其迈向**语义收敛（Semantic Convergence）**：
+
+```mermaid
+flowchart TD
+    Raw["原始候选清单<br/>(业务事件、UI操作、持久化细节、技术通知)"] --> AI["AI 初步模式分类器"]
+    AI --> Draft["初版分类草稿<br/>(粗糙但极具审查价值)"]
+    Draft --> F{"架构师三维反馈注入"}
+    F -->|1. 纠偏型反馈| C1["排除技术噪点 (如 Order stored)<br/>防范虚假完备性"]
+    F -->|2. 增补型反馈| C2["补充业务不变量 (如 确认前必须预留库存)<br/>弥补领域知识空白"]
+    F -->|3. 结构型反馈| C3["划定职责边界 (如 外部支付 vs 仓库)<br/>防止单体流程合并"]
+    C1 & C2 & C3 --> SC["语义收敛 (Semantic Convergence)<br/>事件名称、含义与职责归属彻底稳定"]
+```
+
+### 三维反馈分类与实战指引
+
+| 反馈类型 | 核心目的 | 典型纠偏指令范式 | 防范的系统风险 |
+| :--- | :--- | :--- | :--- |
+| **纠正性反馈 (Corrective)** | 剔除不属于领域的假设与技术细节 | “`Order page opened` 是 UI 交互，`Order stored` 是持久化细节，均非业务事件。” | 防范**虚假完备性**（流于表面工整而实质混杂） |
+| **补充性反馈 (Additive)** | 补充模型无法自行推断的业务规则 | “支付授权不等于订单确认；订单确认代表企业对客户的商业承诺。” | 消除**通用电商常识污染**，对齐当前企业特例 |
+| **结构性反馈 (Structural)** | 捍卫上下文与聚合的职责边界 | “`StockReserved` 归属仓库限界上下文；外部支付事件不得与销售聚合合并。” | 防止模型将多方协作**扁平化压缩为单一流水账** |
+
+### 语义收敛判定指标清单
+1. 模型不再重复引入已被明确否决的技术细节。
+2. 领域专家对核心事件命名不再存在语义分歧。
+3. 关键业务状态流转不再被近义词反复替换。
+4. 未决盲区被显式固化为 `open_questions`，而非由模型随意推断。
+5. 团队讨论重心从基础术语转向更深层次的聚合边界与职责划分。
+
+---
+
+## 4. 语言稳定机制：防范假性一致性 (False Coherence)
+
+当提示词中混杂近义词时，模型会自作主张抹平分歧，产生高度自洽但完全错误的输出（**假性一致性**）。必须建立细粒度的状态流转边界：
+
+```mermaid
+flowchart LR
+    S1["OrderSubmitted<br/>客户发送订单请求以供评估"] --> S2["OrderReceived<br/>系统确认收到请求 (技术受理)"]
+    S2 --> S3["OrderAccepted<br/>业务校验通过 (内部准入)"]
+    S3 --> S4["OrderConfirmed<br/>对客户做出商业履约承诺"]
+```
+
+| 专有事件术语 | 严密业务定义 | 严禁混用的同义词与原因 |
+| :--- | :--- | :--- |
+| **`OrderSubmitted`** | 客户向平台发起订购意向并提交请求 | 严禁混用 `OrderReceived`（接收为系统响应，提交为客户动作） |
+| **`PaymentAuthorized`** | 外部支付网关预留并冻结了相应资金 | 严禁混用 `PaymentCompleted`（授权仅冻结资金，结算方发生转移） |
+| **`StockReserved`** | 仓库上下文在物理仓储中锁定了对应货品 | 严禁混用 `InventoryAllocated`（避免多重命名掩盖仓库上下文边界） |
+| **`OrderConfirmed`** | 企业完成全部前置校验，向客户作出法定履约承诺 | 严禁混用 `OrderApproved`（审批为内部核验，确认为外部商业承诺） |
+
+---
+
+## 5. 生产级实战规范：领域探索工件与工作词汇表模板
+
+### 规范 1：探索转译工件模板 (`brewup-ordering-exploration.md`)
+
+```markdown
+# BrewUp 订单探索工件 (BrewUp Ordering Exploration)
+
+## 1. 范围 (Scope)
+描述 BrewUp 销售订单主流程的早期探索，用于沉淀 AI 协作上下文，非最终模型。
+
+## 2. 候选事件清单 (Candidate Events)
+- Order submitted (客户提交订单)
+- Payment authorized (外部支付已授权)
+- Order stored (订单已持久化 - 待评审)
+- Stock reserved (仓库库存已预留)
+- Confirmation email sent (邮件已发送 - 待评审)
+- Order confirmed (订单已正式确认)
+
+## 3. 已知区别与断言 (Known Distinctions)
+- 支付授权仅代表授信成功，绝不等于订单已被确认。
+- 销售订单职责与仓库库存管理职责必须在物理上明确解耦。
+- UI 交互事件（如页面打开）与数据库持久化操作严禁升格为领域事件。
+
+## 4. 待决问题 (Open Questions)
+- 订单确认前是否必须强依赖库存预留成功？
+- 若支付授权成功但库存预留失败，触发何种补偿事件？
+- 邮件发送是否具有法律合规效力，还是纯粹的技术异步通知？
+```
+
+### 规范 2：工作词汇表模板 (`brewup-ordering-vocabulary.md`)
+
+```markdown
+# BrewUp 订单词汇表与排除契约 (Working Vocabulary)
+
+## 核心领域事件定义
+### Order submitted
+- 定义：客户向 BrewUp 发送订购请求以供评估时触发的领域事件。
+- 不变量约束：不代表订单已接受，亦不代表订单已确认。
+
+### Payment authorized
+- 定义：外部支付服务商冻结所请求金额后向 BrewUp 报告的外部事实。
+- 不变量约束：不代表支付已结算，亦不代表 BrewUp 承诺履行订单。
+
+### Stock reserved
+- 定义：仓库限界上下文成功为订单锁定库存后发布的领域事件。
+- 不变量约束：不代表订单已被销售侧正式确认。
+
+### Order confirmed
+- 定义：在业务前置条件（支付授权与库存预留）全部就绪后，企业对客户作出履行承诺时触发的领域事件。
+
+## 词汇排除项清单 (Vocabulary Exclusions)
+- FORBIDDEN: `Order received` AS SYNONYM OF `Order submitted` (接收是系统的被动受理，提交是客户的主动诉求).
+- FORBIDDEN: `Payment completed` WHEN FACT IS `Payment authorized` (授权是资金冻结，完成是资金划拨).
+- FORBIDDEN: `Inventory allocated` AS SYNONYM OF `Stock reserved` (严禁用多套同义词混淆仓库限界上下文边界).
+- FORBIDDEN: `Order approved` AS SYNONYM OF `Order confirmed` (审批为内部状态，确认为对外部客户的法定承诺).
+```
+
+---
+
+## 6. 架构避坑清单 (Do's & Don'ts)
+
+| 领域维度 | 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- | :--- |
+| **探索转译** | 拍照上传白板或机械转录文字，让大模型自行猜测便签布局背后的业务逻辑。 | 将视觉便签转译为包含候选事件、已知区别、未决问题的结构化 Markdown 工件。 |
+| **信号萃取** | 将工作坊所有的便利贴不加筛选地直接喂给 AI，要求其直接生成微服务模型。 | 分离候选事件与核心事件，利用 AI 识别模式，由人类主导筛选。 |
+| **反馈机制** | 对模型生成的不满意时仅重复点击重新生成，期待模型“自发顿悟”。 | 实施三维反馈闭环：明确给出纠正性、补充性与结构性指示。 |
+| **术语治理** | 容忍在文档与对话中交替使用近义词（如将 Submitted 与 Placed 混用）。 | 显式声明词汇排除清单（Exclusions），消除大模型的假性一致性归一化。 |
+| **职责划分** | 允许模型将因果时序相邻的事件全部归入同一个单体聚合中。 | 施加结构性反馈，将外部系统事实（支付提供商）与不同上下文（仓库）明确切分。 |
+
+<!-- split -->
+
+# 原著完整参考：从领域探索到 AI 协作
 
 在前面的章节中，你已经确立了一个冷酷的事实：大语言模型并不能在人类意义上理解业务领域。它只是根据接收到的上下文预测最可能出现的后续文本。
 
@@ -23,6 +190,14 @@ tags:
 *进行严谨自律的 AI 协作所需的素材究竟来自何处？*
 
 在 AI 能够协助你对业务领域进行理性推理之前，你必须首先让该领域变得“清晰可见”。必须将其中的事件、参与者、决策、术语、歧义和因果关系外显化，转化为人类能够探讨、模型能够处理的形式。本章将从前几章的概念基石，迈向 AI 辅助领域驱动设计（AI-assisted Domain-Driven Design）的第一个实战步骤：领域探索。
+
+:::en
+> **Original**: In the previous chapters, you established a hard truth: a Large Language Model does not understand a business domain in the human sense. It predicts likely continuations from the context it receives. This changes the conditions under which AI becomes useful for software architecture. AI can amplify your reasoning only when you make knowledge, constraints, and uncertainty explicit. Without that discipline, the model might produce fluent and plausible answers while silently drifting away from the domain you are trying to understand. This leads to an immediate practical question: Where does the material required for disciplined AI collaboration come from? Before AI can help you reason about a business domain, you must make that domain visible. Its events, actors, decisions, terminology, ambiguities, and causal relationships must be externalized in a form that humans can discuss and that a model can process. This chapter moves from the conceptual foundation of the previous chapters to the first operational step of AI-assisted Domain-Driven Design: domain exploration.
+
+**📌 核心术语与语境解析**：
+- **Disciplined AI Collaboration**：*受严谨纪律约束的 AI 协作*。基于明确边界、形式契约与显式反馈，拒绝模型自由发散的专业人机交互方式。
+- **Externalize** [ɪkˈstɜːnəlaɪz]：*显式外化*。将专家心智中的内隐假定沉淀为人类可审查、机器可处理的结构化制品。
+:::
 
 以 BrewUp 为参考案例，你将探讨探索工件如何浮现候选事件、揭示因果流转、暴露模糊歧义，并为更加严谨自律的 AI 协作提供原始素材。读完本章，你将理解：
 
@@ -42,6 +217,14 @@ required business conditions have been satisfied.
 ```
 
 “发现（Discover）”让这些便签清晰可见，“精炼（Refine）”决定哪些便签至关重要，“命名（Name）”明确其真实内涵，“强化（Reinforce）”则将这些名称带入后续的对话中。这一演进路径——***发现 → 精炼 → 命名 → 强化（Discover → Refine → Name → Reinforce）***——正是本章的行文脉络。你将从优秀建模始终开始的地方启程：让领域足够显式化，以便人们对其发起审视质疑，并使 AI 系统能够在其中稳定运转。
+
+:::en
+> **Original**: Discover makes those notes visible, Refine decides which of them matter, Name fixes what they mean, and Reinforce carries the names into the next conversation. That progression – ***Discover → Refine → Name → Reinforce*** – is the structure of this chapter. You begin where good modeling always begins: by making the domain explicit enough for people to challenge it and for AI systems to operate within it.
+
+**📌 核心术语与语境解析**：
+- **Discover → Refine → Name → Reinforce**：*发现、精炼、命名、强化*。领域驱动设计知识工程的四阶段递进式演化范式。
+- **Reusability** [ˌriːˌjuːzəˈbɪləti]：*可复用性*。工件脱离单次会话长久保存、被多轮推演无损继承的关键属性。
+:::
 
 ## 技术要求
 
@@ -84,7 +267,7 @@ required business conditions have been satisfied.
 
 一旦显式表达出来，这些要素就会成为模型上下文中的约束条件。模型依然不会像领域专家那样真正“理解”领域，但它能够在团队划定的边界内展开更加自洽连贯的推理。
 
-*图 4.1* 展示了源自 BrewUp 订购流程的一个简化片段。`CreateSalesOrder` 命令触发了 `SalesOrderCreated` 事件，随后该事件用于更新销售读模型（Sales Read Model）并为销售 UI（Sales UI）提供支持。图中显示的外部系统代表该流程中的另一个参与者。
+图 4.1 展示了源自 BrewUp 订购流程的一个简化片段。`CreateSalesOrder` 命令触发了 `SalesOrderCreated` 事件，随后该事件用于更新销售读模型（Sales Read Model）并为销售 UI（Sales UI）提供支持。图中显示的外部系统代表该流程中的另一个参与者。
 
 ![图 4.1 – 来自 BrewUp ERP 的事件风暴示例](/media/posts/ai-ddd/fig-4-1.png)
 
@@ -99,6 +282,14 @@ required business conditions have been satisfied.
 - 遗漏了哪些关键流转？
 
 从这个意义上说，事件风暴充当了人类认知与概率推理之间的翻译层。它将隐性知识转化为可见的工件，再将这些工件转化为 AI 可以处理的结构化输入，同时又不会放任 AI 自行定义领域。
+
+:::en
+> **Original**: By translating discovery results into explicit events, sequences, and vocabulary, you move part of the cognitive burden from individual memory into a reusable context. The architect can then focus less on recalling every note and more on higher-level concerns: Are the boundaries meaningful? Are you mixing business facts with technical consequences? Which assumptions still need validation? Which terms remain stable? Which transitions are missing? In this sense, EventStorming works as a translation layer between human cognition and probabilistic reasoning. It turns implicit knowledge into visible artifacts and those artifacts into structured input that AI can process without allowing it to define the domain on its own.
+
+**📌 核心术语与语境解析**：
+- **Translation Layer**：*翻译层*。连接人类非结构化业务洞见与大模型概率推理引擎之间的形式化语义转换层。
+- **Cognitive Burden** [ˈkɒɡnətɪv ˈbɜːdn]：*认知负担*。在大规模复杂系统中，个人大脑维系海量时序与依赖关系所需耗费的心智成本。
+:::
 
 ### 领域故事叙述
 
@@ -122,7 +313,7 @@ required business conditions have been satisfied.
 - 是否必须已经预留库存？
 - 确认是否构成了对客户的履约承诺？
 
-这些问题揭示了孤立的事件名称可能掩盖的知识。*图 4.2* 展示了与 *图 4.1* 相同的流程，但此时是从参与者的视角展开观察。图中展现了一系列活动中的各个参与方，包括用户、销售系统、外部系统、销售订单、交互产生的事件、读模型以及销售 UI。
+这些问题揭示了孤立的事件名称可能掩盖的知识。图 4.2 展示了与图 4.1 相同的流程，但此时是从参与者的视角展开观察。图中展现了一系列活动中的各个参与方，包括用户、销售系统、外部系统、销售订单、交互产生的事件、读模型以及销售 UI。
 
 ![图 4.2 – 采用领域故事叙述的同一流程示例](/media/posts/ai-ddd/fig-4-2.png)
 
@@ -131,6 +322,14 @@ required business conditions have been satisfied.
 如果说事件风暴倾向于快速浮现出许多相关事实，那么领域故事叙述则放慢了探索节奏，并将这些事实串联为连贯的业务流。对于与 AI 协作而言，这一区别至关重要。事件列表告诉模型发生了什么；而领域故事还指明了是谁发起了操作、涉及哪个工作对象、参与者试图达成何种意图、哪些条件影响了流程走向，以及为什么一个动作会先于或后于另一个动作发生。
 
 这种额外的结构减少了模型可采纳的合理解读数量。如果事件列表直接从 `OrderSubmitted` 跳跃到 `OrderConfirmed`，它能与许多截然不同的业务流程相兼容：模型可能会在两者之间插入支付步骤、信用检查，或者什么都不加，而这些补全方案单看本身似乎都言之成理。而一份记录了谁提交了订单、他们提出了什么诉求，以及 BrewUp 在确认前检查了哪些条件的故事，则直接排除了许多模棱两可的补全可能。模型仍在执行它先前的预测机制，但需要从训练数据中凭空填补的空白却大大减少了。
+
+:::en
+> **Original**: Where EventStorming tends to surface many relevant facts quickly, Domain Storytelling slows the exploration down and connects those facts into coherent flows. For AI collaboration, this distinction matters. An event list tells the model what happened. A domain story also identifies who initiated the action, which work object was involved, what the actor intended to achieve, which conditions influenced the flow, and why one action preceded or followed another. This additional structure reduces the number of plausible interpretations available to the model. An event list that jumps from `OrderSubmitted` to `OrderConfirmed` is compatible with many different business processes: the model can insert a payment step, a credit check, or nothing at all, and each of those completions looks reasonable on its own. A story that records who submitted the order, what they were asking for, and which condition BrewUp checked before confirming rules out many of those completions. The model is doing the same thing it did before, with fewer gaps to fill from its training data.
+
+**📌 核心术语与语境解析**：
+- **Domain Storytelling**：*领域故事叙述*。以参与者、动作和工作对象为核心的具体场景探索方法，强化业务因果流转。
+- **Plausible Interpretations**：*统计上似是而非的解读*。大语言模型在信息不足时依据通用预训练概率随意构造的业务流程分支。
+:::
 
 ### 事件风暴与领域故事叙述的对比
 
@@ -162,9 +361,17 @@ required business conditions have been satisfied.
 
 根据探索素材的不同，这种翻译可能包括用过去时态表达的候选领域事件、可能引发这些事件的命令或意图、流程中涉及的参与者，以及操作与结果之间的因果关系。翻译还可以记录反复出现的领域概念与术语、由归属权或职责所暗示的候选边界、已被领域专家确认的业务规则、尚未解决的待决问题，以及团队因产生歧义而已明确否决的术语。
 
-这一区别至关重要，因为 LLM 倾向于**用统计上看似合理的结构来填补缺失的结构**。如果工件包含两个事件却未说明它们的关系，模型便可能在两者之间臆造一种关联；如果一个术语存在歧义，模型可能会悄悄将其规范化为其训练数据中最常见的解读模式。
+这一区别至关重要，因为大语言模型倾向于**用统计上看似合理的结构来填补缺失的结构**。如果工件包含两个事件却未说明它们的关系，模型便可能在两者之间臆造一种关联；如果一个术语存在歧义，模型可能会悄悄将其规范化为其训练数据中最常见的解读模式。
 
 结构化的上下文能够有效收缩这种自由度。结构化上下文并不保证绝对正确，但它能明确界定领域的哪些部分已知、必须保留哪些核心区别，以及模型在何处应当适可而止而非擅自推断。
+
+:::en
+> **Original**: A transcription captures what is visible: the text written on each sticky note, the apparent sequence of the notes, the labels attached to actors and systems, and the groups visible on the shared surface. A translation goes further. A translation makes the meaning behind those elements explicit... This distinction is important because an LLM tends to complete a missing structure with a statistically plausible structure. If the artifact contains two events but does not explain their relationship, the model may invent a connection between them. If a term is ambiguous, the model might silently normalize it into the most common interpretation found in its training data. Structured context reduces that freedom. Structured context does not guarantee correctness, but it makes explicit that parts of the domain are known, which distinctions must be preserved, and where the model should stop rather than infer.
+
+**📌 核心术语与语境解析**：
+- **Transcription vs Translation**：*机械转录与深层转译*。转录仅保留符号字面，转译则捕获业务意图、排他规则与上下文边界。
+- **Silent Normalization**：*隐性平滑归一化*。大语言模型在遇到未决歧义时，不经提示直接按预训练统计习惯强行折叠为大众化常见模式的失误行为。
+:::
 
 ### 提取既有结构
 
@@ -219,6 +426,14 @@ required business conditions have been satisfied.
 
 该工件为模型提供了一个有明确边界的审查对象。候选事件清晰可见，但已知区别和未决问题同样一目了然。此时，模型可以对素材展开分类、比对和质疑，而不会被误导将每张便签都视为同等有效的业务事实。这种转变是从领域探索迈向 AI 协作的第一个务实跃迁：**在视觉素材变成建模提示词之前，先将其转化为显式上下文。**
 
+:::en
+> **Original**: This artifact gives the model a bounded object to examine. The candidate events remain visible, but so do the distinctions and unanswered questions. The model can now classify, compare, and challenge the material without being encouraged to treat every note as an equally valid business fact. This transformation is the first practical transformation from domain exploration to AI collaboration. Visual material becomes explicit context before it becomes a modeling prompt.
+
+**📌 核心术语与语境解析**：
+- **Bounded Object**：*受限分析标的*。包含正向事实与反向未决疑问的闭合审查单元，为 AI 推理提供聚焦支点。
+- **Modeling Prompt**：*建模提示词*。建立在显式上下文之上的结构化推演指令。
+:::
+
 ### 从探索工件到可复用上下文
 
 经过翻译的工件之所以重要，是因为它能够跨越工作坊而长久留存。满墙的即时贴只是暂时的存在，其含义不仅取决于眼前能看到的内容，更取决于团队在构建这面墙时所发生的对话、分歧与决策。一旦会议结束，许多环绕周围的上下文便开始迅速消退。
@@ -241,11 +456,19 @@ required business conditions have been satisfied.
 
 *哪些候选事件足够重要，能够成为初生模型的结构性锚点？*
 
+:::en
+> **Original**: You keep this material in Markdown files. The choice is practical: Markdown is plain text, so the artifact can be read by a person, diffed in version control, and pasted into a model's context without conversion. These artifacts are working artifacts rather than documentation, and their value is continuity – a later conversation can begin from the same domain material instead of reconstructing it from memory. Without a reusable artifact, each interaction begins with a partial retelling of the domain. Terms change, unresolved questions disappear, and assumptions that were previously rejected might return unnoticed. With the artifact in place, the team can reopen the exploration from a shared starting point. The model receives the events, definitions, and uncertainties that the team has chosen to preserve, while domain experts retain the authority to revise them.
+
+**📌 核心术语与语境解析**：
+- **Working Artifacts**：*工作性工件*。持续迭代更新、用于人机协作对齐的轻量级纯文本版本控制制品。
+- **Continuity** [ˌkɒntɪˈnjuːəti]：*连续性*。跨越时间与会话边界，防止知识在重复交互中降解与变形的关键工程属性。
+:::
+
 ## 识别核心事件并通过反馈进行精炼
 
 一旦探索工件被转化为结构化上下文，接下来的挑战就不再是大范围的发散探索，而是**严谨的收敛筛选**。一场事件风暴工作坊可能会涌现出数十个候选事件，但并非所有事件都具有相同的建模分量。有些表达了业务层面的重大变更；另一些描述的不过是屏幕画面的切换、持久化操作、基础设施的响应，或是局部的实现细节。
 
-如果你在未作区分的情况下将它们全盘喂给 LLM，模型并没有可靠的依据来判定某一项比另一项更为重要。模型或许能将它们编排成看似连贯的时序流，但这种时序流不仅会继承源素材中本已存在的混乱，有时甚至会进一步放大这种混淆。其结果往往是一个充满噪声的事件全景：看似合理、文笔流畅，在概念上却千疮百孔、毫无说服力。
+如果你在未作区分的情况下将它们全盘喂给大模型，模型并没有可靠的依据来判定某一项比另一项更为重要。模型或许能将它们编排成看似连贯的时序流，但这种时序流不仅会继承源素材中本已存在的混乱，有时甚至会进一步放大这种混淆。其结果往往是一个充满噪声的事件全景：看似合理、文笔流畅，在概念上却千疮百孔、毫无说服力。
 
 因此，与 AI 协作的第一步是**提炼萃取（Distillation）**。模型可以帮助你归类相似的表述、暴露缺失的状态流转、质疑表意不清的命名，并区分不同层级的含义。然而，模型给出的第一版结果绝不应被直接当作模型本身，而应将其视为一份**供人推敲质疑的草稿**。
 
@@ -258,6 +481,14 @@ required business conditions have been satisfied.
 核心事件的范围则要收敛得多。一个核心事件代表着具有重要建模分量的业务事实：它可能记录了领域状态的重大变更、确立了某项商业承诺、触发了下游决策或策略、标志着某项关键业务规则的执行结果、揭示了职责之间的清晰边界，或者提供了一个核心锚点，命令、策略、聚合或限界上下文可以围绕其逐步展开组织。
 
 这种区分并不意味着每个核心事件最终都必然体现在代码实现中。在当前阶段，团队的核心任务是识别出那些分量足够厚重、足以支撑后续建模深入开展的关键事件。
+
+:::en
+> **Original**: Candidate events include everything that emerges during exploration: facts mentioned by stakeholders, actions that appear to mark a step in a process, technical reactions observed in the existing system, terms that different participants use for apparently similar transitions, and events proposed to explain gaps in a story. Candidate events are deliberately inclusive. Their purpose is to preserve the breadth of discovery before the team decides what matters. Core events are narrower. A core event represents a business fact that carries meaningful modeling weight: it may record an important change in domain state, establish a business commitment, trigger a downstream decision or policy, mark the result of a significant business rule, reveal a boundary between responsibilities, or provide an anchor around which commands, policies, aggregates, or bounded contexts might begin to organize.
+
+**📌 核心术语与语境解析**：
+- **Candidate Events vs Core Events**：*候选事件与核心事件*。探索初期全景素材与具备重度领域状态变更价值的核心资产的架构解耦。
+- **Business Commitment**：*商业承诺*。具有契约约束力的领域事实（例如订单确认意味着企业承诺排产与履约）。
+:::
 
 思考以下来自 BrewUp 销售订单流程早期探索的一组混杂条目：
 
@@ -301,6 +532,14 @@ required business conditions have been satisfied.
 
 模型能够加速比对分析与重组表述，但业务的真实真相依然必须经由领域专家的验证。
 
+:::en
+> **Original**: At this stage, AI is useful in a specific and limited way: it acts as a fast pattern synthesizer. Given a rough event list, a short domain description, and explicit classification criteria, it can group overlapping formulations, detect likely synonyms, identify events expressed at inconsistent levels of abstraction, and suggest that an item is a UI action or a technical side effect. It can also surface suspicious gaps in a causal chain, propose alternative ways of segmenting the flow, and highlight transitions that require further domain knowledge... The model can accelerate comparison and reformulation. Business truth still requires domain validation.
+
+**📌 核心术语与语境解析**：
+- **Fast Pattern Synthesizer**：*快速模式综合器*。模型在领域探索中的精准定位：仅负责归纳同义词、对齐抽象层级与暴露断层，不承担业务裁决权。
+- **Domain Validation**：*领域校验*。由人类架构师与业务专家依据真实商业约束进行的权威终审。
+:::
+
 #### 作为架构输入的反馈
 
 在没有 AI 辅助的情况下，团队可能会耗费大量时间来重写事件列表、比对术语、重新归纳概念，并为下一次工作坊准备备选解读方案。大模型可以在两次会议的间隙承担大量这类过渡性工作：保持候选解读清晰可见、生成备选分类方案、始终如一地应用明确的评审标准、暴露遗漏的状态流转、比对修订版工件与历史版本的差异，并为领域专家整理出针对性极强的澄清问题。
@@ -330,7 +569,7 @@ no special domain significance.
 
 #### 纠正性反馈
 
-**纠正性反馈（Corrective Feedback）** 用于剔除那些不属于该模型的假设或分类。上面那一行假定邮件送达没有特殊的领域意义，但这仅仅是一个候选假设，因为唯有团队（而非模型）才能决定该通信行为是否具有契约或合规层面的特殊含义。在 BrewUp 的评审过程中，这种反馈通常表达为：
+**纠正性反馈（Corrective feedback）** 用于剔除那些不属于该模型的假设或分类。上面那一行假定邮件送达没有特殊的领域意义，但这仅仅是一个候选假设，因为唯有团队（而非模型）才能决定该通信行为是否具有契约或合规层面的特殊含义。在 BrewUp 的评审过程中，这种反馈通常表达为：
 
 - 该分类属于 UI 操作，并非领域事件。
 - 存储订单属于实现细节。
@@ -342,7 +581,7 @@ no special domain significance.
 
 #### 补充性反馈
 
-**补充性反馈（Additive Feedback）** 用于引入模型无法从现有探索素材中可靠推断出的领域知识。上述标记为“不确定（uncertain）”的那一行正是典型代表：唯有领域专家才能明确裁定，`Order submitted` 到底代表着一个业务事实，还是仅仅是屏幕上的一次点击。在 BrewUp 案例中，它体现为如下陈述：
+**补充性反馈（Additive feedback）** 用于引入模型无法从现有探索素材中可靠推断出的领域知识。上述标记为“不确定（uncertain）”的那一行正是典型代表：唯有领域专家才能明确裁定，`Order submitted` 到底代表着一个业务事实，还是仅仅是屏幕上的一次点击。在 BrewUp 案例中，它体现为如下陈述：
 
 - 支付授权并不意味着订单已被接受。
 - 在库存预留成功之前，订单不能被确认。
@@ -354,7 +593,7 @@ no special domain significance.
 
 #### 结构性反馈
 
-**结构性反馈（Structural Feedback）** 用于捍卫素材内部的架构边界与职责划分。`Payment authorized` 在初次分类中被直接标记为普通的业务事件；而结构性反馈则需要明确记录下该事实是由外部供应商报告的，并不属于 BrewUp 的订单职责范畴。向模型传达这种反馈的指令通常如下：
+**结构性反馈（Structural feedback）** 用于捍卫素材内部的架构边界与职责划分。`Payment authorized` 在初次分类中被直接标记为普通的业务事件；而结构性反馈则需要明确记录下该事实是由外部供应商报告的，并不属于 BrewUp 的订单职责范畴。向模型传达这种反馈的指令通常如下：
 
 - 将销售订单事件与仓库事件彻底分开。
 - 切勿将库存管理混入订单职责之中。
@@ -363,6 +602,14 @@ no special domain significance.
 - 切勿假设因果顺序相邻的事件必定归属于同一个聚合或同一个限界上下文。
 
 结构性反馈至关重要，因为大语言模型天然倾向于编织出一段浑然一体、高度连贯的叙事。然而在领域建模中，表面的连贯往往会掩盖至关重要的边界。一个因果相连的序列可能跨越了多个不同的职责范围，而绝不应被揉捏进单一的模型之中。
+
+:::en
+> **Original**: Meaningful refinement begins when feedback enters the loop. Without feedback, the model might do little more than improve surface coherence. With feedback, it begins to operate inside a progressively sharper semantic boundary. Each correction removes an invalid interpretation. Each missing rule supplied by a domain expert closes a knowledge gap. Each explicit separation between responsibilities prevents the model from flattening the domain into a single generic process... Corrective feedback removes assumptions or classifications that do not belong in the model... Additive feedback introduces domain knowledge that the model could not infer reliably from the discovery material... Structural feedback preserves architectural distinctions within the material. Structural feedback is essential because an LLM naturally tends to produce one coherent narrative. In domain modeling, however, apparent coherence can hide boundaries that matter. A causal sequence may cross several responsibilities without belonging to a single model.
+
+**📌 核心术语与语境解析**：
+- **Corrective / Additive / Structural Feedback**：*纠正性、补充性、结构性反馈*。驱动模型输出逐步逼近真实业务模型的三大核心反馈支柱。
+- **False Completeness**：*虚假完备性*。因输出排版工整漂亮而误判其在逻辑与业务层面已无漏洞的致命心理错觉。
+:::
 
 #### 实用的精炼循环
 
@@ -457,6 +704,14 @@ describes the user's interface action or a durable business fact.
 
 这一产出为团队审查提供了初始标的。团队现在可以推翻错误的分类、澄清隐性假设，并指出哪些领域的知识仍然处于空白状态。值得注意的是，两个看似笃定的分类需要引起更严密的警惕：`PaymentAuthorized` 被标记为业务事件，却完全未提及该事实是由外部供应商报告的；`StockReserved` 同样被标记为业务事件却毫无归属者，尽管库存预留明明属于仓库的职责。根据提供给模型的现有素材，这两种回答都算不上错误，但它们都抹平了一道团队尚未明示的边界——而这正是下一个提示词必须纠偏的地方。输出看起来如同成品一般流畅自然，而这恰恰是该闭环每一个阶段（绝非仅在终局）潜藏的最大陷阱：**粗糙的草稿引人推敲审视，流畅的输出却诱人盲目轻信。**
 
+:::en
+> **Original**: The `uncertain` category is important. Without it, the model is forced to classify every item when the context does not support a reliable decision. The result provides an initial object for review. The team can now reject incorrect classifications, clarify assumptions, and identify where domain knowledge is still missing. Two of the confident classifications warrant closer attention. `PaymentAuthorized` is labeled a business event with no mention that the fact is reported by an external provider, and `StockReserved` is labeled a business event with no owner, although reservation belongs to the warehouse. Neither answer is wrong based on the evidence the model was given. Both flatten a distinction the team has not yet supplied, and that is what the next prompt has to correct. The output reads as finished work. That is the danger at every stage of this loop, not only at the end: a rough draft invites scrutiny, a fluent one invites trust.
+
+**📌 核心术语与语境解析**：
+- **Uncertain Category**：*不确定分类*。一种关键的护栏机制，允许模型坦承上下文不足，阻断概率胡乱臆断。
+- **Fluent vs Rough Output**：*流畅输出与粗糙草稿*。流畅自然的文本极易麻痹人类架构师的批判直觉，需时刻警惕“虚假正确性”。
+:::
+
 #### 第 2 步：注入领域与结构性反馈
 
 假设第一轮产出印证了列表中确实混杂着 UI 和技术关注点，但依然将剩下的业务事件当作单一连贯的流程来处理。下一个提示词重新引入上一轮的结果，并施加更加锐利的边界约束：
@@ -524,6 +779,14 @@ AI 改变了这一进程的节奏。模型能够迅速重构素材、保留过�
 
 模型加速了比对、重述和备选方案的准备，而工件与领域专家则赋予其意义、判断与验证。模型的真正贡献，是让这些关键问题变得足够具象，以便团队展开深入剖析。
 
+:::en
+> **Original**: The knowledge crunching process reflects a foundational Domain-Driven Design idea: modeling is a form of **knowledge crunching**. The team begins with fragmented information, competing terminology, partial examples, and different interpretations. The team tries alternative organizing ideas, rejects weak abstractions, and gradually distills what matters into a useful model. AI changes the tempo of this process. The model can reformulate material quickly, preserve provisional alternatives, compare classifications, and expose inconsistencies between one iteration and the next. Architects and domain experts contribute judgment, business knowledge, and the authority to accept or reject a proposed interpretation. The model accelerates comparison, reformulation, and the preparation of alternatives, while artifacts and domain experts provide meaning, judgment, and validation. Its contribution is to make those questions concrete enough for the team to examine.
+
+**📌 核心术语与语境解析**：
+- **Knowledge Crunching** [ˈnɒlɪdʒ ˈkrʌntʃɪŋ]：*知识提炼/知识咀嚼*。埃里克·埃文斯在经典 DDD 中提出的概念，指架构师与专家反复消化混沌知识、萃取核心模型的过程。
+- **Provisional Alternatives**：*过渡性备选方案*。在最终决策敲定前，由大模型并行维护的多种可能业务建模分支。
+:::
+
 #### 从迭代演进到语义收敛
 
 **语义收敛（Semantic Convergence）** 是证明这一反馈闭环正在有效运转的务实标志：事件、事件内涵及其职责归属不再在一次又一次的迭代中剧烈摇摆。这个词描述的是素材最终达到的稳定状态，而非团队刻意采取的某种特定技巧。在经历了数轮迭代之后，素材开始呈现出清晰的稳定性：
@@ -544,6 +807,14 @@ AI 改变了这一进程的节奏。模型能够迅速重构素材、保留过�
 本章中所精炼的对象是领域素材本身：候选事件、核心含义、职责划分、因果关系以及悬而未决的问题。反馈闭环帮助团队使这些素材变得更加显式、更加稳固。但这个反馈闭环尚未规定模型在未来的交互中必须如何展开推理。
 
 在*第 5 章*中，你将把相同的迭代姿态应用到另一类工件上：你不再仅仅精炼领域素材，而是去精炼用于约束模型如何对这些素材展开推理的**规则手册（Rulebook）**。
+
+:::en
+> **Original**: **Semantic convergence** is a practical sign that the loop is working: the events, their meanings, and their responsibilities stop shifting from one iteration to the next. The phrase describes a state the material reaches, not a technique the team applies. After several iterations, the material begins to stabilize... Semantic convergence means that the team has reached enough stability to support the next modeling step. Stability is more valuable than apparent exhaustiveness. A stable set of core events can be tested, extended, and used as shared context. A long set of plausible events that changes at every interaction cannot. This is why iterative refinement matters more than first-pass brilliance. In later AI engineering workflows, you will encounter the same posture under different names, including the informal **Ralph Wiggum loop** described by Huntley (2025): a deliberately crude technique that reruns the same prompt until a stop condition is met, letting the files and their history rather than the conversation carry the state between runs. The underlying principle is straightforward: do not design the process around the expectation that the first result will be correct. Design it so that repeated execution, critique, and correction can move the artifact toward convergence. In domain modeling, however, repetition alone is insufficient. Running the model again without introducing better feedback might simply produce another plausible variation. The quality of the loop depends on the quality of the signals returned to it.
+
+**📌 核心术语与语境解析**：
+- **Semantic Convergence**：*语义收敛*。模型生成的领域事件、概念内涵及归属职责在多次迭代中不再漂移的稳态。
+- **Ralph Wiggum Loop**：*Ralph Wiggum 循环*。依靠外部文件状态和自动化测试断言、通过小步反复迭代驱动结果收敛的工程流派。
+:::
 
 #### AI 改变了什么，没有改变什么
 
@@ -571,6 +842,14 @@ AI 并没有取代这一切——它没有取代事件风暴，没有取代领�
 
 严谨命名的价值在于它锁定了经过验证的细微差别，并塑造了模型能够稳定维系的领域边界。
 
+:::en
+> **Original**: If that instability enters subsequent prompts, the model has no reliable reason to preserve distinctions that the team has worked to uncover. An event can remain structurally present while its meaning slowly changes through synonyms, generic reformulations, or inconsistent terminology. If events are the structural anchors of the emerging model, language is what prevents those anchors from drifting. Chapter 3 established why disciplined vocabulary matters when collaborating with an LLM. Here, however, we face a more specific problem: the vocabulary produced during discovery is rarely clean. EventStorming encourages people to explore freely. Participants speak naturally, mix levels of abstraction, invent shorthand, and use different terms for what may, or might not, be the same concept. Domain Storytelling preserves those expressions inside concrete scenarios, where further variations might emerge. This fluidity is productive during exploration. It allows ideas to surface before the team has decided how they should be organized. However, the same fluidity becomes a liability when the discovery material is turned into a reusable AI context. The question is: *How do you move from the fluid language of exploration to a vocabulary stable enough to reuse?* Naming matters because it preserves validated distinctions. It shapes the boundaries the model can preserve.
+
+**📌 核心术语与语境解析**：
+- **Structural Anchors**：*结构性锚点*。在架构模型演进中保持稳定、支撑聚合与策略生长的关键领域事件。
+- **Fluid Language to Stable Vocabulary**：*从流动语言到稳定词汇*。从探索期的发散自由表达走向工程期的收敛严格词典。
+:::
+
 ### 工作坊之后不稳定性潜藏在何处
 
 语言层面的不稳定性往往并不显山露水。它通常伪装成一组听起来极其相似、以至于常被误以为可以完全互换的词汇集合。
@@ -586,7 +865,7 @@ AI 并没有取代这一切——它没有取代事件风暴，没有取代领�
 
 `OrderSubmitted` 可能描述的是客户发送订单请求以供系统评估；`OrderReceived` 可能描述的是 BrewUp 确认该请求已进入系统队列；`OrderAccepted` 可能表明相关业务合规校验已经顺利通过；而 `OrderConfirmed` 则可能表示 BrewUp 已正式通知客户接受订单，并作出了履行订单的商业承诺。
 
-即便在团队着手探讨聚合、命令、策略或集成机制之前，这些细微差别就已经至关重要。如果它们始终隐晦不明，LLM 往往会倾向于将这些术语强行压缩为一个它所熟知的标准化通用订购流程。生成的工作流看似干净流畅且极具说服力，却在无形中悄然抹杀了对企业至关重要的状态流转。
+即便在团队着手探讨聚合、命令、策略或集成机制之前，这些细微差别就已经至关重要。如果它们始终隐晦不明，大语言模型往往会倾向于将这些术语强行压缩为一个它所熟知的标准化通用订购流程。生成的工作流看似干净流畅且极具说服力，却在无形中悄然抹杀了对企业至关重要的状态流转。
 
 例如，一项本应在库存预留之后才触发的策略可能会被过早激活；支付授权可能被草率等同于订单接受；命令可能被绑定到错误的事件上；对客户的商业承诺可能被贬低为单纯的技术通知；而原本界限分明的独立业务职责，也可能被捏造为一个浑然一体的连续单体流程。
 
@@ -611,6 +890,14 @@ AI 并没有取代这一切——它没有取代事件风暴，没有取代领�
 这种平滑处理带来了极其隐蔽的风险：**输出看起来越是无懈可击，人们就越容易盲目推定底层业务领域也已经完全理清**。因此，严谨自律的语言是一道坚固的心理防线，防止团队过早地误以为模型已经“理解”了某些团队自己都尚未澄清的本质问题。
 
 当术语尚未稳定时，歧义必须保持高度可见。应当明确指示模型标出存在竞争关系的冲突术语、识别潜在的含义分歧，并主动要求补充缺失的领域知识，而不是擅自将一切粗暴折叠为一个貌似完美的片面解读。
+
+:::en
+> **Original**: Ambiguous language does not necessarily produce visibly confused output. More often, it produces **false coherence**... The available context does not establish whether these expressions describe one transition, several transitions, or different perspectives on the same business fact. The model will not necessarily stop and request clarification. Unless instructed otherwise, it is likely to select one plausible interpretation and silently normalize the others around it. The result might look smooth and well-structured. The output feels coherent because the prose no longer shows the ambiguity, even though the domain still contains it. The model has resolved that ambiguity on the team's behalf. This normalization creates a specific risk: the cleaner the output appears, the easier it becomes to assume that the underlying domain has also become clear. Disciplined language is therefore a defense against prematurely believing that the model has understood something the team itself has not clarified. When terminology remains unstable, ambiguity must stay visible. Instruct the model to flag competing terms, identify possible distinctions, and ask for missing domain knowledge rather than collapse everything into a polished interpretation.
+
+**📌 核心术语与语境解析**：
+- **False Coherence**：*假性一致性*。大语言模型通过平滑掉业务歧义与未决冲突，生成表面天衣无缝、实质隐藏致命业务漏洞的伪连贯输出。
+- **Ambiguity Visibility**：*歧义显性化*。在架构提示词中要求模型强制保留并暴露未决问题，拒绝擅自平滑折叠。
+:::
 
 ### 实用的 BrewUp 词汇表
 
@@ -707,6 +994,14 @@ BrewUp immediately confirms the order. Stock is reserved afterward.
 
 这正是你在领域探索收尾阶段迫切需要的关键产出。工件将尚未裁决的区别显式化地暴露出来，并将其交还给团队定夺，而不是自作聪明地生造一条缺失的规则，或是强行将该场景套入某种司空见惯的固定套路之中。除了规范字词之外，一份工作词汇表更为团队提供了一套坚固稳定的通用语言，使前后矛盾、缺失的流转以及悬而未决的问题能够在同一套语言体系下被严谨讨论。
 
+:::en
+> **Original**: A working vocabulary becomes useful only when its terms survive contact with a concrete domain scenario... The working vocabulary leaves the validity of this scenario open and exposes a question that the team must answer: *Is successful stock reservation one of the business conditions required before an order can be confirmed?* This is the outcome you need at the end of domain exploration. The artifact makes the unresolved distinction visible and returns it to the team, instead of manufacturing a missing rule or forcing the scenario into a familiar sequence. Beyond normalizing words, a working vocabulary gives the team a stable language in which inconsistencies, missing transitions, and unanswered questions can be discussed.
+
+**📌 核心术语与语境解析**：
+- **Concrete Domain Scenario**：*具体领域场景*。用于压力测试工作词汇表与业务状态流转的黄金端到端用例。
+- **Unresolved Distinction**：*未决业务分界*。尚未形成架构定论的边界问题，必须显式抛出由人类团队决策，严禁模型自行闭合。
+:::
+
 ### 从自由探索走向审慎交互
 
 本章始于一个刻意呈现的混沌局面：领域知识四散分布在不同人员的头脑中、工作坊的交谈里、墙上的即时贴上、各类架构草图中，以及尚未完全对齐的术语之间。这些素材弥足珍贵，但它们脆弱易变，尚不足以支撑与 AI 系统展开长期、可复用的深度协作。
@@ -751,6 +1046,14 @@ BrewUp immediately confirms the order. Stock is reserved afterward.
 这一序列产出的领域素材，其业务含义足够清晰显式，足以在后续的人机协作中长久沿用。该序列在走向完整设计以及针对模型如何推理制定硬性规则之前适时收笔。领域探索、领域专家以及架构师的判断力依然不可或缺；而 AI 的真正价值，在于极大地加速了对这些专家产出素材进行翻译、比对、质疑与精炼的工程进程。
 
 在*第 5 章*中，你将在这套坚实基石之上继续深入。稳定下来的词汇表将成为**规则手册（Rulebook）**的输入核心，用于强力约束模型在一个限界上下文之内应当如何展开严密推理。
+
+:::en
+> **Original**: In this chapter, you moved from domain exploration to the first operational foundation for AI-assisted Domain-Driven Design. EventStorming helped the team externalize business knowledge as candidate events, questions, reactions, and possible boundaries. Domain Storytelling complemented that event landscape by preserving actors, intentions, work objects, and causal flow. You then distinguished transcription from translation. Capturing the text written on a workshop wall is not enough. The meaning carried by relationships, grouping, accepted distinctions, unresolved questions, and domain-expert feedback must be preserved in a form that can survive beyond the workshop. Once the material became explicit, the challenge shifted from discovery to selection. Candidate events preserved the breadth of the exploration, while core events identified the business facts important enough to support further modeling. AI accelerated classification, comparison, and reformulation, but validation remained the responsibility of architects and domain experts. The progression developed in this chapter was: ***Discover → Refine → Name → Reinforce***. This sequence produces domain material whose meaning is explicit enough to be carried forward. This sequence stops short of a complete design and of any rule about how the model must reason. Domain exploration, the domain expert, and the architect's judgment remain in place. AI accelerates the work of translating, comparing, challenging, and refining the material they produce.
+
+**📌 核心术语与语境解析**：
+- **Operational Foundation**：*可操作的工程基石*。使领域探索成果直接赋能软件架构与 AI 推理的具体方法体系。
+- **Discover → Refine → Name → Reinforce**：*发现、精炼、命名、强化*。将隐性混沌知识提炼为坚固版本化通用语言的完整闭环。
+:::
 
 ## 参考文献
 

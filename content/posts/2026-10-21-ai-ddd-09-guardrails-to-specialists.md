@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（九）：从护栏到专家：为 DDD 设计智能体"
 date: 2026-10-21T09:00:00Z
-description: "亲手打造专精于事件风暴、故事叙述、命令与事件编写及上下文映射的专业智能体，用契约与交接划定认知边界，让通用语言保证各专家之间的一致性。"
+description: "双栏独立滚动工作台：解构事件风暴、故事叙述、命令编写与上下文映射四大专家智能体，用契约与人工关卡筑牢认知边界。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -12,7 +12,173 @@ tags:
   - "AI 协作"
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。全专栏共 12 篇，覆盖大语言模型心智模型、事件风暴与 AI 协作、提示词规则手册、限界上下文精炼，以及专家智能体与编排器的完整工程实践。
+> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
+
+# 核心实战精炼：构建 DDD 专家智能体与认知边界
+
+## 1. 架构选型与决策矩阵
+
+在利用生成式 AI 进行领域驱动设计（DDD）建模时，单纯依赖全能大模型或被动防御型护栏会导致严重的概念漂移与越权虚构。下表对比了四种协作范式的核心决策维度：
+
+| 架构维度 | 泛化全能智能体 (Unbounded Agent) | 防御型守卫智能体 (Defensive Guard) | 规范驱动流水线 (Spec-Driven SDD) | **DDD 专家智能体流水线 (Specialist Pipeline)** |
+| :--- | :--- | :--- | :--- | :--- |
+| **职责边界** | 试图一步到位完成所有分析与代码生成 | 仅对已生成的工件做规则校验与拦截 | 按文档阶段线性下发指令 | **单智能体绑定单项转换（One Transformation），职责极度收敛** |
+| **决策权归属** | 模型自行补全缺失逻辑并平滑决策 | 仅能报错，无法产出建设性候选物 | 依赖测试用例作为事实依据 | **专家仅负责转换（Transforms），领域权威负责决策（Decides）** |
+| **交付契约** | 自然语言无结构对话 | 拦截规则（如 Linters） | Markdown 任务规范 | **强类型交接模式（Handoff Schema，强制携带出处与未决问题）** |
+| **因果与权属** | 混淆执行者、观察者与裁决权威 | 不感知领域归属权 | 仅关注代码级依赖 | **严格剥离因果促成者（Causal Actor）与裁决权威（Decision Owner）** |
+| **不确定性** | 产生幻觉与“叙事闭合”（强行编造合理结局） | 仅标记错误 | 忽略未明确业务 | **证据终止处强制截断（Stop at evidence limit），显式暴露未决缺口** |
+
+## 2. 四大专家智能体与认知边界拓扑
+
+领域建模工作流被解构为四项狭窄的单项转换，各阶段之间由**显式人工关卡（Human Gate）**硬性隔离。未通过人工关卡采纳的提议项，绝不可进入下游专家的输入上下文：
+
+```mermaid
+flowchart TD
+    Raw["原始业务证据 (Raw Evidence)<br/>访谈实录 / 现场观察 (QUOTE-nn, OBS-nn)"] --> ES["1. 事件风暴智能体 (EventStormer)<br/>转换：原始证据 ➔ 候选事实/触发器/参与者<br/>禁令：不得擅自裁定模棱两可的业务策略"]
+    ES -->|候选输出 ES-*| G1{"人工关卡 1 (Human Gate 1)<br/>审查真实性、因果区分与未决状态"}
+    G1 -->|已采纳事实 accepted-facts.md| ST["2. 故事叙述智能体 (Storyteller)<br/>转换：已采纳事实 ➔ 具体业务场景与变体<br/>禁令：证据终止处故事必须终止，严禁叙事闭合"]
+    ST -->|候选输出 ST-*| G2{"人工关卡 2 (Human Gate 2)<br/>审查场景边界、断点与未决悬念"}
+    G2 -->|已采纳场景 accepted-scenarios.md| CEW["3. 命令与事件编写智能体 (Command & Event Writer)<br/>转换：已采纳场景 ➔ 候选命令/事件/规则<br/>禁令：严禁为求流程完整而捏造顺手命令"]
+    CEW -->|候选输出 CEW-*| G3{"人工关卡 3 (Human Gate 3)<br/>审查行为权属、调用者与真实意图"}
+    G3 -->|已采纳行为 accepted-behavior.md| CM["4. 上下文映射智能体 (Context Mapper)<br/>转换：已采纳行为 ➔ 职责边界与上下文关系<br/>禁令：严禁绘制无交互依据的连线，图表美观不等于正确"]
+    CM -->|候选输出 CM-*| G4{"人工关卡 4 (Human Gate 4)<br/>审查职责自治、无依据连线与命名准确度"}
+    G4 --> Done["已采纳限界上下文映射<br/>accepted-context-map.md (建模素材已确认)"]
+```
+
+## 3. 治理自治框架：契约与交接模式规范
+
+### 3.1 四大转换的职责边界与标志性禁令
+
+| 专家智能体 | 权威输入 | 单项转换任务 | 允许产出的候选类别 | 标志性绝对禁令 (Characteristic Prohibition) |
+| :--- | :--- | :--- | :--- | :--- |
+| **EventStormer** | 原始证据（访谈材料、观察记录） | 原始证据 $ightarrow$ 候选事实 | `fact` (过去时), `trigger` (诱因), `participant` (参与者) | **不得擅自裁定模棱两可的业务策略**；不得将预期作为已发生事实。 |
+| **Storyteller** | 已采纳事实（`accepted-facts.md`） | 已采纳事实 $ightarrow$ 具体业务情境 | `scenario` (主场景), `variation` (变体情境) | **证据止步之处故事必须戛然而止**；严禁引入未经证实的假设结局。 |
+| **Command & Event Writer** | 已采纳场景（`accepted-scenarios.md`） | 已采纳场景 $ightarrow$ 候选系统行为 | `command` (意图指令), `event` (既成事实), `rule` (约束) | **严禁捏造“图省事的顺手命令”**；口头习惯与未定规程绝不可升格为 rule。 |
+| **Context Mapper** | 完整已采纳链（`accepted-behavior.md` 等） | 已采纳行为 $ightarrow$ 职责边界与关系 | `boundary` (职责边界), `relationship` (交互关系) | **严禁绘制缺乏证据支撑的连接线**；严禁以物理房间或代码模块命名边界。 |
+
+### 3.2 跨阶段通用交接 Schema 规范
+
+下游专家消费的不是上一轮大模型的完整对话历史（避免上下文污染与幻觉放大），而是结构化的 YAML 交付工件。以下为生产级交接 Schema：
+
+```yaml
+# 专家输出交接规范 (Handoff Schema)
+candidates:
+  - id: "<prefix>-01"                  # 专家前缀 + 编号，如 ES-17, ST-02, CEW-18, CM-01
+    kind: "fact | trigger | participant | scenario | variation | command | event | rule | boundary | relationship"
+    name: "业务语言命名"                # 严格采用业务领域术语，严禁在初筛阶段使用技术架构名词
+    statement: "明确陈述该条目的具体内涵" # 单句陈述，指出是自身促成还是仅被告知
+    source: ["QUOTE-13", "ES-17"]       # 强制可追溯性：上游已采纳条目 ID + 原始证据 ID
+    status: "observed | inferred | proposed | unresolved" # 严禁智能体自行标记 accepted/rejected
+    decision_owner: "业务权威主体 | unknown" # 仅用于指明拥有裁决权的人类角色；因果促成者写入 statement
+    uncertainty: "成立所需的前提事实，以及当前缺失的权威决策" # 替代不可靠的数字置信度
+    review_question: "提请人工关卡裁决的精确决策问题"       # 显式将缺口转化为人类工作项
+
+summary:
+  candidates_returned: 18               # 本次生成的候选总数
+  unresolved: 4                         # 其中保持未决状态的条目数
+  unaccounted_sources: []               # 未能安置的原始证据 ID 列表（必须为空，否则判定覆盖不全）
+  information_needed: "需要业务方进一步明确的核心决策说明"
+```
+
+### 3.3 跨交接必须存续的五大元数据
+
+在多智能体串联过程中，以下五项元数据必须在每一次交接中强制存续，任何一项被下游抹去即构成“语义漂移（Semantic Drift）”违规：
+1. **出处追溯（Provenance）**：所有下游概念必须能通过 ID 链条回溯至原始访谈证据 `QUOTE-nn`。
+2. **状态（Status）**：未决状态（`unresolved`）绝不可随转换深入而被自动抹平为已解决。
+3. **决策所有权（Decision Ownership）**：外部上下文决定的事实，绝不可在流转中变为当前上下文的自有决定。
+4. **不确定性（Uncertainty）**：缺失的业务策略或数据依据必须显式保留说明。
+5. **评审问题（Review Questions）**：提请人类权威裁决的具体问题必须完整传递至终审关卡。
+
+## 4. 生产级专家契约模板与实战案例
+
+### 4.1 专家契约元结构模板
+
+```markdown
+---
+description: <单句描述：本智能体执行的单项转换，以及绝对不得越权做出的决策>
+id_prefix: <两到三个大写字母，全局唯一，如 ES / ST / CEW / CM>
+---
+
+# <专家名称>
+
+你仅执行一项转换，不得执行其他任务：**将 <输入> 转换为 <候选输出>。**
+
+## 你的输入
+- 权威输入：<前序关卡批准的已采纳工件>
+- 辅助素材：<原始证据清单、词汇表、领域建模宪章、交接模式>
+
+## 返回内容
+| 类别 | 含义与判定标准 |
+| :--- | :--- |
+
+## 最至关重要的区分
+<本专家最容易率先犯下的概念混淆与越权失误深度防范指南>
+
+## 绝对不得做的事情 (Prohibitions)
+- 严禁提议无引用支撑的任何内容。
+- 严禁擅自解答证据中悬而未决的事项。
+- 严禁描述具体技术实现或软件工程细节。
+- 严禁使用 accepted 或 rejected 状态标记。
+```
+
+### 4.2 典型实战交接案例（截断与未决保留）
+
+#### 案例 1：EventStormer 保留冲突未决（ES-17）
+面对仓库主管 Andrea（缺货直接拒单）与 Nadia（缺货分拣暂扣）的口径冲突，模型严禁折衷取平均，强制输出未决记录：
+```yaml
+- id: ES-17
+  kind: trigger
+  name: requested quantity was short
+  statement: "实际可用库存少于请求数量时，引发完全拒单或部分暂扣，取决于具体值班人员。"
+  source: [QUOTE-13, QUOTE-15, QUOTE-16, QUOTE-17, QUOTE-18, QUOTE-19]
+  status: unresolved
+  decision_owner: unknown
+  uncertainty: "缺量处理策略从未形成书面制度，Andrea 与 Nadia 描述了不同做法且均不认为对方有误。"
+  review_question: "谁拥有业务权威，能够裁定当可用库存少于请求数量时必须执行的标准规程？"
+```
+
+#### 案例 2：Storyteller 证据止步处戛然而止（ST-02）
+场景在遇到缺货 4 箱时立即中断，严禁模型自行无依据推断“然后补货送达，订单顺利完成”：
+```yaml
+- id: ST-02
+  kind: variation
+  name: Andrea refuses a short order
+  statement: "销售下达 12 箱订单；现场仅有 8 箱；Andrea 未在隔湾放置任何货物，标记为未完成并向销售返回无法执行。"
+  source: [ES-17, ES-18, ES-20, QUOTE-13, QUOTE-14, QUOTE-15, QUOTE-16]
+  status: unresolved
+  decision_owner: unknown
+  uncertainty: "这是 Andrea 的个人习惯做法，与 Nadia 的操作冲突，缺乏统一成文规则。"
+  review_question: "谁有权决定针对 12 箱的请求在仅有 8 箱时必须全单拒绝？"
+```
+
+#### 案例 3：Command & Event Writer 阻断图省事的顺手命令（CEW-18）
+尽管时序上需要重试，但证据未说明谁来触发重试，因此严禁发明 `Stock.RetryReservation`：
+```yaml
+- id: CEW-18
+  kind: command
+  name: retry stock reservation
+  statement: "重新尝试为此前因缺货而受阻的订单预留库存。"
+  source: [ST-05, QUOTE-24, QUOTE-25]
+  status: unresolved
+  decision_owner: unknown
+  uncertainty: "证据中未指明重试的下发责任人、补货通知机制或强制重试策略。"
+  review_question: "哪个角色拥有下达重新尝试预留指令的权力，以及何时应当触发该动作？"
+```
+
+## 5. 架构避坑清单 (Do's & Don'ts)
+
+| 场景维度 | 严禁做法 (Don't) | 推荐做法 (Do) |
+| :--- | :--- | :--- |
+| **不确定性处理** | 智能体在证据不足时凭借概率进行“叙事闭合”（如编造合理结局使流程完整）。 | 遵循**截断原则**：证据止步之处场景戛然而止，标记为 `unresolved` 并生成明确的 `review_question`。 |
+| **语言规范** | 在业务发现阶段直接要求模型输出“聚合根”、“实体”、“仓储”等技术名词。 | 保持输入与输出完全处于业务通用语言中，由人类架构师在人工关卡处映射为 DDD 构建块。 |
+| **指令设计** | 为了流程顺畅，顺手为邻近团队发明一个命令（如让仓库拥有确认销售订单的命令）。 | 坚守职责边界：仅当证据确凿证明某群体实际执行某动作时才提议指令，权属不明时挂起。 |
+| **上下文映射** | 为了架构图美观整洁，将存在先后时序的上下文之间全部连上带箭头的交互线。 | **图表美观不等于正确**：缺乏跨边界通信确凿证据时，坚持保留孤立边界；流向不等于决策权威。 |
+| **限界上下文命名** | 直接用物理办公房间名、部门名或已有遗留软件模块名（如 Warehouse）命名上下文。 | **依据其守护的业务决策与不变量命名**（如 Stock Management），防止遗留架构倒灌领域模型。 |
+| **流水线演进** | 在多智能体之间直接传递未结构化的自由散文对话，任由模型逐级发散。 | 强制采用标准化 `Handoff Schema`，每次交接仅传递通过人工关卡裁决的工件与未决清单。 |
+
+<!-- split -->
+
+# 原著完整参考：从护栏到专家：为 DDD 设计智能体
 
 前一章展示了守卫智能体（Guard Agent）如何在缺陷扩散之前，暴露缺乏依据的主张、所有权漂移以及缺失的权威。然而，守卫本质上仍然是防御性的：它能够审查或拦截产物，却无法将杂乱的证据转化为候选事实、场景、行为或职责边界。
 
@@ -33,12 +199,36 @@ tags:
 在*第 8 章*中，你使用守卫智能体为生成的产物设定了认知边界。守卫审查的是已经存在的材料。而在本章中，你将要求智能体完成一项更艰巨的任务：将原始证据转换为此前并不存在的候选材料。
 
 单纯赋予一个角色名称并不能构筑起这种边界。专业化需要权威输入、狭窄的单项转换、可审查的输出、明确的非职责范围（Non-responsibilities）以及人工关卡。
+:::en
+> **Original**: In *Chapter 8*, you used guard agents to put cognitive boundaries around generated artifacts. A guard inspects material that already exists. In this chapter, you ask an agent to do something harder: to transform evidence into candidate material that did not exist before.
+
+**📌 核心术语与语境解析**：
+- **Cognitive boundaries** [ˈkɒɡnətɪv ˈbaʊndəriz]：*认知边界*。系统为智能体划定的推演范围与约束，防止大模型凭借概率联想越过受信任的事实依据。
+- **Candidate material** [ˈkændɪdət məˈtɪəriəl]：*候选素材/材料*。智能体生成的输出仅具备提议性质，在经由领域权威审查通过前，不可作为既定事实输入给下一阶段。
+:::
+
 
 ### 专家负责转换；权威负责决策
 
 转换会增加结构，而风险恰恰潜藏在这些额外增加的结构之中：序列暗含了顺序，通用的名称可能掩盖分歧，命令引入了意图，而边界则对决策进行了归类。每一步动作固然有助于团队进行推理，但也可能让词汇、因果关系或业务策略显得像是直接源于业务领域本身一样。
+:::en
+> **Original**: Transformation adds structure, and the risk lies in that added structure: a sequence implies ordering, a common name can hide disagreement, a command introduces an intention, and a boundary groups decisions. Each move can help a team reason, but it can also make vocabulary, causality, or policy appear to come from the domain.
+
+**📌 核心术语与语境解析**：
+- **Added structure** [ˈædɪd ˈstrʌktʃə]：*附加结构*。在格式化或建模转换过程中额外引入的逻辑时序、名称或分组，极易在无依据的情况下被误认为源自业务领域本身。
+- **Causality** [kɔːˈzæləti]：*因果关系*。事件之间的驱动与引发逻辑，大模型极易将“时序先后”轻率归因为“因果必然”。
+:::
+
 
 因此，输出必须始终保持为候选材料：它足够具体以供质询，但又与已被采纳的领域知识泾渭分明。一个未解决的候选者往往是当前最精确的产出，因为它如实保留了矛盾，而不是为了平息分歧而将其强行捏造为策略。
+:::en
+> **Original**: The output must therefore remain candidate material: concrete enough to challenge, but separate from accepted domain knowledge. An unresolved candidate is often the most accurate result available because it preserves a contradiction rather than smoothing it into policy.
+
+**📌 核心术语与语境解析**：
+- **Unresolved candidate** [ˌʌnrɪˈzɒlvd ˈkændɪdət]：*未决候选条目*。保留分歧、缺项或相互矛盾的提议项。
+- **Smoothing into policy**：*平滑粉饰为既定策略*。大模型倾向于消弭冲突、强行捏造折中规则以输出“自圆其说”的答案，这是多智能体建模中必须严防的幻觉现象。
+:::
+
 
 *表 9.1* 列出了四项转换以及每个专家必须拒绝承担的“貌似有用”的工作。
 
@@ -62,6 +252,14 @@ tags:
 ### 契约与交接作为认知边界
 
 每份契约都固定了权威输入、单项转换、允许的输出类别以及该角色绝对不得做出的决策。这种狭窄的限定使得任何新增内容都是可追溯责任的：如果某项策略首次出现在某个场景中，团队能够准确知道该在哪里对其发起质询。
+:::en
+> **Original**: Each contract fixes the authoritative input, one transformation, the allowed output kinds, and the decisions the role must not make. That narrowness makes additions attributable: if a policy first appears in a scenario, the team knows exactly where to challenge it.
+
+**📌 核心术语与语境解析**：
+- **Authoritative input** [ɔːˈθɒrɪtətɪv ˈɪnpʊt]：*权威输入*。经过领域专家或人工关卡核准、具备明确信任背书的数据源。
+- **Attributable** [əˈtrɪbjʊtəbl]：*可追溯责任的/可归因的*。通过单一狭窄的职责约束，使任何非预期的概念新增均可精确归因到特定智能体阶段。
+:::
+
 
 所有四份契约都遵循相同的结构，你可以将其调整用于自定义的专家智能体：
 
@@ -94,6 +292,13 @@ id_prefix: <两到三个字母，在所有专家之间全局唯一>
 ```
 
 契约规定了专家可以产出什么。而一套通用的**交接模式（Handoff Schema）**则规范了输出的返回格式，使下一个阅读者无需重新推演生成该输出的对话上下文，即可对其做出评判。
+:::en
+> **Original**: The contract fixes what a specialist may produce. A shared **handoff schema** fixes how the output must be returned, allowing the next reader to judge it without reconstructing the conversation that produced it.
+
+**📌 核心术语与语境解析**：
+- **Handoff schema** [ˈhændɒf ˈskiːmə]：*交接数据结构模式*。跨智能体之间标准化的数据交付规范，保证下游接收者仅凭工件本身即可评估有效性，解耦上下文历史。
+:::
+
 
 ```yaml
 candidates:
@@ -116,6 +321,14 @@ summary:
 ```
 
 其中有两个字段尤为关键。`uncertainty`（不确定性）字段指明了仍然需要的证据或决策，以此取代了不可靠的置信度评分。`review_question`（评审问题）则将这一缺口转化为指派给具体权威的工作任务。在 summary（摘要）块中，`unaccounted_sources` 比任何数字计数都更重要，因为一个空的列表意味着专家声称自己已经妥善安置了所有证据，而你需要去核实这一主张。
+:::en
+> **Original**: Two fields are especially important. The uncertainty field names the evidence or decision still needed, taking the place of a confidence score. The review question turns that gap into work for a named authority. In the summary block, `unaccounted_sources` matters more than any count, because an empty list claims the specialist placed all the evidence, and you check that claim.
+
+**📌 核心术语与语境解析**：
+- **Uncertainty field** [ʌnˈsɜːtnti fiːld]：*不确定性字段*。用定性的“事实或决策缺口”替代不可靠的概率置信度数字（Confidence Score）。
+- **Unaccounted sources**：*未被采纳/未安置的来源*。衡量智能体是否完整覆盖原始证据清单的关键审查字段。
+:::
+
 
 本 Schema 中有一处冲突值得在此说明，因为它在记录的运行实验中出现了两次。在此 Schema 中，`decision_owner` 指的是必须决定某个候选者是否可以推进的权威主体。然而，在四个记录的契约中，有两个（事件风暴专家和命令与事件编写专家）却将该字段挪用于因果归属（Causal Attribution）：即谁导致了该结果的发生。这两个问题都很重要，但它们的答案截然不同，因此单一字段无法同时承载这两种含义。我们对记录下来的契约及其输出保持原样，因为它们构成了运行证据。在任一契约的可复用版本中，都应当在陈述（`statement`）和出处追溯（`provenance`）中表达因果归属，并将 `decision_owner` 专门保留给裁决权威。四个契约中有两个对同一字段产生了不同的理解，这本身就是一个具有启发意义的设计发现，接下来的各节将记录这一冲突在各次运行中的具体体现。
 
@@ -139,6 +352,14 @@ when the available quantity is less than the requested quantity?
 原始证据并未指明谁有权决定缺量策略，因此 `decision_owner` 保持为 `unknown`。如果随意指派一个看似合理的临近参与者，就会擅自闭合原本悬而未决的问题。
 
 请注意，无论是契约还是记录，均未直接使用领域事件（Domain Event）、聚合（Aggregate）或限界上下文（Bounded Context）等术语。这种刻意的省略是有意为之的。如果直接要求智能体生成限界上下文，就等于把模型的形态硬塞给它，而不是让它从证据中推导出该形态。每个专家智能体确实都会阅读 `constitution-excerpt.md`，其中明确陈述了 BrewUp 的建模原则：状态变更表示为领域事件，每个限界上下文使用其专属的通用语言，且领域所有权必须清晰明确。而专家自身的指令则完全保留在酿酒厂所使用的原始词汇中，例如 set aside（留出/暂扣）、the board（黑板/记录板）以及 the end bay（尽头隔湾）。在关卡处，你负责将酒厂的术语映射到 DDD 概念。在真实的探索过程中，领域专家和建模人员随后会就团队统一使用的一致词汇达成共识。*表 9.2* 是你在评审时所使用的映射关系。
+:::en
+> **Original**: Notice that neither the contract nor the record uses the terms domain event, aggregate, or bounded context. The omission is deliberate. An agent told to produce bounded contexts is handed the model's shape instead of deriving that shape from the evidence. Every specialist does read constitution-excerpt.md, which states the BrewUp modeling principles plainly: state changes are expressed as domain events, each bounded context speaks its own Ubiquitous Language, and domain ownership must be explicit. The specialist's own instructions stay in the words the brewery used, such as set aside, the board, and the end bay. At the gate, you map the brewery's terms to DDD concepts. In real discovery, domain experts and modelers would then agree on the vocabulary the team will use consistently. *Table 9.2* is the mapping you use when you review.
+
+**📌 核心术语与语境解析**：
+- **Ubiquitous Language** [juːˈbɪkwɪtəs ˈlæŋɡwɪdʒ]：*通用语言*。领域专家与软件开发团队在限界上下文内共同遵守、无歧义的业务语言。
+- **Model's shape**：*模型形态*。过早给智能体预设“聚合根”、“实体”等技术范畴，会导致模型削足适履，忽视证据中的真实业务逻辑。
+:::
+
 
 | 候选类别 | 评审人员可能识别出的 DDD 构建块 | 首次出现位置 |
 |---|---|---|
@@ -213,6 +434,14 @@ when the available quantity is less than the requested quantity?
 ## 事件风暴智能体：发现事实而不擅自裁定领域
 
 **事件风暴智能体（EventStormer）**接收整条流水线中加工程度最低的原始材料。它的职责是将陈述、观察结果、词汇差异和矛盾转化为可供领域权威评审的候选事实、触发器、参与者以及问题。它将我们在*第 4 章*中手动执行的事件风暴中的“收集”动作自动化，并继承了该实践的纪律：在决定其含义之前，先如实收集人们所说的一切。
+:::en
+> **Original**: The **EventStormer** receives the least processed material in the chain. Its job is to turn statements, observations, vocabulary differences, and contradictions into candidate facts, triggers, participants, and questions that a domain authority can review. It automates the collecting move in EventStorming, the practice we ran by hand in *Chapter 4*, and it inherits that practice's discipline: collect what was said before deciding what it means.
+
+**📌 核心术语与语境解析**：
+- **Least processed material**：*加工程度最低的原始材料*。访谈原声录音、会议记录、现场观察记录等包含矛盾与口语表达的原始证据。
+- **Collecting move**：*收集动作*。事件风暴中“先穷举外化、后评判筛选”的纪律，智能体只做事实记录，不越权裁定。
+:::
+
 
 ### 从原始证据到候选事实
 
@@ -256,6 +485,14 @@ id_prefix: ES
 这种区分针对每个候选者为你提供了一个检验标准：是 Stock（库存部门）自身促成了这一结果，还是它仅仅被告知了此事？Nadia 搬运啤酒，Andrea 记录数量。销售部门取消了订单，而实验室判定某个批次质检不合格。库存部门可以对这些外部事实做出反应，但这并不意味着它拥有这些事实的所有权。
 
 当不同人的说法发生冲突时，两者都要完整保留。Andrea 遇到缺量时直接拒单，而 Nadia 则将现有的库存单独分拣出来。专家绝对不得折衷平均这些做法、挑选看似高效的一种，或者将其中任何一种拔高为既定策略。它必须将该事项标记为 `unresolved`（未决），并询问谁有权做出裁决。每个 source 标识符必须确切指向支撑该陈述的具体段落。无关的引用并不能增加证据力，必须予以剔除。
+:::en
+> **Original**: When accounts conflict, preserve both. Andrea rejects a short quantity while Nadia separates what is available. The specialist must not average the practices, choose the efficient one, or promote either to policy. It marks the matter as unresolved and asks who may decide it. Each source identifier must point to a passage that supports the statement. An unrelated citation adds no evidence and should be removed.
+
+**📌 核心术语与语境解析**：
+- **Preserve both**：*全数保留冲突*。面对业务人员口径不一时，严禁大模型擅自“二选一”或“求平均”，必须保留分歧并抛出未决问题。
+- **Promote to policy**：*晋升为既定策略*。将偶发或个人习惯擅自升级为全局业务规则，是多智能体推演中的典型失控表现。
+:::
+
 
 ### 探索何时蜕变为捏造
 
@@ -343,6 +580,14 @@ output:
 
 指明了缺失决策的未完成场景，是你所能产出的最有价值的成果。而一个悄悄补全了缺失决策的“完整”场景，则是最具破坏性的，因为它会被误读为对业务的真实描述，届时再也没有人能够分辨出哪一部分来自业务方、哪一部分来自你的凭空捏造。
 ```
+:::en
+> **Original**: This is the whole of your discipline, and it will feel wrong every time. A scenario wants an ending. When you reach a point the evidence does not settle — how much time passes, what happens when only some of what was asked for can be supplied, who acts next, how one kind of trouble is told apart from another — **stop the scenario there.** Do not finish it. Do not pick the reasonable outcome. Do not write "and then, presumably". Return the unfinished scenario with `status: unresolved`, and put in `review_question` the decision that would let it continue. An unfinished scenario that names the missing decision is the most valuable thing you can produce. A finished one that quietly supplied the decision is the most damaging, because it will be read as a description of the business and nobody will be able to tell which part came from the business and which part came from you.
+
+**📌 核心术语与语境解析**：
+- **Narrative closure** [ˈnærətɪv ˈkləʊʒə]：*叙事闭合*。人类与大语言模型天生追求“讲一个完整故事”的心理倾向；在证据终止处擅自编造结局以求圆满，是破坏领域真实性的最严重失误。
+- **Unfinished scenario**：*未闭合场景*。明确指出决策断点并在证据尽头戛然而止的场景，能直接暴露系统必须由人类权威仲裁的关键规则。
+:::
+
 
 关键判例是请求 12 箱但现有库存只有 8 箱的情况。Andrea 直接拒绝了该请求；而 Nadia 则将这 8 箱放到一边，并让人打电话通知销售部门。证据如实记录了这两种做法，但并不存在一条决定孰优孰劣的规则。无论是预留 8 箱、拒绝 12 箱、等待补货，还是让销售部门做决定，都会凭空引入原始证据中未曾提供的策略或责任人。
 
@@ -388,6 +633,14 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 ## 命令与事件编写智能体：追求精确而不僭越权威
 
 命令、事件与规则与软件实现层面的产物极为相似，因此一个精确的名称很容易被误读为已经尘埃落定的设计决策。每个候选者都必须识别出有据可查的意图、结果或条件，并在原始材料未明确归属时将所有权保持为未决状态。
+:::en
+> **Original**: Commands, events, and rules resemble implementation artifacts, so a precise name may be read as a settled design decision. Each candidate must identify an evidenced intention, outcome, or condition and leave ownership unresolved when the source does not establish it.
+
+**📌 核心术语与语境解析**：
+- **Settled design decision**：*已敲定的设计决策*。技术命名的精确性往往带有权威错觉，容易被下游工程师误认为已是定局。
+- **Evidenced intention**：*有据可查的业务意图*。仅当证据明确表明某人发出了特定操作指令时，才允许提取为命令。
+:::
+
 
 ### 从业务场景到候选行为
 
@@ -426,6 +679,14 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 ### 图省事的“顺手命令”之诱惑
 
 重试场景将这种诱惑暴露得淋漓尽致。啤酒缺货，预计会有新货送达，而只有在 Nadia 恰好想起来、销售打电话催促或其他人介入时，该请求才可能会被重试。如果凭空添加一个 `RetryReservation`（重试预留）命令并将其指派给 Stock，工作流确实会变得严丝合缝；然而证据既没有明确重试的负责人，没有指明补货信号，也没有规定必须对请求进行重试的业务策略。
+:::en
+> **Original**: The retry scenario makes the temptation visible. Beer is out, more is expected, and the request might be tried again only if Nadia remembers, Sales calls, or someone else intervenes. Adding `RetryReservation` and assigning it to Stock would make the flow neat, but the evidence identifies neither the owner, the replenishment signal, nor a policy that says the request must be retried.
+
+**📌 核心术语与语境解析**：
+- **Convenient command** [kənˈviːniənt kəˈmɑːnd]：*图省事的命令*。为了缝合断裂的时序流程，由模型擅自捏造出来的系统命令。
+- **Replenishment signal**：*补货信号*。缺乏权威触发来源时，流程无法自动继续。
+:::
+
 
 该次运行将重试记录为 CEW-18，状态为 `status: unresolved` 且 `decision_owner: unknown`；未出现任何 Stock 自有的确认命令。针对发货，CEW-30 记录了将暂扣啤酒搬上货车的观察性指令，同时将其下达者、派送权威以及时间节点保留为未决状态。这两个缺口都作为评审问题留给相关权威来裁决。
 
@@ -456,6 +717,14 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 上下文映射专家执行最后一项转换。它阅读已采纳的材料，并提议候选的职责边界以及它们之间的关系。边界对看似属于同一权威管辖的决策进行归组。关系则记录跨越不同职责的事物：请求、事实、依赖项或其他信息，其方向和所有权能够获得证据的支持。正如前几项转换一样，其结果依然是供人类评审的建模素材，而非已被正式认可的领域全貌描述。
 
 这一步蕴含着特殊的风险，因为边界极易迅速演变成架构层面的设计。诸如 Warehouse（仓库）、Sales（销售）或 Shipping（物流发货）这样的名称极像软件模块名。两个方框之间的连线酷似系统集成。即便证据仅仅表明业务的某个部门对另一部门有所了解，一个带方向的箭头也能暗示出消息、API 或事件流的存在。一旦绘制成图，这些图形很容易让一种尝试性的职责划分给人以既成事实的实现决策之感。
+:::en
+> **Original**: This step carries a particular risk because boundaries look architectural very quickly. A name such as Warehouse, Sales, or Shipping resembles a module name. A line between two boxes resembles an integration. A directional arrow can suggest a message, API, or event flow even when the evidence established only that one part of the business knew something about another. Once drawn, these shapes can make a tentative responsibility split feel like an implementation decision.
+
+**📌 核心术语与语境解析**：
+- **Architectural illusion**：*架构假象*。图表中的方框和连线极易让团队误以为微服务拓扑和 API 交互已经敲定。
+- **Tentative responsibility split**：*暂定职责划分*。上下文映射图首先是概念责任的隔离，绝非物理服务的部署图。
+:::
+
 
 我们的目标是让职责边界变得可审查，同时杜绝该图表暗中假定有关组织架构、领域模型或技术实现的任何决策。
 
@@ -492,6 +761,13 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 让一个候选边界看起来具有确定性的最简单手段之一，就是赋予它一个耳熟能详的名称。Warehouse（仓库）就是一个典型的例子。现场演练发生在仓库里，当前的系统实现中包含一个 Warehouse 模块，若干受访者也自然而然地使用这个词。但这些事实都不能证明 Warehouse 就是限界上下文的正确名称。
 
 限界上下文应当依据其所拥有的职责与决策来命名，而不是根据开展工作的物理房间或当前实现它的软件结构来命名。如果已采纳的材料展现出一组围绕库存可用性、暂扣啤酒与释放啤酒的自洽决策，上下文映射专家可以围绕该职责提议一个边界。然而，除非业务语言已经明确支持该名称，否则附加在其上的名称必须始终保持为一项提议。
+:::en
+> **Original**: A bounded context should be named for the responsibility and decisions it owns, not for the room in which work happens or the software structure that currently implements it. If the accepted material shows a coherent set of decisions around stock availability, holding beer, and releasing it, the Context Mapper may propose a boundary around that responsibility. However, the name attached to it must remain a proposal unless the business language already supports it.
+
+**📌 核心术语与语境解析**：
+- **Responsibility ownership** [rɪˌspɒnsəˈbɪləti ˈəʊnəʃɪp]：*职责归属权*。限界上下文的划界基石在于它所守护的不变量与业务决策，而非物理办公空间或遗留代码工程名。
+:::
+
 
 这种区分至关重要，因为命名会深刻影响后续的设计。一旦一个方框被冠以 Warehouse 之名，人们极易先入为主地假定现有模块就已经代表了正确的边界，进而认为未来的软件实现应当保留这一形态。届时，这张图非但不能帮助你反思该职责是否已被正确理解，反而是在将软件现状倒灌映射回业务领域之中。
 
@@ -502,6 +778,13 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 ### 整洁美观的地图依然可能是错误的
 
 上下文映射图产生了一种与此前产物截然不同的诱惑压力。事实可以保持未决，场景可以在证据止步处戛然而止。相比之下，一旦某个边界缺乏连线，或者两项看似临近的职责之间没有绘制连接关系，图表就会显得未完成。
+:::en
+> **Original**: A context map creates a different kind of pressure from the artifacts that came before it. Facts can remain unresolved, and scenarios can stop where the evidence stops. A diagram, by contrast, tends to look unfinished when a boundary has no connection or when two responsibilities appear close, but no relationship has been drawn between them.
+
+**📌 核心术语与语境解析**：
+- **Tidy map pressure**：*整洁图表压力*。在可视化呈现时，人类和智能体都存在盲目“将孤立节点相连”的强迫症，从而擅自捏造未经验证的系统依赖。
+:::
+
 
 这种压力使得缺乏依据的连线边（Edge）变得尤为危险。销售、发货物流、实验室和办公室都出现在已采纳材料中，但它们的存在并不能证明它们与 Stock 存在直接关联。两个边界之间的一条连线代表着有事物在它们之间跨越的主张。一个箭头则进一步附加了关于流向的主张。如果证据无法同时支撑这两点，那么这张图之所以显得更为整洁，是以牺牲真实性为代价的。
 
@@ -524,6 +807,14 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 到目前为止，每个专家智能体都是对照其自身的契约进行评估的。局部评估能够告诉你某项转换是否恪守了其局部边界，但无法说明整条流水线是否完整保留了原始证据的真实含义。
 
 当多个高度纪律严明的转换串联组合在一起时，风险的性质发生了变化。早期被采纳的某个词汇选择，在后续阶段可能会衍生出略微不同的含义。某个悬而未决的问题可能会因为下游产物未再显式承载而悄然蒸发。在场景中清晰可见的所有权区分，一旦被表示为命令、事件或关系，可能会变得模糊不清。整条链路发生漂移，根本不需要任何单一环节出现灾难性的失效。
+:::en
+> **Original**: The risk changes when several disciplined transformations are composed. A vocabulary choice accepted early may acquire a slightly different meaning later. An unresolved question may disappear because a downstream artifact no longer carries it explicitly. An ownership distinction that was clear in a scenario may become less visible once it is represented as a command, event, or relationship. No single step needs to fail dramatically for the chain to drift.
+
+**📌 核心术语与语境解析**：
+- **Chain drift** [tʃeɪn drɪft]：*链条漂移*。在多级流水线中，即使每个节点单独看都遵循纪律，微小的概念误差经逐级传递后，最终也会发生严重的语义失真。
+- **Semantic attenuation**：*语义衰减*。未决问题和不确定性容易在多级交接中被下游遗漏或由模型自行推测填充。
+:::
+
 
 人工关卡通过仅允许已被采纳的材料向后流转来降低这种风险，但采纳本身并不能天然保证全局的一致连贯性。一致性还要求：当材料从事实演变为场景、从场景演变为行为、再从行为演变为职责边界时，出处追溯、不确定性、决策所有权以及关键的语言细微差异必须始终保持可追溯。
 
@@ -576,6 +867,14 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 专业化削减了每个智能体的自由度，但并没有减少建模过程所必需的判断量。在某些方面，它甚至让这些判断变得更加清晰可见。每项转换都以候选材料告终，在下一个专家能够安全使用之前，必须有人对其进行审查。
 
 这种摩擦成本正是本章贯穿始终所引入的边界的代价。一个单一、不受约束的智能体原本可以一步到位，直接从演练材料生成一个看似光鲜亮丽的模型。但这四个专家智能体被特意剥夺了这种能力。每一个都在完成单项转换后止步，暴露其推断的内容或留存的悬念，并等待人类裁定哪些内容被允许向后流转。
+:::en
+> **Original**: This friction is the price of the boundaries introduced throughout the chapter. A single unconstrained agent could have moved from the walkthrough to a polished model in one step. The four specialists deliberately could not. Each stopped after one transformation, exposed what it had inferred or left unresolved, and waited for a decision about what was allowed to advance.
+
+**📌 核心术语与语境解析**：
+- **Deliberate friction** [dɪˈlɪbərət ˈfrɪkʃn]：*刻意引入的摩擦阻力*。放弃单一超长上下文的端到端“一键生成”，换取每个设计阶段的可审查性、可追溯性与人工决策主权。
+- **Locality of responsibility** [ləʊˈkæləti əv rɪˌspɒnsəˈbɪləti]：*责任局部性*。将推演范围约束在单项转换内，确保每项新增概念皆可精确归因。
+:::
+
 
 这种额外的摩擦是有意为之的。正是它阻止了在链路早期引入的某种看似合理的推测，悄无声息地演变成后续所有步骤的前提假设。专业化以执行的连续性为代价，换取了职责的局部性（Locality of Responsibility）。最终的产出变得更加容易审查，但依然需要有人来协调这些审查工作。
 
@@ -598,6 +897,13 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 因此，人类的贡献体现在实质判断上，而非文字润色。人类的职责是判断何时证据已足够充分、何时一项提议可以正式转变为已采纳的建模材料，以及何时因为尚未咨询相关领域权威而必须让问题继续保持开放。
 
 权威，是整个工作流中绝无法通过将提示词写得更详尽来替代的部分。更优异的指令可以告诉智能体保留不确定性，但它们无法凭空制造出消除不确定性所必需的权威。
+:::en
+> **Original**: Authority is the part of the workflow that cannot be replaced by making the prompt more detailed. Better instructions can tell an agent to preserve uncertainty. They cannot manufacture the authority required to remove it.
+
+**📌 核心术语与语境解析**：
+- **Domain authority** [dəʊˈmeɪn ɔːˈθɒrɪtəti]：*领域权威*。对业务规则具有最终裁定权的真实利益相关者；精细的提示词工程可以提示智能体暴露出不确定性，但绝无法凭空创造裁决权力。
+:::
+
 
 ## 代码仓库赋予了哪些可复现性
 
@@ -622,6 +928,13 @@ ST-03 对应记录了 Nadia 的做法。两个场景都没有在二者之间做�
 编排器绝对不得暗中把未决状态变成已解决状态、擅自挑选缺失决策的责任人，或者擅自批准所提议的限界上下文名称。编排器更不得把这四个专家智能体重新合并为一个能够解答所有问题的全能型单体智能体。那样做等于在自动化的幌子下，彻底抹杀了本章千辛万苦建立起来的认知边界。
 
 因此，编排的有效边界在于**协调与权威的分立**。编排器可以强制执行前述工作流的不变性条件，也可以记录重试与流转过程以确保路径具备可审查性。但它绝不能擅自推断出使停滞的状态流转恢复合法所需作出的领域决策。
+:::en
+> **Original**: The useful boundary for orchestration is therefore coordination versus authority. An orchestrator may enforce the workflow invariants listed previously, and it may record retries and transitions so the path stays inspectable. It still cannot infer the domain decision required to make a stopped transition valid.
+
+**📌 核心术语与语境解析**：
+- **Coordination versus authority** [kəʊˌɔːdɪˈneɪʃn ˈvɜːsəs ɔːˈθɒrəti]：*协调权与权威决策权分离*。编排系统仅负责工件流转、前置校验与状态推进，绝不可代替领域权威自动拍板业务决策。
+:::
+
 
 下一章将从创建专门的专家智能体转向如何对它们进行有效编排，同时避免重蹈覆辙去重建一个不受边界约束的单体智能体。
 
