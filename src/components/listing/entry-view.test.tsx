@@ -156,3 +156,16 @@ describe('EntryView 草稿模式', () => {
     expect(html).not.toContain('aria-label="相邻文章"')
   })
 })
+
+describe('EntryView 双栏独立滚动对照模式', () => {
+  it('当正文包含 split 分隔标记时激活双栏对照，左右内容独立呈现', async () => {
+    const body = '# 核心提炼\n\n这是左栏新提炼内容。\n\n<!-- split -->\n\n# 原著参考\n\n这是右栏原著参考文本。'
+    const html = await renderToHtml(makeEntry(body))
+
+    expect(html).toContain('双栏独立滚动模式')
+    expect(html).toContain('这是左栏新提炼内容。')
+    expect(html).toContain('这是右栏原著参考文本。')
+    // 容器采用全宽 7xl 栅格
+    expect(html).toContain('max-w-7xl')
+  })
+})

@@ -62,6 +62,14 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('提示内容')
   })
 
+  it('remark-directive 自定义块映射为英文原文折叠（:::en）', async () => {
+    const html = await renderToHtml(':::en\nOriginal Text Here\n:::')
+
+    expect(html).toContain('en-disclosure')
+    expect(html).toContain('英文原文与难词解析')
+    expect(html).toContain('Original Text Here')
+  })
+
   it(':::demo 指令转换为 CodeDemo 组件与 iframe 沙箱', async () => {
     const md = [
       ':::demo[卡片测试]',

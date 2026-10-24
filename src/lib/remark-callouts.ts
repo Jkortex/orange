@@ -6,7 +6,7 @@ import { visit } from 'unist-util-visit'
  * 此插件把容器指令（:::note 等）标记为同名自定义元素，交由 markdown.tsx 的 components 映射渲染。
  * 新增自定义块：在 CALLOUT_KINDS 登记名称，并在 components 中补映射。
  */
-const CALLOUT_KINDS = new Set(['note'])
+const CALLOUT_KINDS = new Set(['note', 'en'])
 
 export function remarkCallouts() {
   return (tree: Root) => {

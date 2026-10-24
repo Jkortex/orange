@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（五）：定义规则：教会模型运用 DDD 进行思考"
 date: 2026-10-21T05:00:00Z
-description: "学习笔记与双重视角对照：摒弃泛化提示词，通过三层架构规则手册与三大容器（Agent/Skill/MCP）为 AI 推理装上刚性护栏。"
+description: "双栏独立滚动对照：摒弃泛化提示词，通过三层架构规则手册与三大容器（Agent/Skill/MCP）为 AI 推理装上刚性护栏。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -12,163 +12,390 @@ tags:
   - "AI 协作"
 ---
 
-> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。正文内嵌开箱即用的「限界上下文规则手册 YAML 模版」，可直接复制使用。
+> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。
+> 🖥️ **双栏模式**：本篇已开启双栏独立滚动对照。左栏为高信噪比实战精炼，右栏为原书完整论述与案例，两栏可各自独立纵向滚动查阅。
 
----
+# 核心实战精炼：定义规则手册 (Rulebook)
 
-## 学习导航：为什么需要这套笔记？
+## 1. 核心矛盾：提示词与规则的区别
 
-在与 AI 协作进行领域建模时，最可怕的不是 AI 报错，而是 **“输出表面行云流水、格式极具 DDD 范儿，背地里却存在隐秘错误（Silently Wrong）”**。
-
-本文档采用 **「🎯 实战精粹（高信噪比学习主线）」** 与 **「📖 原书论述（溯源背景对照）」** 的双重视角编排。帮助你在 3 分钟内建立核心心智模型，同时保留原著的论据溯源。
-
----
-
-## 一、 核心翻车现场：为什么规则远比提示词更重要？
-
-| 🎯 实战精粹（心智模型） | 📖 原书论述对照（溯源背景） |
-| :--- | :--- |
-| **提示词 vs 规则手册**<br>• **提示词（Prompt）**：要求模型“做什么”。<br>• **规则手册（Rulebook）**：约束模型“如何推演”。<br><br>**破除教科书指令的迷信**：<br>写 `“请始终如一地应用 DDD 原则”`、`“实体必须有唯一标识”` 毫无约束力。因为大模型早在预训练数据中背熟了这些常识，泛化指令**丝毫没有收窄模型在你项目中的概率采样空间**。 | **BrewUp 支付建模的惨痛教训**<br>团队首次要求 AI 对支付上下文建模，输出的 YAML 乍看无可挑剔（有 Payment 聚合、Authorize、Capture 等命令）。<br>然而资深工程师发现：<br>1. AI 悄悄捏造了 `Charge` 聚合，仅因提示词偶然提到了 *“charge the customer”*；<br>2. AI 竟对处于授权（Authorized）而非已扣款（Captured）的款项发起退款。<br>*[溯源: 原著第 32-56 行]* |
-
-### 核心结论
-大语言模型本质是**沿着概率填补空白**。规则手册的作用正如 DDD 中的限界上下文：**提前规定模型应当如何处理这些概率空白，将缺乏约束的主观臆测收拢在刚性护栏内。**
-
----
-
-## 二、 DDD 规则手册的三层架构
-
-一份合格的规则手册必须自底向上由三层构建，每一层都是上一层的基石：
-
-```mermaid
-flowchart TD
-    L3["3. 输出结构层 (Output Structure)<br/>强制 YAML/JSON 字段 (command, event, aggregate, open_questions)<br/>使推理可评审、可对比、可 Diff"] --> L2["2. 语义规则层 (Semantics)<br/>硬性约束业务不变量与归属权 (如退款仅能针对已扣款项发起)<br/>约束系统允许执行的操作"]
-    L2 --> L1["1. 语言层 (Language)<br/>通用语言规范 + 禁用同义词 (forbidden_synonyms)<br/>利用注意力机制收拢词汇采样空间"]
-```
-
-| 层级 | 核心职责 | 实战示例（Payment 上下文） |
-| :--- | :--- | :--- |
-| **1. 语言层** | 锁定领域专用词汇，设立**禁用同义词**拦截漂移。 | `forbidden_synonyms: [Charge, Transaction, OrderPayment]` |
-| **2. 语义规则层** | 约束概念的行为、生命周期与核心业务不变量。 | `Refunds are issued only against captured payments, never against authorizations.` |
-| **3. 输出结构层** | 强制结构化呈现，拒绝发散性散文。 | `format: yaml; fields: [command, event, aggregate, open_questions]` |
-
----
-
-## 三、 规则从何而来？（拒绝空中楼阁）
-
-不要试图大费周章开务虚会枚举所有规则。成熟的规则手册天然源于三大渠道：
-
-1. **团队已经踩过的生产 Bug（代价惨痛的真知）**：
-   * 禁用同义词清单**不必穷举世间所有错词**，只记录让团队付出过真金白银代价的词（例如 `Charge`）。这使得规则库天然保持有限且收敛。
-2. **领域研讨中沉淀的“词汇排他块”**：
-   * 只要领域专家在讨论中费心区分两个相近词汇（如 `Order submitted` vs `Order received`），一条规则就呼之欲出。
-3. **工作坊未能敲定的“未决问题（Open Questions）”**：
-   * 遇到权属模糊之处，下达**紧急刹车指令**：*“如果归属权不清晰，将其列为待决问题，严禁擅自脑补规则。”*
-
----
-
-## 四、 护栏的三大工程容器：关注点解耦
-
-不要把人设、过程、词汇和项目数据杂糅在一个庞杂的 Prompt 中。作者提炼出了三大容器的分工法则：
+- **提示词（Prompt）**：指定执行目标（What to do）。
+- **规则手册（Rulebook）**：施加推演约束（How to reason）。
+- **问题本质**：大语言模型根据概率采样填补空白。泛化指令（如“请遵循 DDD 原则”）属于已学习常识，无法收敛当前项目的概率分布。
+- **失误特征**：输出符合语法与命名习惯，但在业务规则与归属权上产生隐蔽错误（Silently Wrong），例如捏造聚合或越权调用。
 
 ```mermaid
 flowchart LR
-    A["Agent (智能体)<br/>Who: 行为姿态"] --- B["Skill (技能)<br/>How: 规程方法"]
-    B --- C["MCP Server (知识源)<br/>What: 权威事实"]
+    A["通用提示词<br/>(Apply DDD consistently)"] -->|无约束| B["概率采样漂移<br/>(擅自捏造聚合/越权)"]
+    C["具体规则手册<br/>(Specific Rulebook)"] -->|刚性护栏| D["收敛推演空间<br/>(符合业务不变量)"]
 ```
 
-| 容器 | 核心回答 | 生命周期 | DDD 实战职责 |
+## 2. 规则手册的三层架构
+
+规则手册是针对单一限界上下文编写的最小刚性约束集合，分为三层：
+
+```mermaid
+flowchart TD
+    L3["3. 输出结构层 (Output Structure)<br/>强制 YAML 字段格式，使推理过程可审查与可比对"] --> L2["2. 语义规则层 (Semantics)<br/>约束业务不变量与概念行为 (如退款仅能针对已扣款款项)"]
+    L2 --> L1["1. 语言层 (Language)<br/>通用语言规范 + 禁用同义词 (forbidden_synonyms)"]
+```
+
+1. **语言层**：
+   - 规定通用语言标准词汇。
+   - 显式声明 `forbidden_synonyms`。利用注意力机制阻断模型滑向通用近义词（如将 Payment 误称为 Charge）。
+2. **语义规则层**：
+   - 约束概念行为与生命周期。
+   - 声明业务不变量（如“退款仅能针对已扣款发起，严禁对已授权款项发起”）。
+3. **输出结构层**：
+   - 强制使用 YAML/JSON 表达。
+   - 包含命令、事件、聚合与未决问题字段，将散文输出转化为结构化制品。
+
+## 3. 护栏的三大工程容器
+
+不要将人设、任务与数据源混合在单一提示词中，应按生命周期解耦：
+
+| 容器 | 职责定位 | 生命周期 | DDD 落地示例 |
 | :--- | :--- | :--- | :--- |
-| **Agent（智能体）** | **Who**（模型扮演何种角色） | 贯穿整个会话 | 维持 DDD 架构师姿态；严守限界上下文边界；确立“遇缺则问”而非妄加揣测的准则。 |
-| **Skill（技能）** | **How**（特定任务怎么做） | 显式触发，按需激活 | 规范独立规程（如提取领域事件、校验聚合边界）；强制统一的输入与输出 Schema。 |
-| **MCP 服务器** | **What**（可以查阅什么数据） | 运行时工具检索 | 暴露词汇表、上下文映射图（Context Map）、事件风暴记录。**将“概率推测”转化为“确定性查表检索”**。 |
+| **Agent (智能体)** | **Who**：思考视角与全局姿态 | 会话级持久 | 维持 DDD 架构师姿态；严格隔离限界上下文；确立“遇缺则问”原则。 |
+| **Skill (技能)** | **How**：具体规程与操作任务 | 显式调用激活 | 独立执行任务规程（如提取领域事件）；校验并输出固定 Schema。 |
+| **MCP 服务器** | **What**：受信任项目数据源 | 运行时检索工具 | 暴露词汇表、上下文映射图（Context Map）。将概率臆测转为确定性查表。 |
 
-### 工程经验法则
-> 💡 **收敛原则**：一条规则应当只编写一次，并优先置于足以容纳它的最宽泛容器中（Agent）；仅当更窄的容器（Skill）确实需要对特定任务进行加固收紧时，才允许进行重申。
+> **收敛原则**：规则应在满足需求的最宽容器（Agent）中声明一次；仅在特定任务需要进一步收紧时，在较窄容器（Skill）中重申。
 
----
+## 4. 规则来源与沉淀路径
 
-## 五、 案例推演：从批判审视中演化规则
+1. **生产事故与实际失误**：
+   - 禁用词表仅需记录实际引发过歧义或 Bug 的词汇，无需穷举。
+2. **领域研讨中的排他词汇**：
+   - 将工作坊中明确区分的概念（如 Order submitted 与 Order received）沉淀为排他规则。
+3. **未决问题（Open Questions）**：
+   - 权属不明或前置条件缺失时，指令模型停止推断，将其显式列为待决问题。
 
-以 BrewUp 订单管理（Order Management）上下文的演化为例，展现如何将 AI 的错误转化为规则：
-
-### 1. AI 的初稿缺陷
-在仅给出基础词汇 `Order, Payment, Stock` 时，AI 返回了包含 `Payment` 聚合和 `Stock` 聚合的模型。
-* **致命隐患**：AI 将当前上下文仅仅“引用”到的外部概念，直接跃升为了本上下文“拥有”的聚合，**暗中击穿并瓦解了限界上下文的边界**！
-
-### 2. 批判并晋升为新规则
-团队并不手动修补单次输出，而是提炼出刚性约束注入规则库：
-```yaml
-- Order Management 仅拥有 Order 聚合。
-- Payment 和 Stock 是外部概念。
-- 由其他限界上下文产生的事件必须标记为 external_input。
-- 绝不能将外部事件当作内部状态变更。
-- 若归属权不明确，请添加 open_question，严禁脑补规则。
-```
-
-### 3. 第二轮输出蜕变
-AI 迅速将 `Payment` 和 `Stock` 归入 `external_input`，并主动在 `open_question` 中发问：*“Payment 和 Stock 的标准外部事件名是什么？”*。**关于“权属不明即刹车提问”的规则切实生效！**
-
----
-
-## 六、 避坑指南（Do's & Don'ts）
-
-* ❌ **Don't**：写教科书检查清单（如“聚合根必须保证不变量”）。
-* ✅ **Do**：针对单一限界上下文编写专用规则（如“退款仅能针对已扣款款项发起”）。
-* ❌ **Don't**：试图提前枚举并禁用世间所有的错误名词。
-* ✅ **Do**：只记录线上踩过坑、造成过误解的禁用词汇。
-* ❌ **Don't**：向 AI 索要最终完美答案，或者把人设、过程、词汇堆在一个 Prompt 里。
-* ✅ **Do**：让 AI 给出结构化初稿，以人类 DDD 专家视角批判并提取规则，解耦至 Agent、Skill 与 MCP。
-
----
-
-## 七、 开箱即用工程模版：限界上下文规则手册 (Rulebook)
-
-你可以直接复制以下 YAML 模版，根据你的具体限界上下文进行参数化替换，保存在代码仓库的 `docs/ddd/rules/<context-name>.yaml` 中：
+## 5. 生产级规则手册 YAML 模版
 
 ```yaml
-# 限界上下文规则手册模版 (Bounded Context Rulebook Template)
-# 用途：为特定限界上下文编写的最小刚性约束，收敛 AI 生成的概率采样空间。
-
-context: <BoundedContextName> # 例如: Payment / OrderManagement
-
-# 1. 语言层 (Language Layer)
+# rules/payment-context.yaml
+context: Payment
 vocabulary:
-  - <CanonicalTerm1>
-  - <CanonicalTerm2>
-  - <CanonicalTerm3>
+  - Payment
+  - Authorization
+  - Capture
+  - Refund
+  - Settlement
 
-# 禁用同义词：记录曾经让团队付出过线上 Bug 或沟通成本的歧义词（无需穷举，只记踩过坑的）
 forbidden_synonyms:
-  - <ForbiddenSynonym1>
-  - <ForbiddenSynonym2>
+  - Charge
+  - Transaction
+  - OrderPayment
 
-# 2. 语义规则层 (Semantic Layer)
-# 核心业务不变量、前后置条件、生命周期约束
 invariants:
-  - "<InvariantRule1: 例如货币在授权与捕获时必须一致，支付环节严禁转换>"
-  - "<InvariantRule2: 例如退款仅能针对已捕获(Captured)款项发起，绝不能针对已授权款项发起>"
-  - "<InvariantRule3: 例如授权有效期为30分钟，超时则自动作废>"
+  - "Currency at authorization must equal the order currency. No conversion at payment time."
+  - "An authorization expires 30 minutes after issuance; capture must occur within that window."
+  - "Refunds are issued only against captured payments, never against authorizations."
+  - "Partial refunds are allowed; partial captures are not."
 
-# 权属与边界守则 (急刹车原则)
 ownership_rules:
-  - "<CurrentContext> 仅拥有 <OwnedAggregateName> 聚合。"
-  - "<ExternalConcept1> 与 <ExternalConcept2> 均为外部概念，严禁在本上下文内建模为聚合。"
-  - "由其他限界上下文产生的事件，在本上下文内必须严格标记为 external_inputs。"
-  - "若概念权属或业务前置条件尚不明确，将其加入 open_questions，严禁凭空捏造规则。"
+  - "Payment context only owns Payment aggregate."
+  - "Do not invent aggregates that are not present in vocabulary."
+  - "If concept ownership is unclear, add an open question instead of inventing rules."
 
-# 3. 输出结构层 (Output Structure Layer)
 output:
   format: yaml
   fields:
-    - owned_aggregates
-    - commands:
-        user_initiated: list
-        policy_triggered: list
-    - internal_events:
-        confirmed: list
-        proposed: list
-    - external_inputs: list
-    - policies: list
-    - open_questions: list
+    - command
+    - event
+    - aggregate
+    - open_questions
 ```
 
+## 6. 避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 编写教科书式泛化检查清单（如“聚合根保护不变量”）。 | 针对单一限界上下文编写专用规则（如“严禁在支付阶段转换货币”）。 |
+| 试图穷举世界上所有同义词。 | 仅记录团队踩过坑、造成过实际损失的词汇。 |
+| 将角色身份、执行步骤与词汇规则混在一个长 Prompt 里。 | 解耦至三大容器：Agent 定姿态，Skill 定任务，MCP 定事实。 |
+| 允许模型在信息不足时进行合理推断。 | 设置急刹车指令：信息不足时强制输出 `open_questions`。 |
+
+<!-- split -->
+
+# 原著完整参考：定义规则：教会模型运用 DDD 进行思考
+
+在上一章中，我们借助事件风暴（EventStorming）和领域叙事（Domain Storytelling）将领域知识显式外化，并沉淀了团队在全书后续内容中将持续沿用的词汇表。我们以一条实践原则收尾：“发现（Discover）、精炼（Refine）、命名（Name）、强化（Reinforce）”这一演进序列所构建的语言，其稳定性足以在与 AI 助手的多次对话中建立信任。然而，稳定的词汇并不等同于严谨自律的推理（Disciplined Reasoning）。本章将通过引入**规则手册（Rulebook）**来弥合这一差距。
+
+:::en
+> **Original**: Stable vocabulary, however, is not the same as **disciplined reasoning**. This chapter closes that distance by introducing a **rulebook**.
+
+**📌 核心术语与语境解析**：
+- **Disciplined Reasoning**：*受纪律约束的推理*。特指模型不凭预训练概率直觉信马由缰、而是在团队划定的架构刚性轨道内推演。
+- **Rulebook**：*规则手册*。代码化、版本化的最小约束集，扮演模型在特定限界上下文内的思维护栏。
+:::
+
+规则手册是一组简短且显式的约束条件，用于管控模型在特定限界上下文（Bounded Context）内部的推理方式。团队只需编写一次，将其与代码一同进行版本控制，并在后续的每次会话中重复使用。在实践中，它是代码仓库中与代码并存的一个文件：一份 Markdown 格式的指令文件或一小段 YAML 片段，像任何其他源文件一样被编辑和评审。它的有效性取决于具体精确度（Specificity），而非篇幅的长短或构思的巧妙。规则手册在与 AI 交互中所扮演的角色，恰如限界上下文在领域驱动设计中所起的作用：它守护语义、保全设计意图，并使输出在时间的推移中始终保持可靠。
+
+这些约束之所以不可或缺，是因为即便大语言模型（LLM）手握清晰的词汇表，依然可能会擅自扩大业务范围、凭空捏造聚合，并模糊上下文边界。这样的大模型同样可能生成看似行云流水、实则偏离实际设计的输出。这种漂移（Drift）根源于大语言模型的工作机制：它沿着提示词所暗示的方向去填补概率上的空白。而规则手册则提前规定了模型应当如何处理这些空白。
+
+:::en
+> **Original**: Its effectiveness depends on **specificity** rather than length or cleverness. The rulebook plays the role that bounded contexts play in Domain-Driven Design: it protects meaning, preserves intent, and makes output dependable over time... This drift follows from how an LLM operates: it fills **probabilistic gaps** in the direction suggested by the prompt.
+
+**📌 核心术语与语境解析**：
+- **Specificity** [ˌspesɪˈfɪsəti]：*具体精确度/特异性*。规则的生命力在于与具体的单一限界上下文强绑定；泛泛而谈的常识（如“实体具有唯一标识”）无法约束采样空间。
+- **Probabilistic gaps**：*概率空白*。大模型在缺乏确定性事实输入时，基于训练概率倾向脑补出的假设缝隙。
+:::
+
+故事始于 BrewUp 案例中一个切实的真实时刻：团队猛然发觉，AI 助手完全可以生成表面上极具 DDD 规范的输出，背地里却存在隐秘的错误（Silently Wrong）。顺着这一线索，本章将展示少量恰到好处的规则如何有效规避此类失误，以及如何将这些规则打包到可复用的容器中——即智能体（Agents）、技能（Skills）与 MCP 服务器（MCP Servers）——从而使其在一次又一次的会话中持续发挥效力。
+
+:::en
+> **Original**: The team realized that an AI assistant could produce DDD-shaped output and still be **silently wrong**.
+
+**📌 核心术语与语境解析**：
+- **Silently Wrong**：*隐性错误*。大模型最具欺骗性的翻车状态——代码语法完全正确、名词听起来极其符合 DDD，但在业务不变量和所有权边界上犯下致命错误。
+:::
+
+在本章中，你将学到：
+
+- 为什么形如“*始终如一地应用 DDD*”这种泛化的 DDD 指令无法真正约束模型，以及一个包含专用词汇、不变量（Invariants）和禁用同义词（Forbidden Synonyms）的支付（Payment）专属规则手册究竟长什么样。
+- 智能体、技能和 MCP 服务器如何作为规则的三种不同容器协同运作。每个容器分别塑造不同的关注点：模型应当扮演的身份（Who）、它执行特定任务的方式（How），以及它能够查阅的受信任项目数据源（What）。
+- 结构化输出预期（例如包含命名命令与事件字段的 YAML）如何将模型的推理过程转化为可供你评审、对比差异（Diff）以及复用的制品（Artifacts）。
+- 团队如何通过批判与审视（Critique）不断迭代精炼规则手册，将模型的每一次隐性失误转化为一条崭新的规则，从而确保下一次能够精准拦截同类错误。
+
+让我们从团队最初经历的那个场景起步：一个在纸面上看似完全正确的支付上下文（Payment Context）。
+
+## 技术要求
+
+本章所阐述的核心思想并不依赖于某一家特定的大模型或厂商。文中的示例假定你所使用的助手能够读取项目级配置文件，而不仅限于当前对话上下文。为了动手实践本章内容，你需要：
+
+- 一款能够读取项目级指令文件的 AI 编程助手：取决于具体的工具，可以是 `CLAUDE.md`、`AGENTS.md` 或 `.github/copilot-instructions.md`。
+- 支持具备明确命名且面向特定任务的过程机制——如技能（Skills）、自定义命令或助手中的等价物——如果你希望亲自运行本章后半部分的示例而非仅浏览阅读，还需要具备至少一个 MCP 服务器的访问权限。
+- 一款能够编辑 Markdown 与 YAML 文件的文本编辑器。
+
+本章中的规则手册、智能体代码片段和技能定义都刻意保持得非常精炼。它们旨在展示 DDD 约束在各个容器中呈现的具体形态，而非演示某款特定商业产品的配置细节，因此这些模式可以无缝迁移到团队所选定的任何 AI 助手之中。
+
+## 为何规则远比提示词更重要
+
+当 BrewUp 团队首次要求 AI 助手为支付上下文（Payment Context）建模时，其生成的输出乍看之下合情合理。返回的 YAML 包含一个 `Payment` 聚合，诸如 `Authorize`（授权）、`Capture`（扣款/捕获）和 `Refund`（退款）等符合直觉的命令，以及采用过去时态命名的事件。然而，一位资深工程师随即指出，模型悄悄捏造了一个 `Charge` 聚合，仅仅因为提示词中偶然提及了“*向客户收费（charge the customer）*”。此外，模型还生成了一条直接对“已授权（Authorized）”而非“已捕获（Captured）”的支付款项发起退款的流程。该结果语言流畅且语法严密，却在团队从未成文写下的一条领域规则上犯下了致命的隐性错误。
+
+正是在那个瞬间，团队决定不再单纯编写提示词，而是开始编写规则。两者在文本表现上可能颇为相似，但回答的却是截然不同的问题：提示词要求模型“做什么”，而规则则约束模型“如何推演”。当模型给出的错误答案看起来“无比正确”时，这种区别就显得尤为关键。无论怎样重新措辞提示词，都无法阻拦凭空捏造出的 `Charge` 聚合，因为此前从未有人明确告知助手：`Charge` 是被严令禁用的。
+
+这些规则无需复杂冗长即可发挥实效。一组简短且界定清晰的约束，通常就足以引导模型展开符合领域一致性的推理。真正的挑战在于“甄选”：找出能够迫使模型以领域驱动设计方式思考的最小规则集。
+
+人们在构建这种规则手册时，很自然的一个初次尝试往往是把教科书里的 DDD 概念直接翻译成一份 Copilot 指令文件便草草了事。下面的代码片段就是此类早期尝试的一个典型缩影：
+
+```text
+Domain-Driven Design (DDD) Instructions
+
+General Principles
+- Apply Domain-Driven Design patterns consistently in all generated code
+- Use the Ubiquitous Language of the domain
+- Maintain a strict separation between architectural layers
+
+Tactical Design Patterns
+- Entities: Must have a unique and persistent identity
+- Value Objects: Must be immutable
+- Aggregates: Define the Aggregate Root and enforce invariants
+- Repositories: Define interfaces in the Domain layer
+```
+
+这种检查清单看起来或许令人安心，但实际上几乎无法提供任何有效的约束。其中的每一行内容，不过是在重述助手早已在预训练数据中吸收过的通用常识。“*Apply DDD consistently*（始终如一地应用 DDD）”根本不是一条约束，而是一句美好的祈福祈愿。“*Entities have a unique identity*（实体具有唯一标识）”也是模型无需任何帮助就能倒背如流的公理定义。这份文件并没有收窄助手在你项目中可能生成的内容空间，因为它根本没有提及任何关于你项目的具体信息。无论是否加载该文件，模型的行为都毫无二致。篇幅长短并不是问题的症结所在——即使列出一份三倍长的检查清单，对模型的约束力依然微乎其微。因为它所缺失的是至关重要的具体精确度（Specificity）：即特定限界上下文独有的词汇表、不变量以及模型边界。
+
+一份真正有价值的规则手册，必须植根于单一限界上下文的具体特征。下面展示了将这一理念应用于 BrewUp 支付上下文的实例，团队将通过代价高昂的线上生产 Bug 所换来的惨痛教训，全部凝练编码进了规则之中：
+
+```yaml
+context: Payment
+vocabulary: Payment, Authorization, Capture, Refund, Settlement
+forbidden_synonyms: Charge, Transaction, OrderPayment
+
+invariants:
+- Currency at authorization must equal the order currency. No conversion at
+payment time.
+- An authorization expires 30 minutes after issuance; capture must occur within
+that window.
+- Refunds are issued only against captured payments, never against authorizations.
+- Partial refunds are allowed; partial captures are not.
+
+events:
+- Use past-tense names rooted in the Payment vocabulary, e.g. PaymentAuthorized,
+PaymentCaptured, PaymentRefunded.
+```
+
+该片段中的每一行内容，都在实实在在地收拢助手可能生成的空间。模型绝不可能凭空捏造出 `Charge` 聚合，因为早在模型首次犯错的那一天，`Charge` 就已被列入禁用名单；模型绝不可能提议在支付环节进行货币转换，因为业务不变量明令禁止；模型也绝不可能针对仍处于授权状态的支付发起退款，因为本章开篇提及的那套错误的退款逻辑，如今已被正式沉淀为一条刚性规则。这份文件虽然更加短小精悍，其约束却无比具体精准。这正是泛化检查清单与领域规则手册之间的本质区别。
+
+### 规则从何而来
+
+如此具体的规则手册，乍看之下似乎必须大费周章地组织专门的工作坊才能产出。然而在 BrewUp 中，团队绝大部分的规则手册都是通过忠实记录此前遭遇过的现实问题构建起来的。这些规则绝大部分源于三大渠道：
+
+第一个来源是**团队已经遭遇过的实际问题**。`forbidden_synonyms: Charge, Transaction, OrderPayment` 这份禁用名词列表，记录的全都是曾经在不恰当场合出现过的词汇，而非凭空猜测模型可能会捏造什么。`Charge` 之所以赫然在列，正是因为本章开篇的那次建模会话。规则中的各项不变量同样具有完全相同的出处溯源（Provenance）：每一条都是某人通过代价惨痛的踩坑教训总结得出、并记录在案以确保无人重蹈覆辙的真知。这份列表同时也是对一种合理质疑的绝佳回应——有人认为禁用同义词是在“自证其无”，穷举永远没有尽头。事实上，根本没有人需要提前枚举世间所有的错误名词；列表只需记录那些已经让团队付出过真金白银代价的词汇即可，这使其天然保持有限，且新增速度会逐渐衰减。
+
+:::en
+> **Original**: The first source is the problems the team has already encountered... The invariants have the same **provenance**: each one is a rule someone learned through costly experience and wrote down so that nobody has to learn it twice. The list is also the answer to a fair objection – that banning synonyms means proving a negative, and you can never finish. Nobody is enumerating every wrong name in advance; the list only records the ones that have already cost something, which makes it finite and shrinking.
+
+**📌 核心术语与语境解析**：
+- **Provenance** [ˈprɒvənəns]：*出处溯源/起源凭据*。规则并非凭空构想，必须有线上真实 Bug 或设计研讨作为起源依据。
+- **Invariants**：*业务不变量*。业务生命周期中任何合法状态转换都绝不可违背的刚性真理。
+- **Proving a negative**：*自证其无*。对禁用词穷举不可能性的逻辑反驳——工程上只需记录已踩过的坑。
+:::
+
+第二个来源是**团队业已维护的词汇表**。上一章的结尾包含一个专门的“词汇排他块（Vocabulary Exclusions Block）”——例如“*切勿使用 Order received 作为 Order submitted 的同义词*”；“*当领域事实仅仅是授权时，切勿使用 Payment completed*”——这些是在工作坊中正式研讨确立的，而非源于后期的试错摸索。这个排他块本身就是一份现成的禁用同义词清单；团队只需将其搬入规则手册中即可，完全无需另行构思。在词汇表中，只要有人费心去区分两个在常规流畅文笔下容易混用的词汇，就意味着一条规则正呼之欲出。
+
+第三个来源是**工作坊未能解决的悬而未决问题（Open Questions）**。*第 4 章*遗留了若干未决事项——例如库存预留（Stock reservation）到底由谁掌管、在订单被确认之前必须满足哪些前置条件——每一个悬置的问题，都是模型在缺乏约束时极易凭借直觉去“脑补”合理答案的潜在漏洞。针对悬而未决的问题所制定的规则，往往不是陈述一个确凿事实，而是一条“紧急刹车”的指令：**如果概念的归属权尚不清晰，请将其列为待决问题，而不是擅自捏造规则**。
+
+在此之后，规则将通过循环演进不断沉淀积累：将现有的规则手册提供给模型，以人类专家的领域判断力审视其返回的结果，并将每一次修正提炼为一条崭新的规则，以确保下一次能够直接拦截同类错误。本章最后一节将带领大家在订单管理（Order Management）的两次迭代中完整体验这一闭环。这正是成熟规则手册的主要成因：当一个团队经历过几次这样的循环后，他们便不再纠结于“到底该写哪些规则”，而是能够敏锐地识别并提炼出规则。
+
+洞悉规则从何而来只是完成了一半的工作，另一半则是清晰地界定你所编写的规则属于何种类别。前面展示的支付代码片段实际上承担了三项截然不同的职责：它规定了模型可以如何命名事物、这些事物被允许如何运转，以及最终给出的答案必须呈现怎样的格式形态。
+
+## DDD 规则手册的三层架构
+
+一份规则手册由三个层级自底向上堆叠构建而成：**语言（Language）**、**语义（Semantics）**以及**输出结构（Output Structure）**。每一层的稳固性完全依赖于其下层的支撑。
+
+第一层是**语言层**。模型必须始终如一地使用该限界上下文的通用语言（Ubiquitous Language），避免滑向通用的技术黑话或擅自创造的同义词。语言层在形式上类似风格约定，在实效上则扮演着坚固的护栏（Guardrail）。*第 2 章与第 3 章*揭示了其背后的作用机理：重复出现的术语会通过注意力机制自我强化，每一次强化都会收窄模型从中采样的概率分布。因此，稳定的词汇表能产生实质效用——它极大地缩减了模型可能肆意游荡的潜在语义空间。在支付规则手册中，这一层精炼为单一的一行：`forbidden_synonyms: Charge, Transaction, OrderPayment`。
+
+第二层是**语义规则层**。这些规则向模型传达领域概念被允许如何表现与运转。例如：事件代表已经发生的事实；聚合通过其聚合根保护内部不变量；仓储（Repository）属于领域契约的一部分，即便其技术实现位于别处。缺乏了语义层，模型依然能输出行云流水般的文本，但往往会抹平或曲解真实的领域本质。支付规则中就包含这样一条规则：“*退款仅能针对已扣款的支付发起，绝不能针对已授权的支付发起*”。这条规则丝毫不涉及命名规范，它直接对系统“被允许执行什么操作”施加了硬性约束。
+
+第三层是**输出结构层**。要求模型以 YAML 或 JSON 表达其结果，能够强迫它围绕具有明确业务内涵的分类组织答案，而非任由其自由发散抒写散文。命令、事件、聚合、策略（Policies）以及上下文边界得以变得清晰可见、便于评审且可重复利用。支付规则手册中的 `events` 块便是这一层极具代表性的微缩体现：它并没有逐一罗列事件，而是严格规定了事件必须呈现的格式形态。
+
+以下是 BrewUp 订单管理（Order Management）的极简规则手册：
+
+```yaml
+context: BrewUp Order Management
+rules:
+  - Use only the defined domain vocabulary: Order, Payment, Stock
+  - An event must represent something that has already happened
+  - Each successful state-changing command should produce at least one domain event
+  - Do not introduce new aggregates
+output:
+  format: yaml
+  fields:
+    - command
+    - event
+    - aggregate
+```
+
+对照三层架构来审视，这份文件的职责划分清晰明了。词汇约束行对应**语言层**：严格限定为这三个词汇，其余任何术语均不被接纳。关于事件、命令与聚合的规则构成了**语义层**，因为它们管束的是领域概念必须如何运转，而非其名称叫什么。输出块则属于**结构层**，它的存在使得针对同一提示词的两次运行结果能够逐行进行精准比对。
+
+## 智能体、技能与 MCP 服务器：DDD 护栏的三大容器
+
+将这些关注点解耦拆分到具有不同生命周期的**三大容器**之中：
+- **智能体（Agent）**承载模型在整个会话期间始终保持的常态化姿态（Posture）；
+- **技能（Skill）**的范围更为收敛聚焦：它是一个独立的过程规程，仅在被显式调用时激活，其余时间保持休眠；
+- 基于模型上下文协议（Model Context Protocol）构建的 **MCP 服务器（MCP Server）**则承担了截然不同的职能：它向模型开放可供查阅的权威项目数据源，从根本上杜绝毫无根据的凭空臆测。
+
+作为一条极为实用的工程法则：**如果某项约束无论面对何种任务都必须始终成立，它就归属于智能体；如果某项约束仅在特定任务执行期间生效，它就归属于技能；如果某项约束依赖于当前对话上下文之外的既成事实，它就应当被置于 MCP 之后。**
+
+:::en
+> **Original**: Agents, skills, and MCP servers operate as three different containers for rules. Each container shapes a different concern: **who** the model is supposed to be, **how** it performs a specific task, and **what** trusted project sources it can consult. As a practical engineering rule: *if a constraint must hold no matter the task, it belongs in an agent; if it only applies during a specific task, it belongs in a skill; and if it depends on facts outside the conversation, it belongs behind an MCP server.*
+
+**📌 核心术语与语境解析**：
+- **Posture** [ˈpɒstʃə(r)]：*常态化姿态/心智立场*。Agent 在整个会话期间始终坚守的角色定位（如严守限界上下文边界，遇缺则问）。
+- **Procedure** [prəˈsiːdʒə(r)]：*独立规程*。Skill 承载的任务级操作规程，具备明确触发与终止生命周期。
+- **Grounding**：*事实扎根*。借助 MCP 等协议将模型的推演锚定在真实项目资料上，消除缺乏依据的臆测。
+:::
+
+### 智能体
+
+**智能体（Agents）**运作在最高控制层级。它们界定了模型在特定交互场景下的身份、角色以及思考视角。智能体的生命周期超越了单次提示词的范畴：它规范的是整个会话周期的模型行为，而非单次一问一答的交互。在 DDD 语境下，智能体可以通过强制推行通用语言、严守限界上下文边界以及维持架构规范，来具象化扮演领域架构师的角色。智能体回答了一个最根本的问题：**在展开推理时，模型到底应该扮演何种角色？**
+
+具体而言，这种全局定调通常栖身于项目级指令文件中：取决于你使用的助手，可以是 `CLAUDE.md`、`AGENTS.md` 或 `.github/copilot-instructions.md`。
+
+```markdown
+## DDD Guardrails
+
+- Act as a domain-focused software architect, not as a generic code generator.
+- Use the project's ubiquitous language exactly as defined. Do not introduce synonyms unless explicitly requested.
+- Treat bounded contexts as strict semantic boundaries. Do not merge concepts across contexts.
+- Never invent aggregates, invariants, or business rules that are not supported by the provided context.
+- If domain constraints are missing, ask for clarification instead of filling gaps with plausible assumptions.
+- Prefer domain behaviors, business rules, and events over CRUD-oriented explanations.
+```
+
+### 技能
+
+**技能（Skills）**专注于执行单一的具体任务。它是一个具备明确命名的规程过程，在触发条件满足时由模型执行，而在不需要时保持休眠。在 DDD 工作流中，诸如从业务场景中提取领域事件、校验聚合边界、审查专业术语，或是将核心业务事实与技术副作用彻底剥离等具体操作规程，都沉淀于此。
+
+```yaml
+---
+name: extract-domain-events
+description: Extract core domain events from a business scenario using DDD rules
+---
+
+## Instructions
+
+1. Read the scenario and identify candidate events.
+2. Keep only events that represent meaningful business facts.
+3. Remove UI actions, technical side effects, and infrastructure reactions.
+4. Use past-tense event names only.
+5. Do not introduce new aggregates that are not present in the provided context.
+6. If two events appear to be synonyms, normalize them using the canonical vocabulary.
+
+## Output format
+
+Return YAML with these fields only:
+- event
+- aggregate
+- reason
+- open_questions
+```
+
+### MCP 服务器
+
+MCP 服务器向模型开放可供查阅的权威项目数据源：包括助手可以调用的工具、可以查阅的文档，以及可以依凭的项目制品。在 DDD 工作中，一旦人机交互开始依赖于权威词汇表、上下文映射图、架构决策记录 ADR 等，MCP 的价值就会立刻凸显。通过将对话牢牢锚定在真实的项目资料上，MCP 服务器使“词汇表里究竟是怎么定义的？”这一问题，从模型“凭概率推测回答”转变成了“通过确定性查表检索回答”。
+
+```yaml
+tools:
+  - name: glossary.lookup
+    description: Returns canonical domain terms and forbidden synonyms
+  - name: contextmap.get
+    description: Returns bounded contexts and allowed relationships
+  - name: eventstorming.search
+    description: Searches validated workshop events and notes
+
+usage_rules:
+  - Always check glossary.lookup before normalizing domain terminology.
+  - Use contextmap.get before suggesting interactions across bounded contexts.
+  - If an event is not found in the validated workshop material, mark it as proposed, not confirmed.
+```
+
+三大容器各司其职：**智能体锁定了模型“是谁”（Who），技能规范了模型“如何工作”（How），而 MCP 则锚定了模型“知道什么”（What）**。
+
+## 迭代迈向自洽统一的领域词汇
+
+实际的工作流十分简洁明快：**使用当前的规则集运行模型，审视其对与错，随后将修正意见沉淀为一条崭新的规则**。
+
+在 BrewUp 订单管理第二次迭代中，模型返回了包含 `Payment` 聚合与 `Stock` 聚合的内容。团队识别出：模型错误地将该上下文仅仅引用的外部概念，跃升为了本上下文拥有的聚合，瓦解了限界上下文边界。
+
+因此，下一阶段的规则精准脱胎于上述的批判性审视：
+
+```text
+- Order Management owns the Order aggregate only.
+- Payment and Stock are external concepts for this context.
+- Events produced by other bounded contexts must be marked as external inputs.
+- Do not treat external events as internal state changes.
+- Use the canonical event names from the glossary: OrderSubmitted, OrderConfirmed, OrderCancelled.
+- If ownership is unclear, add an open question instead of inventing a rule.
+```
+
+注入新规则后，模型输出蜕变为：
+
+```yaml
+owned_aggregate: Order
+command:
+  - Submit Order
+  - Confirm Order
+  - Cancel Order
+internal_event:
+  - OrderSubmitted
+  - OrderConfirmed
+  - OrderCancelled
+external_input:
+  - Payment
+  - Stock
+policy:
+  - After OrderSubmitted, Payment and Stock are external inputs.
+  - Confirm Order only after Payment and Stock indicate success.
+  - Confirm Order produces OrderConfirmed.
+  - Cancel Order produces OrderCancelled.
+open_question:
+  - What are the canonical external event names from Payment and Stock?
+  - Should an unsuccessful Payment or Stock cause Cancel Order?
+```
+
+这正是本章通篇致力于构建的实战闭环：**你绝不要向模型索要最终答案，而是要求其提供一份结构化的初稿，运用 DDD 专业判断力对其进行严厉批判，随后将这些审视批评提炼为一条崭新的规则**。

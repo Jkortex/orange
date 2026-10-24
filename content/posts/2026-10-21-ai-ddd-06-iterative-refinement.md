@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（六）：迭代精化：构建限界上下文"
 date: 2026-10-21T06:00:00Z
-description: "学习笔记与双重视角对照：运用反馈循环、四动词分类器与 CQRS 角色分离透镜，精化聚合边界并沉淀上下文快照。"
+description: "双栏独立滚动对照：运用反馈循环、四动词分类器与 CQRS 角色分离透镜，精化聚合边界并沉淀上下文快照。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -12,181 +12,399 @@ tags:
   - "DDD"
 ---
 
-> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。正文内嵌开箱即用的「上下文快照规格」与「怀疑式审计提示词」工程模版。
+> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。
+> 🖥️ **双栏模式**：本篇已开启双栏独立滚动对照。左栏为高信噪比实战精炼，右栏为原书完整论述与案例，两栏可各自独立纵向滚动查阅。
 
----
+# 核心实战精炼：迭代精化限界上下文
 
-## 学习导航：为什么需要这套笔记？
+## 1. 核心认知：AI 初稿的破绽价值
 
-即使有了第 5 章的规则手册，大语言模型在面对复杂业务流时，依然具有强大的**“概念压缩本能”**——它会把在业务时序上连续出现的事物（下单、支付、锁库、发货）强行合并进同一个聚合或同一个限界上下文里。
-
-本文采用 **「🎯 实战精粹（高信噪比学习主线）」** 与 **「📖 原书论述（溯源背景对照）」** 的双重视角编排，带你掌握如何通过 **“生成–审查–纠偏–规则晋升”** 循环，将模糊的业务初稿精化为内聚自洽的限界上下文。
-
----
-
-## 一、 核心反直觉认知：AI 初稿错得直观是最大价值
-
-| 🎯 实战精粹（心智模型） | 📖 原书论述对照（溯源背景） |
-| :--- | :--- |
-| **初稿是靶子，不是终点**<br>• 不要妄图单次 Prompt 产出完美架构。<br>• AI 生成的首个模型之所以极其宝贵，恰恰在于它**错得很直观（Visibly Wrong）**。<br>• 它的破绽为人类架构师提供了切实可见的切入点，把隐性的领域认知逼入显性化的讨论中。 | **BrewUp 订单管理的迷惑性初稿**<br>AI 返回的初稿看似标准：<br>`aggregates: [Order, Payment, StockReservation]`<br>`commands: [SubmitOrder, AuthorizePayment, ReserveStock, ConfirmOrder]`<br>命名符合规范，时序酷似合理电商流。但资深工程师一眼看破：这根本不是订单管理，这是把整个公司业务大包大揽的巨型怪物！<br>*[溯源: 原著第 23-56 行]* |
-
----
-
-## 二、 核心辨析：命名错误 vs 归属权错误
-
-这是领域建模中最关键的分水岭：
+- **首发初稿定位**：AI 输出的首个模型不是最终方案，而是显性化靶子。
+- **价值所在**：AI 能够快速将一种对领域的潜在理解具象化。其破绽暴露得越直观，架构师越能准确指出边界缺陷。
+- **迭代目标**：让错误显性化，将纠偏提炼为可复用规则，收窄后续推理空间。
 
 ```mermaid
 flowchart LR
-    Bug["AI 建模失误"] --> Naming["1. 命名错误 (Naming Error)<br/>例如：把 OrderSubmitted 叫成 OrderPlaced<br/>👉 解决方式：词汇表标准化"]
-    Bug --> Ownership["2. 归属权错误 (Ownership Error · 致命级)<br/>例如：把 Payment 聚合纳入订单管理上下文<br/>👉 解决方式：制定刚性归属规则并剥离"]
+    A["AI 初稿<br/>(暴露破绽)"] --> B["人类架构师审查<br/>(识别归属权越界)"]
+    B --> C["四动词分类纠偏<br/>(Keep/Move/Reject/Question)"]
+    C --> D["规则晋升<br/>(沉淀进 Rulebook)"]
+    D --> E["上下文快照<br/>(锁定防倒退)"]
 ```
 
-* **误区警示**：如果仅仅把 `Payment` 重命名为 `PaymentInfo`，你根本没有修复模型，只是**用更优雅的名词粉饰了架构错误**。
-* **本质**：命名错误是当前上下文用错了词；归属权错误则是把概念完完全全放错了限界上下文，彻底颠覆了架构边界。
+## 2. 致命区别：命名错误 vs 归属权错误
 
----
+| 错误类别 | 定义与表现 | 纠偏手段 | 危害等级 |
+| :--- | :--- | :--- | :--- |
+| **命名错误 (Naming)** | 对本上下文的概念使用了不恰当同义词（如将 `OrderSubmitted` 误叫为 `OrderPlaced`）。 | 词汇表标准化。 | 低（修饰性） |
+| **归属权错误 (Ownership)** | 将属于外部上下文的概念建模为当前上下文的自有聚合或命令（如订单管理拥有 Payment 聚合）。 | 制定显式归属规则并剥离为 external_inputs。 | **致命（结构性）** |
 
-## 三、 审查武器：四动词分类过滤器 (Keep / Move / Reject / Question)
+> **关键准则**：严禁用更贴切的名词掩盖归属权错误（例如将 Payment 简单改名为 PaymentInfo 毫无意义，概念依然放错了位置）。
 
-在审查 AI 初稿时，切忌泛泛提出“请优化设计”这种模糊要求，而是强制 AI 执行**四动词分类任务**：
+## 3. 审查工具：四动词分类过滤器
+
+在审查 AI 初稿时，强制执行四个动作的分类：
 
 ```mermaid
 flowchart TD
-    Raw["AI 生成的模型初稿条目"] --> Filter{"四动词分类过滤器"}
-    Filter -->|属于当前上下文| Keep["1. Keep (保留)<br/>如 Order 聚合、SubmitOrder 命令"]
-    Filter -->|其他上下文产生的外部事实| Move["2. Move to external_inputs (移动)<br/>如 PaymentAuthorized、StockReserved"]
-    Filter -->|越权虚构所有权| Reject["3. Reject (否决剔除)<br/>如 AuthorizePayment、StockReservation"]
-    Filter -->|权属或策略尚不明确| Question["4. Question (保留未决疑问)<br/>如 库存预留失败后订单如何处理？"]
+    Raw["初稿候选条目"] --> F{"四动词分类器"}
+    F -->|属于本上下文资产| Keep["1. Keep (保留)<br/>如 Order 聚合、SubmitOrder 命令"]
+    F -->|外部产生的事实| Move["2. Move to external_inputs (移动)<br/>如 PaymentAuthorized、StockReserved"]
+    F -->|越权虚构所有权| Reject["3. Reject (否决剔除)<br/>如 Payment 聚合、AuthorizePayment 命令"]
+    F -->|权属或前置条件缺失| Question["4. Question (保留未决疑问)<br/>如 库存失败后订单如何流转？"]
 ```
 
-### 规则晋升法则（Rule Promotion）
-纠偏不能停留在单次口头指正，必须**将纠偏沉淀为新规则**：
-* 剔除 `AuthorizePayment` $\rightarrow$ 晋升规则：*“支付相关命令绝不属于 Order Management。”*
-* 移动 `PaymentAuthorized` $\rightarrow$ 晋升规则：*“外部事实可以触发内部决策，但绝不能建模为 Order 聚合抛出的内部事件。”*
+### 规则晋升机制 (Rule Promotion)
+每次审查发现的归属权越界，必须晋升为规则手册中的硬性条款：
+- 否决 `AuthorizePayment` $\rightarrow$ 晋升规则：`支付命令不属于 Order Management。`
+- 移动 `PaymentAuthorized` $\rightarrow$ 晋升规则：`外部事实绝不能建模为 Order 聚合抛出的内部事件。`
 
----
+## 4. CQRS 角色分离透镜
 
-## 四、 CQRS 作为 AI 推理的“角色分离透镜”
+CQRS 在 AI 推理中的首要使命是**分离语义**（区分意图与观察），防止模型将交互压平为流水账：
 
-在 AI 辅助建模中，**CQRS 的首要价值是“分离语义”，而非分离数据库或总线**。它配合互补的 DDD 角色，能有效阻断 AI 把复杂交互坍塌为一条平铺叙事：
-
-| 领域角色 | 语义本质 | 订单管理实战示例 |
+| 领域角色 | 语义本质 | 订单管理实战定义 |
 | :--- | :--- | :--- |
-| **Command（命令）** | 改变状态的意图（分为用户发起与策略触发） | `SubmitOrder` (用户发起)<br>`ConfirmOrder` (**策略触发**) |
-| **Internal Event（内部事件）** | 本上下文聚合产生的既成事实 | `OrderSubmitted`, `OrderConfirmed` |
-| **External Input（外部输入）** | 其他上下文产生、本上下文关心的外部事实 | `PaymentAuthorized`, `StockReserved` |
-| **Policy（策略）** | 反应机制：将观察到的事实转化为新命令 | “当观察到支付授权与库存预留均成功，触发 ConfirmOrder” |
-| **Query（查询）** | 只读观察，严禁产生任何副作用 | `GetOrderStatus` |
-| **Read Model（读模型）** | 为查询端优化的数据投影 | `OrderSummaryProjection` |
+| **Command (命令)** | 改变状态的意图（包含用户发起与策略触发） | `SubmitOrder` (用户发起)<br>`ConfirmOrder` (**策略触发**) |
+| **Internal Event (内部事件)** | 由自身聚合抛出的既成事实 | `OrderSubmitted`, `OrderConfirmed` |
+| **External Input (外部输入)** | 其他上下文产生的既成事实 | `PaymentAuthorized`, `StockReserved` |
+| **Policy (策略)** | 反应规则：观察到事实后下发新命令 | 观察到支付与库存均成功时，触发 ConfirmOrder |
+| **Query (查询)** | 纯粹观察状态，无副作用 | `GetOrderStatus` |
+| **Read Model (读模型)** | 为查询侧优化的数据投影 | `OrderSummaryProjection` |
 
-> 💡 **关键心智**：`ConfirmOrder` 依然是命令，但它是**策略触发的命令（Policy-triggered Command）**。客户不会直接点“确认订单”，而是由系统观察到外部输入全部就绪后，由内部策略代为下发。
+> **策略触发的命令 (Policy-triggered Command)**：`ConfirmOrder` 依然是命令，但由内部策略在观察到外部事实就绪时代为下发，而非客户直接触发。
 
----
+## 5. 精化聚合边界：协作不等于拥有
 
-## 五、 精化聚合边界：“协作不等于拥有”
-
-大模型极其倾向于把“一起工作的事物”打包成“同一个聚合”。
+模型天然倾向于将时序上频繁一起出现的概念塞入同一个聚合。
 
 ### 聚合防膨胀 5 连问
-在审视聚合时，连续向 AI 抛出 5 个灵魂拷问：
-1. **该聚合到底在守护哪些核心业务不变量？**
-2. **哪些决策必须在同一个事务一致性边界内做出？**
-3. **聚合自身真正抛出哪些事件？**
-4. **哪些概念实际上属于另一个限界上下文？**
-5. **哪些行为纯粹是做出反应，而非聚合固有的内生行为？**
+1. 该聚合真正守护的核心业务不变量是什么？
+2. 哪些决策必须要求强事务一致性？
+3. 聚合自身真正抛出哪些事件？
+4. 哪些概念实际上属于外部上下文？
+5. 哪些行为是外部流程反应，而非内部固有效权？
 
-* **结论**：Order 聚合固然依赖 Payment 和 Stock，但**依赖绝不等于包含**。Order 聚合只需保存派生自外部事实的最小状态（如是否观察到支付成功），妄图霸占整个支付生命周期属于越俎代庖。
+> **结论**：Order 聚合可以记录派生自外部事实的最小状态（如是否观察到支付成功），但绝不能占有产生该事实的业务流程。
 
----
+## 6. 上下文快照 (Context Snapshot) 规格模版
 
-## 六、 防倒退神器：上下文快照（Context Snapshot）
-
-为了防止千辛万苦确立的决策在下一次会话中被 AI 推翻，团队必须将成果固化为受版本控制的 **上下文快照**：
+用于将精炼结果固化为版本控制工件，作为后续所有 AI 交互的基础底座：
 
 ```yaml
 # docs/ddd/contexts/order-management-snapshot.yaml
 bounded_context: Order Management
+version: 1.0.0
+last_refined: "2026-10-24"
+
+purpose:
+  - "管理客户订单生命周期，守护订单确认与取消的不变量。"
+
 owned_concepts:
   aggregates:
-    confirmed: [Order]
+    confirmed:
+      - Order
+    proposed: []
+
   commands:
     confirmed:
-      user_initiated: [SubmitOrder]
-      policy_triggered: [ConfirmOrder]
+      user_initiated:
+        - SubmitOrder
+      policy_triggered:
+        - ConfirmOrder
     proposed:
-      user_initiated: [CancelOrder]
-      policy_triggered: [ExpireOrder]
+      user_initiated:
+        - CancelOrder
+      policy_triggered:
+        - ExpireOrder
+
   internal_events:
-    confirmed: [OrderSubmitted, OrderConfirmed]
-    proposed: [OrderCancelled, OrderExpired]
+    confirmed:
+      - OrderSubmitted
+      - OrderConfirmed
+    proposed:
+      - OrderCancelled
+      - OrderExpired
+
 external_inputs:
   - PaymentAuthorized
   - StockReserved
   - StockReservationFailed
+
 policies:
   confirmed:
-    - "当观察到支付授权与库存预留均已完成时，确认订单。"
+    - "当观察到 PaymentAuthorized 且 StockReserved 均成功时，触发 ConfirmOrder。"
+
 ownership_constraints:
-  - "Payment、StockReservation、Shipment、Invoice 均不属于订单管理。"
-  - "绝不能将外部输入建模为 Order 聚合发出的事件。"
+  - "Payment、StockReservation、Shipment、Invoice 均不归 Order Management 所有。"
+  - "绝不能将外部输入建模为由 Order 聚合发出的事件。"
+  - "协作绝不意味着拥有：可观察外部事实，严禁占有外部流程。"
+
 open_questions:
-  - "收到 StockReservationFailed 后，订单是立即取消还是发起重试？"
-  - "未确认状态的超时时间限制是多少？"
+  - "在收到 StockReservationFailed 后，订单是立即取消还是发起重试？"
+  - "未确认状态下的订单最长超时时间是多少？"
 ```
 
-### 诚实留白 vs 虚假完备
-* **未决问题（Open Questions）是自洽性不可或缺的一部分**。
-* 大模型具有为了强求完备而胡乱脑补规则的倾向（如擅自决定“库存失败就自动退款取消”）。
-* **诚实保留未决问题，并在审查提示词中严厉勒令 AI “严禁擅自解答未决问题”**，是守护架构严谨性的最强护栏。
-
----
-
-## 七、 避坑指南（Do's & Don'ts）
-
-* ❌ **Don't**：把 AI 初稿里的外部聚合仅仅改个名字（如改叫 `PaymentInfo`）便自欺欺人。
-* ✅ **Do**：彻底剥离归属权，将其降级为 `external_inputs`。
-* ❌ **Don't**：把复杂的跨上下文交互写成一段流水账散文。
-* ✅ **Do**：用 CQRS 透镜拆解为 Command、Event、Policy、External Input。
-* ❌ **Don't**：允许 AI 为了回答问题而擅自发明业务规则。
-* ✅ **Do**：用未决问题（Open Questions）阻断盲目补全，区分 `confirmed` 与 `proposed`。
-
----
-
-## 八、 开箱即用工程模版：怀疑式自洽性审计提示词
-
-在每次更新完限界上下文快照后，你可以直接将以下提示词发送给 AI 助手，对其进行“找茬式”自洽性审查：
+## 7. 怀疑式自洽性审计提示词
 
 ```yaml
-# 怀疑式自洽性审计提示词 (Skeptical Coherence Audit Prompt)
+# 审计提示词模版
 Context:
-  我们正在审查当前的 <BoundedContextName> 限界上下文快照。
-  快照定义内容见上方附带的 YAML。
+  审查当前的 Order Management 限界上下文快照（见上方 YAML）。
 
 Task:
-  以严格审慎、怀疑的态度评估该快照的“上下文自洽性（Contextual Coherence）”。
+  以严格审慎、怀疑的态度评估快照的上下文自洽性（Contextual Coherence）。
 
-Checklist (逐项严格核验):
-  1. 归属权矛盾：是否存在与该上下文所有权声明冲突的聚合或命令？
-  2. 外部输入混淆：是否有外部产生的领域事实被错误当成了内部聚合抛出的事件？
-  3. 越权命令：是否存在属于其他协作上下文的命令？
-  4. 草率晋升：是否存在缺乏领域证据支撑、却被擅自标记为 confirmed 的 proposed 概念？
-  5. 擅自脑补策略：是否存在凭空捏造缺失业务规则的 policy？
-  6. 偷抹未决问题：是否有未决问题在未经领域专家确认的情况下被悄悄移除？
-  7. 角色与命名漂移：命令、事件与外部输入的命名是否与通用语言词汇表产生偏离？
+Checklist:
+  1. 检查是否存在与该上下文所有权声明冲突的聚合或命令。
+  2. 检查是否有外部输入被错误当成了内部事件。
+  3. 检查是否有属于其他上下文的命令。
+  4. 检查是否有提议中的概念被草率晋升为 confirmed。
+  5. 检查是否有策略凭空捏造缺失的业务规则。
+  6. 检查是否有未决问题在未经确认的情况下被悄悄移除。
 
 Strict Constraints:
-  - 严禁擅自解决 open_questions！未决问题必须原样保留。
-  - 除非有快照事实的直接支持，严禁擅自添加新的领域规则。
-  - 模型扮演审计员，而非补全生成器。
+  - 严禁擅自解答 open_questions！未决问题必须原样保留。
+  - 除非有快照事实直接支持，严禁添加新领域规则。
+  - 模型扮演审计员，而非生成器。
 
 Output Format:
   assessment: <"coherent_with_open_questions" | "inconsistent">
-  detected_inconsistencies:
-    - issue: <问题描述>
-      severity: <"critical" | "warning">
+  detected_inconsistencies: []
   recommended_corrections: []
   rules_to_add: []
   open_questions_to_preserve: []
 ```
 
+## 8. 避坑清单 (Do's & Don'ts)
+
+| 错误实践 (Don't) | 正确实践 (Do) |
+| :--- | :--- |
+| 把 AI 初稿里的外部聚合简单重命名（如改叫 PaymentInfo）。 | 彻底剥离所有权，移至 `external_inputs`。 |
+| 将跨上下文交互压平为一段无角色的流水账。 | 用 CQRS 透镜拆分为 Command、Internal Event、External Input、Policy。 |
+| 允许 AI 为了追求假性完备而擅自发明业务策略。 | 保留 `open_questions` 留白，区分 `confirmed` 与 `proposed`。 |
+| 在单次对话中手工纠正错误后直接进行后续编码。 | 将纠偏晋升为 Rulebook 与 Context Snapshot，防止设计倒退。 |
+
+<!-- split -->
+
+# 原著完整参考：迭代精化：构建限界上下文
+
+在前面的章节中，我们将与 AI 的协作从一种模糊随意的交互转变为一种遵循纪律的建模实践。*第 4 章* 展示了如何利用事件风暴（EventStorming）与领域叙事（Domain Storytelling）将原始的领域探索转化为结构化素材。*第 5 章* 则阐明了如何通过规则、约束以及可复用的输出结构来保护这些素材。然而，仅凭规则本身并不能直接孕育出一个内聚自洽的限界上下文。
+
+限界上下文是通过反复的精化（Refinement）才变得明晰的。模型生成一种候选解释；架构师依据领域知识对其展开批判性审查，并将纠偏措施沉淀为规则；随后团队在更加严苛明确的约束下再次运行模型。每一个循环都让边界更加清晰，并使 AI 的推理环境褪去通用性，变得更加契合特定领域。
+
+本章将这一循环应用于 BrewUp 系统的 Order Management（订单管理）上下文。你将从一份由 AI 生成的初稿起步——该草稿表面上看颇为合理，却在悄无声息间将 Order（订单）、Payment（支付）和 Stock（库存）的归属权混为一谈。以此为起点，你将运用反馈循环将自身拥有的概念与外部输入分离开来；引入**命令查询职责分离**（**Command-Query Responsibility Segregation**，**CQRS**）作为角色分离的透镜；进一步精化命令、事件与聚合；并最终评估该限界上下文是否已具备足够的自洽性，从而支撑下一步的设计工作。
+
+我们的目标绝不是寄希望于通过单次提示词就得到一个完美的模型。其核心目标在于让错误显现出来，将纠偏转化为可复用的约束，并让同样的错误越来越难以再次发生。
+
+在本章中，你将学到：
+
+- **生成–审查–纠偏循环**（**generate–critique–correct loops**）如何将存在缺陷的 AI 输出转化为可复用的建模约束。
+- 如何区分命名错误与归属权错误，以及为何绝不能允许模型将外部事实当作由错误聚合所发出的事件。
+- CQRS 如何将命令与查询清晰分离，以及在 AI 辅助推理过程中，互为补充的 DDD 角色如何守护事件、策略、读模型和外部输入的真实意图。
+- 如何通过将协作与归属权区分开、将已确认概念与提议中概念区分开，从而精化聚合边界。
+- 如何识别**上下文自洽性**（**contextual coherence**），并将其捕获到限界**上下文快照**（**context snapshot**）中，从而沉淀决策、被否决的概念以及未决问题（Open Questions）。
+
+## 通过反馈循环引导模型
+
+AI 生成的首个模型之所以有价值，恰恰在于它错得很直观：它的破绽为团队提供了切实可见的切入点，供人们审视与质疑。直观显现的错误听起来似乎有悖常理，特别是在强调规则与约束之后，但这恰恰是核心所在。你之所以使用 AI，并非因为它的第一版输出足够可靠；而是因为它能迅速将一种看似合理的领域理解具象化、外显化。一旦这种理解变得清晰可见，你便可以审视它、批判它，并将暴露出的一项项错误转化为更加精准严密的规则。这种审视，正是迭代精化的真正起点。
+
+为了直观体会这一循环的实际运转，不妨审视作者在要求 AI 助手对 Order Management 上下文进行建模后，AI 给出的第一版草案：
+
+```yaml
+context: Order Management
+
+aggregates:
+  - Order
+  - Payment
+  - StockReservation
+
+commands:
+  - SubmitOrder
+  - AuthorizePayment
+  - ReserveStock
+  - ConfirmOrder
+
+events:
+  - OrderSubmitted
+  - PaymentAuthorized
+  - StockReserved
+  - OrderConfirmed
+```
+
+初看起来，这份输出相当不错。它使用了符合 DDD 规范的表述，清晰地定义了聚合、命令与事件。命名也无可挑剔：命令采用祈使句式，事件采用过去时态。其流转时序同样酷似一套合理的电商业务流程：客户提交订单，支付服务授权付款，库存服务预留库存，最后系统确认订单。
+
+这份输出行文非常流畅，而这恰恰让它变得极具迷惑性、难以轻易质疑。AI 产出的成果看似一个像模像样的领域模型，却在暗中打破了我们在前一章确立的归属权规则。这里最根本的问题在于语义归属权，而非命名措辞。更确切地说，存在多项严重的违规：
+
+- Order Management 并不拥有 `Payment`。
+- Order Management 并不拥有 `StockReservation`。
+- `AuthorizePayment` 不是 Order Management 的命令。
+- `ReserveStock` 不是 Order Management 的命令。
+- `PaymentAuthorized` 不是 Order Management 的内部事件。
+- `StockReserved` 不是 Order Management 的内部事件。
+
+这些归属权违背绝非细枝末节的修饰性瑕疵；它们彻底改变了该限界上下文的本质内涵。
+
+如果你仅仅是将 Payment 重命名为 `PaymentInfo`，或者将 `StockReservation` 改为 `ReservedStock`，你根本没有修复模型。你只不过是用更加圆滑温和的名称掩盖了错误。症结不在于用词晦涩；而在于模型将职责错配给了错误的上下文。
+
+Order Management 只拥有 Order 聚合。Order Management 不拥有 `Payment`，也不拥有 Stock。`PaymentAuthorized` 和 `StockReserved` 或许与 Order Management 息息相关，但它们是由其他限界上下文产生的。在这个限界上下文内部，Order Management 必须将它们视为外部输入，而不是由 Order 聚合自身抛出的内部事件。
+
+这两类失误有着本质的区别。命名错误意味着模型对本就属于当前上下文的概念用错了词；而归属权错误则意味着它把概念完完全全放错了限界上下文。
+
+第一类错误通常可以通过词汇标准化来解决；第二类错误则必须依赖显式规则予以纠正。如果不建立起硬性规则，模型在后续的交互中极可能会重蹈覆辙，哪怕它换上了更优美贴切的名称和更有说服力的论述。
+
+单轮迭代包含六个步骤：生成、审查、纠偏、将纠偏沉淀为规则、重新运行，以及对比评估。
+
+审查步骤由人类依据领域知识、归属权与边界做出审慎判断；纠偏步骤据此产出模型的改进版本。紧接着是最关键的一步：纠偏措施必须转化为可复用的规则。唯有如此，当你再次运行模型时，才能将新输出与之前的成果进行对比并验证其进步。
+
+如果没有“规则晋升（Promotion）”这一步，你将陷入无休止的手动纠偏泥潭。而有了它，每一次修正都能显著改良推理环境。下面给出一个实用的提示词，将这种纪律贯彻到 BrewUp Order Management 草案的精化中：
+
+```yaml
+Context:
+我们正在精化 BrewUp 的 Order Management 限界上下文。
+
+Known rules:
+- Order Management 仅拥有 Order 聚合。
+- Payment 和 Stock 是外部概念。
+- 由其他限界上下文产生的事件必须标记为 external_inputs。
+- 如果归属权不明确，请添加一个未决问题（open question），而不是凭空捏造规则。
+
+Task:
+请审查下方的模型草案。
+
+对于每一项：
+1. 若其属于 Order Management，则予以保留（Keep）。
+2. 若其由其他限界上下文产生，则移至 external_inputs。
+3. 若其捏造了归属权，则予以否决（Reject）。
+4. 保留现有的未决问题；仅在审查暴露出未决的归属权争议时，才添加新的未决问题。
+
+请返回包含以下字段的 YAML：
+- accepted_items
+- moved_to_external_inputs
+- rejected_items
+- open_questions
+- new_rules
+```
+
+精化后的输出如下：
+
+```yaml
+accepted_items:
+  aggregates:
+    - Order
+
+  commands:
+    - SubmitOrder
+    - ConfirmOrder
+
+  internal_events:
+    - OrderSubmitted
+    - OrderConfirmed
+
+moved_to_external_inputs:
+  - PaymentAuthorized
+  - StockReserved
+
+rejected_items:
+  aggregates:
+    - Payment
+    - StockReservation
+
+  commands:
+    - AuthorizePayment
+    - ReserveStock
+
+open_questions:
+  - 支付授权成功后，库存预留失败该如何处理？
+  - 订单在超时失效前最多可以等待多长时间？
+  - 在确认之前是否始终允许取消订单？
+
+new_rules:
+  - 支付相关命令不属于 Order Management。
+  - 库存预留相关命令不属于 Order Management。
+  - 外部输入可以影响 Order Management，但绝不能将其建模为由 Order 聚合发出的事件。
+  - 如果外部输入引发了 Order 决策，请显式建模由此产生的、归属于 Order 的命令、策略或事件。
+```
+
+这份输出将 Order 保留为 Order Management 拥有的唯一聚合，把 `PaymentAuthorized` 和 `StockReserved` 归入 `external_inputs`，并坚决剔除了暗示越权的条目。具体的失误演化为了可复用的建模约束。
+
+## 在 AI 推理中引入 CQRS 与角色分离
+
+归属权精化解决了概念隶属于哪个上下文的问题，但尚未界定概念在上下文内部的角色性质。
+
+**命令查询职责分离（CQRS）** 为我们提供了第一条分离坐标轴。在 AI 辅助领域驱动设计语境下，CQRS 的价值始于一个更为朴素的区分：将可能改变状态的“意图”与纯粹观察状态的“请求”清晰剥离开来。围绕这一根本区分，将内部事件、外部输入、策略与读模型保持显式独立：
+
+不要向模型提出这类笼统的问题：
+`Design the order flow.`
+
+而是提出显式分类任务：
+```text
+Classify the following elements according to their role:
+- command
+- internal event
+- external input
+- policy
+- query
+- read model
+```
+
+显式的角色分类能显著遏制语义漂移。一旦某个元素被模型归类为外部输入，后续交互中模型将其曲解为内部事件的概率大幅降低。一旦查询与命令明确切割，模型也极少再围绕只读操作编造出副作用。
+
+引入 CQRS 是为了分离“语义”，而非分离“技术实现”。
+
+## 精化事件、命令与聚合
+
+聚合首先且最关键的是一个语义边界。它们界定了在哪里守护不变量、在哪里做出业务决策，以及哪些事件能够合乎逻辑地从同一个事务一致性边界中产出。
+
+大语言模型极其倾向于把在业务工作流中频繁共同出现的概念打包归类在一起。如果支付、库存预留和订单确认反复联袂登场，模型便很容易推断它们隶属于同一个聚合。
+
+审视与批判这类由 AI 生成的草案，抛出一连串直指归属权核心的问题：
+- 该聚合究竟在守护哪些不变量？
+- 哪些决策必须要求事务一致性？
+- 聚合自身真正抛出哪些事件？
+- 哪些概念实际上属于另一个限界上下文？
+- 哪些行为纯粹是做出反应，而非聚合自身固有的内生行为？
+
+精化后的 Order 聚合变得更加聚焦：
+
+```yaml
+aggregate:
+  name: Order
+
+responsibilities:
+  - 追踪客户订单的生命周期
+  - 决定订单是否可以确认
+  - 发出归属于订单的事件
+
+commands:
+  confirmed:
+    - SubmitOrder
+    - ConfirmOrder
+  proposed:
+    - CancelOrder
+    - ExpireOrder
+
+internal_events:
+  confirmed:
+    - OrderSubmitted
+    - OrderConfirmed
+  proposed:
+    - OrderCancelled
+    - OrderExpired
+
+required_external_inputs:
+  - PaymentAuthorized
+  - StockReserved
+  - StockReservationFailed
+```
+
+业务流程本身并未简化：支付、库存、物流、过期和取消依然客观存在。变得更加清晰的是归属权。
+
+## 通过迭代达成上下文自洽性
+
+当一个限界上下文的语言、职责、规则与边界在反复的迭代中能够相互印证、彼此强化时，它便具备了自洽性。
+
+一个自洽的模型依然会包含未决问题；而如果一个模型过快地将所有疑难问题悉数“解决”，反而应当引发高度警觉。保留未决问题是一道至关重要的安全防护机制，避免虚构规则在后续迭代中固化。
+
+团队通过维护一份**上下文快照（Context Snapshot）**，精准记录历经精化考验而沉淀下来的决策、必须保持稳固的关键区分，以及依然处于开放状态的未决问题。在实践中，快照是作为受版本控制的文档与其所描述的限界上下文保存在一起的，作为后续任何 AI 会话的第一手资料。
+
+当反复的迭代不再引发重大的结构性剧变，并且残留的不确定性已被显式暴露而非深藏于隐性假设之中时，限界上下文便达到了足够自洽的标准。

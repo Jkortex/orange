@@ -12,7 +12,7 @@ import { ReadingProgress } from '@/components/reading/reading-progress'
 import { AdjacentNav } from '@/components/reading/adjacent-nav'
 import { DetailHeader } from '@/components/listing/detail-header'
 import { PagefindFilters } from '@/components/listing/pagefind-filters'
-
+import { SplitReader } from '@/components/reading/split-reader'
 import { PhotoGallery } from '@/components/listing/photo-gallery'
 
 /*
@@ -41,6 +41,8 @@ export function entryMetadata(type: CollectionType, slug: string): Metadata {
   }
 }
 
+const SPLIT_MARKER = /<!--\s*split(?::original)?\s*-->/
+
 export function EntryView({
   entry,
   backHref,
@@ -55,6 +57,11 @@ export function EntryView({
   draft?: boolean
 }) {
   const isLife = entry.collection === 'life'
+  const isSplit = SPLIT_MARKER.test(entry.body)
+  const [leftBody, rightBody] = isSplit
+    ? entry.body.split(SPLIT_MARKER)
+    : [entry.body, '']
+
   // 默认返回路径指向确定路由（无站内来源历史时兜底）：
   // posts 默认回文章列表（根路径）；life 默认回生活列表；若有站内来源由 BackButton 动态接管
   const fallback =
@@ -63,10 +70,10 @@ export function EntryView({
       : isLife
         ? { href: '/life', label: '生活' }
         : { href: '/', label: '文章列表' }
-  // 长文在正文前生成锚点目录
-  const headings = shouldShowToc(entry.body) ? extractToc(entry.body) : []
+  // 长文在正文前生成锚点目录（双栏模式提取左栏主线目录）
+  const headings = shouldShowToc(leftBody) ? extractToc(leftBody) : []
   // 阅读时长与字数估算
-  const { words, minutes } = estimateReadingTime(entry.body)
+  const { words, minutes } = estimateReadingTime(leftBody)
   // 相邻条目导航（posts 与 life 均支持上一篇/下一篇）；草稿不在任何集合内，留空
   const adjacent = draft
     ? { prev: null, next: null }
@@ -74,7 +81,7 @@ export function EntryView({
 
   // 生活随笔随手拍照片
   const photos = 'photos' in entry.data && Array.isArray(entry.data.photos) ? entry.data.photos : undefined
-  const contentWidth = isLife ? 'max-w-2xl' : 'max-w-3xl'
+  const contentWidth = isSplit ? 'max-w-7xl' : isLife ? 'max-w-2xl' : 'max-w-3xl'
 
   const hasToc = headings.length > 0
 
@@ -139,8 +146,27 @@ export function EntryView({
         )}
       </div>
 
-      {/* 正文与右侧悬浮目录联动区 */}
-      {hasToc ? (
+      {/* 正文呈现区：支持双栏独立滚动与常规单栏模式 */}
+      {isSplit ? (
+        <div className="mx-auto w-full max-w-7xl">
+          <SplitReader
+            leftNode={
+              <>
+                <MarkdownRenderer>{leftBody}</MarkdownRenderer>
+                {photos && photos.length > 0 && (
+                  <PhotoGallery photos={photos} alt={entry.data.title} />
+                )}
+                <A11yScrollable />
+              </>
+            }
+            rightNode={<MarkdownRenderer>{rightBody}</MarkdownRenderer>}
+          />
+          <div className="mt-8">
+            <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
+          </div>
+          {hasToc && <MobileTocDrawer headings={headings} />}
+        </div>
+      ) : hasToc ? (
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid grid-cols-1 xl:grid-cols-[14rem_minmax(0,48rem)_14rem] justify-center gap-8">
             {/* 左侧等宽空白列：在 xl 屏幕下占据 14rem，保证中间 48rem 正文物理绝对居中 */}

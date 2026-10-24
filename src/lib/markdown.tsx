@@ -22,6 +22,7 @@ import { VideoPlayer, type VideoPlayerProps } from '@/components/reading/video-p
 import { SystemFlow, type SystemFlowProps } from '@/components/reading/system-flow'
 import { MediaZoom } from '@/components/reading/media-zoom'
 import { HeadingWithAnchor } from '@/components/reading/heading-anchor'
+import { EnDisclosure } from '@/components/reading/en-disclosure'
 
 /*
  * Markdown 渲染管线（AGENTS.md 内容与渲染纪律）：
@@ -78,6 +79,9 @@ const components = {
   ),
   note: ({ node: _node, ...rest }: ComponentProps<'aside'> & { node?: unknown }) => (
     <aside data-callout="note" {...rest} />
+  ),
+  en: ({ node: _node, children, ...rest }: ComponentProps<'details'> & { node?: unknown }) => (
+    <EnDisclosure {...rest}>{children}</EnDisclosure>
   ),
   /*
    * 宽表套一层横向滚动容器：表格自身是 overflow: hidden（为圆角），而 body 的
