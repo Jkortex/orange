@@ -661,3 +661,20 @@ html.dark code[data-theme] span[style*='--shiki'] {
 }
 
 
+
+/* Zen 全屏阅读模式：隐藏站点 chrome，正文铺满视口 */
+html.zen header,
+html.zen footer,
+html.zen [data-bar],
+html.zen .fixed:not(.zen-toggle) {
+  display: none !important;
+}
+
+html.zen main {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+html.zen .zen-toggle {
+  display: inline-flex !important;
+}

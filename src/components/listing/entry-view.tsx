@@ -14,6 +14,7 @@ import { DetailHeader } from '@/components/listing/detail-header'
 import { PagefindFilters } from '@/components/listing/pagefind-filters'
 import { SplitReader } from '@/components/reading/split-reader'
 import { PhotoGallery } from '@/components/listing/photo-gallery'
+import { ZenModeToggle } from '@/components/reading/zen-mode-toggle'
 import { getColumnAdjacentEntries } from '@/lib/column-data'
 
 /*
@@ -217,6 +218,8 @@ export function EntryView({
           <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
         </article>
       )}
+
+      <ZenModeToggle />
     </div>
   )
 }
