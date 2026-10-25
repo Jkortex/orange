@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Layers, ArrowRight, Cpu, ShieldCheck, Terminal, Compass } from 'lucide-react'
 import { BackButton } from '@/components/reading/back-button'
+import { ColumnToc, type ColumnTocPhase } from '@/components/listing/column-toc'
 import { getAllColumns, getColumn } from '@/lib/column-data'
 
 type Params = { params: Promise<{ id: string }> }
@@ -99,7 +100,7 @@ export default async function ColumnDetailPage({ params }: Params) {
         </div>
 
         {col.phases.map((phase, pIndex) => (
-          <section key={phase.name} className="space-y-4">
+          <section key={phase.name} id={`phase-${pIndex}`} className="space-y-4 scroll-mt-24">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
               <h3 className="type-item flex items-center gap-2 font-semibold text-foreground">
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">
@@ -152,6 +153,16 @@ export default async function ColumnDetailPage({ params }: Params) {
           </section>
         ))}
       </div>
+
+      <ColumnToc
+        phases={col.phases.map((phase) => ({
+          name: phase.name,
+          chapters: phase.chapters.map((chapter) => ({
+            slug: chapter.slug,
+            title: chapter.title,
+          })),
+        }))}
+      />
     </div>
   )
 }
