@@ -57,6 +57,8 @@ describe('sitemap 技能包文件页', () => {
       'https://orange-cnc.pages.dev/columns/distributed-go',
       'https://orange-cnc.pages.dev/columns/ai-ddd',
       'https://orange-cnc.pages.dev/columns/spring-boot-angular',
+      'https://orange-cnc.pages.dev/columns/rust-systems-engineering',
+      'https://orange-cnc.pages.dev/columns/data-intensive-systems',
       'https://orange-cnc.pages.dev/skills/tdd/references/pitfalls',
       'https://orange-cnc.pages.dev/skills/tdd/templates/checklist',
     ])

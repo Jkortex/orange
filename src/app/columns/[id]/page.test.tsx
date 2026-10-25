@@ -2,7 +2,13 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import ColumnDetailPage, { generateStaticParams, generateMetadata } from './page'
-import { AI_DDD_COLUMN, DISTRIBUTED_GO_COLUMN, getAllColumns } from '@/lib/column-data'
+import {
+  AI_DDD_COLUMN,
+  DISTRIBUTED_GO_COLUMN,
+  RUST_SYSTEMS_COLUMN,
+  DATA_INTENSIVE_COLUMN,
+  getAllColumns,
+} from '@/lib/column-data'
 
 afterEach(() => {
   cleanup()
@@ -90,5 +96,73 @@ describe('ColumnDetailPage AI 增强的领域驱动设计专栏', () => {
       expect(screen.getByText(phase.description)).toBeTruthy()
     }
     expect(screen.getByText(AI_DDD_COLUMN.focus!)).toBeTruthy()
+  })
+})
+
+describe('ColumnDetailPage Rust 现代系统级工程实战专栏', () => {
+  it('generateMetadata 正确生成 Rust 专栏元信息', async () => {
+    const meta = await generateMetadata({ params: Promise.resolve({ id: 'rust-systems-engineering' }) })
+    expect(meta.title).toBe(RUST_SYSTEMS_COLUMN.title)
+    expect(meta.description).toBe(RUST_SYSTEMS_COLUMN.description)
+  })
+
+  it('渲染全部 25 篇章节链接且指向对应文章路径', async () => {
+    const el = await ColumnDetailPage({ params: Promise.resolve({ id: 'rust-systems-engineering' }) })
+    const { container } = render(el)
+
+    const allChapters = RUST_SYSTEMS_COLUMN.phases.flatMap((p) => p.chapters)
+    expect(allChapters).toHaveLength(25)
+    expect(RUST_SYSTEMS_COLUMN.totalArticles).toBe(25)
+
+    for (const chapter of allChapters) {
+      const link = container.querySelector(`a[href="/posts/${chapter.slug}"]`)
+      expect(link).toBeTruthy()
+      expect(link?.textContent).toContain(chapter.title)
+    }
+  }, 15000)
+
+  it('渲染 4 大阶段的进阶路线图与专栏定位标签', async () => {
+    const el = await ColumnDetailPage({ params: Promise.resolve({ id: 'rust-systems-engineering' }) })
+    render(el)
+
+    for (const phase of RUST_SYSTEMS_COLUMN.phases) {
+      expect(screen.getByText(new RegExp(phase.name))).toBeTruthy()
+      expect(screen.getByText(phase.description)).toBeTruthy()
+    }
+    expect(screen.getAllByText(RUST_SYSTEMS_COLUMN.focus!).length).toBeGreaterThan(0)
+  })
+})
+
+describe('ColumnDetailPage 数据密集型系统架构实战专栏', () => {
+  it('generateMetadata 正确生成 DDIA 专栏元信息', async () => {
+    const meta = await generateMetadata({ params: Promise.resolve({ id: 'data-intensive-systems' }) })
+    expect(meta.title).toBe(DATA_INTENSIVE_COLUMN.title)
+    expect(meta.description).toBe(DATA_INTENSIVE_COLUMN.description)
+  })
+
+  it('渲染全部 15 篇章节链接且指向对应文章路径', async () => {
+    const el = await ColumnDetailPage({ params: Promise.resolve({ id: 'data-intensive-systems' }) })
+    const { container } = render(el)
+
+    const allChapters = DATA_INTENSIVE_COLUMN.phases.flatMap((p) => p.chapters)
+    expect(allChapters).toHaveLength(15)
+    expect(DATA_INTENSIVE_COLUMN.totalArticles).toBe(15)
+
+    for (const chapter of allChapters) {
+      const link = container.querySelector(`a[href="/posts/${chapter.slug}"]`)
+      expect(link).toBeTruthy()
+      expect(link?.textContent).toContain(chapter.title)
+    }
+  }, 15000)
+
+  it('渲染 3 大阶段的进阶路线图与专栏定位标签', async () => {
+    const el = await ColumnDetailPage({ params: Promise.resolve({ id: 'data-intensive-systems' }) })
+    render(el)
+
+    for (const phase of DATA_INTENSIVE_COLUMN.phases) {
+      expect(screen.getByText(new RegExp(phase.name))).toBeTruthy()
+      expect(screen.getByText(phase.description)).toBeTruthy()
+    }
+    expect(screen.getAllByText(DATA_INTENSIVE_COLUMN.focus!).length).toBeGreaterThan(0)
   })
 })
