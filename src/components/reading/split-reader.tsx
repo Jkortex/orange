@@ -1,7 +1,21 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { BookOpen, Sparkles, Globe, GripVertical } from 'lucide-react'
+import {
+  BookOpen,
+  Sparkles,
+  Globe,
+  GripVertical,
+  PanelLeft,
+  PanelRight,
+  Columns2,
+  Maximize2,
+  Minimize2,
+  ChevronsLeft,
+  ChevronsRight,
+  RotateCcw,
+  ScrollText,
+} from 'lucide-react'
 
 export type SplitReaderProps = {
   leftNode: React.ReactNode
@@ -9,6 +23,8 @@ export type SplitReaderProps = {
   leftTitle?: string
   rightTitle?: string
 }
+
+export type ViewMode = 'split' | 'left' | 'right'
 
 export function SplitReader({
   leftNode,
@@ -18,8 +34,11 @@ export function SplitReader({
 }: SplitReaderProps) {
   const [mobileTab, setMobileTab] = useState<'left' | 'right'>('left')
   const [allEnOpen, setAllEnOpen] = useState(false)
-  const [ratio, setRatio] = useState<number>(50) // 左栏宽度百分比 (20 - 80)
+  const [ratio, setRatio] = useState<number>(50) // 左栏宽度百分比 (10 - 90)
   const [isDragging, setIsDragging] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('split') // 双栏 / 仅看精炼 / 仅看原著
+  const [isWide, setIsWide] = useState(false) // 宽屏通栏铺满模式
+  const [isFluidHeight, setIsFluidHeight] = useState(false) // 自然流动长文高度模式
   const containerRef = useRef<HTMLDivElement>(null)
 
   const toggleAllEn = () => {
@@ -36,26 +55,44 @@ export function SplitReader({
     setIsDragging(true)
   }, [])
 
+  const handleTouchStart = useCallback(() => {
+    setIsDragging(true)
+  }, [])
+
   useEffect(() => {
     if (!isDragging) return
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const updateRatio = (clientX: number) => {
       if (!containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
-      const offset = e.clientX - rect.left
-      const newPercent = Math.min(Math.max((offset / rect.width) * 100, 20), 80)
+      const offset = clientX - rect.left
+      const newPercent = Math.min(Math.max((offset / rect.width) * 100, 10), 90)
       setRatio(Math.round(newPercent))
     }
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => {
+      updateRatio(e.clientX)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        updateRatio(e.touches[0].clientX)
+      }
+    }
+
+    const handleEnd = () => {
       setIsDragging(false)
     }
 
     window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
+    window.addEventListener('mouseup', handleEnd)
+    window.addEventListener('touchmove', handleTouchMove)
+    window.addEventListener('touchend', handleEnd)
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('mouseup', handleEnd)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleEnd)
     }
   }, [isDragging])
 
@@ -113,62 +150,189 @@ export function SplitReader({
         )}
       </div>
 
-      {/* 桌面端视图 (≥ lg)：双栏独立滚动工作台 */}
+      {/* 桌面端视图 (≥ lg)：多模式阅读工作台 */}
       <div
-        className={`hidden lg:flex lg:flex-col w-full h-[calc(100vh-var(--header-height)-6rem)] min-h-[640px] rounded-2xl border border-border-subtle bg-surface shadow-card overflow-hidden ${
-          isDragging ? 'select-none' : ''
-        }`}
+        className={`hidden lg:flex lg:flex-col w-full rounded-2xl border border-border-subtle bg-surface shadow-card transition-all duration-200 split-reader-container ${
+          isWide ? 'split-reader-wide' : ''
+        } ${
+          isFluidHeight
+            ? 'split-reader-flow min-h-[500px]'
+            : 'h-[calc(100vh-var(--header-height)-6rem)] min-h-[640px] overflow-hidden'
+        } ${isDragging ? 'select-none' : ''}`}
       >
-        {/* 顶部指示条与比例切换 */}
-        <div className="flex h-11 shrink-0 items-center justify-between border-b border-border-subtle bg-muted/30 px-6">
-          <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
-            <Sparkles className="size-3.5 text-primary" aria-hidden />
-            <span>{leftTitle}</span>
-            <span className="font-mono text-[10px] text-muted-foreground">({ratio}%)</span>
+        {/* 顶部指示条与模式/比例控制栏 */}
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-subtle bg-muted/30 px-5 gap-3">
+          {/* 左侧：左栏状态指示 */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wider truncate">
+              <Sparkles className="size-3.5 text-primary shrink-0" aria-hidden />
+              <span className="truncate">{leftTitle}</span>
+              <span className="font-mono text-[10px] text-muted-foreground shrink-0">
+                ({viewMode === 'left' ? '100%' : viewMode === 'right' ? '已隐藏' : `${ratio}%`})
+              </span>
+            </div>
           </div>
 
-          {/* 栏目比例快速切换组 */}
-          <div className="inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-surface/80 p-0.5 text-xs shadow-2xs">
-            <span className="px-1.5 text-[11px] text-muted-foreground">比例:</span>
-            <button
-              type="button"
-              onClick={() => setRatio(70)}
-              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                ratio >= 65
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="7:3 核心实战主导"
+          {/* 中间核心控制区：视区模式切换 + 双栏比例组 */}
+          <div className="flex items-center gap-2.5">
+            {/* 视区模式切换组：仅看精炼 / 双栏对照 / 仅看原著 */}
+            <div
+              className="inline-flex items-center rounded-lg border border-border-subtle bg-surface/80 p-0.5 text-xs shadow-2xs"
+              role="group"
+              aria-label="阅读视图模式"
             >
-              7 : 3
-            </button>
-            <button
-              type="button"
-              onClick={() => setRatio(50)}
-              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                ratio > 40 && ratio < 65
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="5:5 双栏平分对照"
-            >
-              5 : 5
-            </button>
-            <button
-              type="button"
-              onClick={() => setRatio(30)}
-              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                ratio <= 40
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="3:7 原著精读主导"
-            >
-              3 : 7
-            </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('left')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                  viewMode === 'left'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="仅看精炼（100% 独享阅读）"
+              >
+                <PanelLeft className="size-3.5" aria-hidden />
+                <span>仅看精炼</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('split')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                  viewMode === 'split'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="双栏对照（左右协同阅读）"
+              >
+                <Columns2 className="size-3.5" aria-hidden />
+                <span>双栏对照</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('right')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                  viewMode === 'right'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="仅看原著（100% 独享阅读）"
+              >
+                <PanelRight className="size-3.5" aria-hidden />
+                <span>仅看原著</span>
+              </button>
+            </div>
+
+            {/* 双栏模式下激活的宽度比例快捷组 */}
+            {viewMode === 'split' && (
+              <div className="hidden xl:inline-flex items-center gap-0.5 rounded-lg border border-border-subtle bg-surface/80 p-0.5 text-xs shadow-2xs">
+                <span className="px-1 text-[11px] text-muted-foreground">比例:</span>
+                <button
+                  type="button"
+                  onClick={() => setRatio(80)}
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                    ratio >= 75
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="8:2 核心实战主导"
+                >
+                  8 : 2
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRatio(70)}
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                    ratio >= 65 && ratio < 75
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="7:3 核心实战主导"
+                >
+                  7 : 3
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRatio(50)}
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                    ratio > 40 && ratio < 65
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="5:5 双栏平分对照"
+                >
+                  5 : 5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRatio(30)}
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                    ratio > 25 && ratio <= 40
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="3:7 原著精读主导"
+                >
+                  3 : 7
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRatio(20)}
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                    ratio <= 25
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="2:8 原著全景精读"
+                >
+                  2 : 8
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRatio(50)}
+                  className="rounded p-1 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  title="重置为 5:5 平分"
+                  aria-label="重置比例"
+                >
+                  <RotateCcw className="size-3" aria-hidden />
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* 右侧：宽屏模式、流动高度、英文开关与右栏状态 */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* 宽屏铺满切换按钮 */}
+            <button
+              type="button"
+              onClick={() => setIsWide(!isWide)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer shadow-2xs"
+              title={isWide ? '恢复标准宽度' : '展开宽屏模式'}
+              aria-label={isWide ? '恢复标准宽度' : '展开宽屏模式'}
+            >
+              {isWide ? (
+                <Minimize2 className="size-3.5 text-primary" aria-hidden />
+              ) : (
+                <Maximize2 className="size-3.5 text-muted-foreground" aria-hidden />
+              )}
+              <span className="hidden xl:inline">{isWide ? '标准宽度' : '宽屏模式'}</span>
+            </button>
+
+            {/* 流动高度 / 工作台高度切换按钮 */}
+            <button
+              type="button"
+              onClick={() => setIsFluidHeight(!isFluidHeight)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer shadow-2xs"
+              title={isFluidHeight ? '切换为工作台独立滚动' : '长文展开流动（自适应全文高度）'}
+              aria-label={isFluidHeight ? '工作台独立滚动' : '长文展开流动'}
+            >
+              <ScrollText
+                className={`size-3.5 ${isFluidHeight ? 'text-primary' : 'text-muted-foreground'}`}
+                aria-hidden
+              />
+              <span className="hidden xl:inline">{isFluidHeight ? '工作台模式' : '长文模式'}</span>
+            </button>
+
+            {/* 全篇英文展开开关 */}
             <button
               type="button"
               onClick={toggleAllEn}
@@ -176,62 +340,113 @@ export function SplitReader({
               title={allEnOpen ? '折叠所有段落的英文对照' : '展开所有段落的英文对照'}
             >
               <Globe className="size-3.5 text-primary" aria-hidden />
-              <span>{allEnOpen ? '折叠全篇英文' : '全篇展开英文'}</span>
+              <span className="hidden xl:inline">{allEnOpen ? '折叠全篇英文' : '全篇展开英文'}</span>
             </button>
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              <BookOpen className="size-3.5" aria-hidden />
-              <span>{rightTitle}</span>
-              <span className="font-mono text-[10px] text-muted-foreground">({100 - ratio}%)</span>
+
+            {/* 右栏标题信息 */}
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
+              <BookOpen className="size-3.5 shrink-0" aria-hidden />
+              <span className="hidden 2xl:inline truncate">{rightTitle}</span>
+              <span className="font-mono text-[10px] text-muted-foreground shrink-0">
+                ({viewMode === 'right' ? '100%' : viewMode === 'left' ? '已隐藏' : `${100 - ratio}%`})
+              </span>
             </div>
           </div>
         </div>
 
-        {/* 双栏容器：左右均有独立的纵向滚动条，支持中间拖拽拉伸 */}
-        <div ref={containerRef} className="flex flex-1 min-h-0 w-full overflow-hidden">
-          {/* 左栏：核心精炼（独立滚动） */}
-          <section
-            aria-label={leftTitle}
-            tabIndex={0}
-            style={{ width: `${ratio}%` }}
-            className="h-full overflow-y-auto px-8 py-6 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
-          >
-            <div className="prose w-full max-w-none">{leftNode}</div>
-          </section>
+        {/* 视区呈现容器 */}
+        <div ref={containerRef} className="relative flex flex-1 min-h-0 w-full overflow-hidden">
+          {/* 左栏：核心精炼 */}
+          {viewMode !== 'right' && (
+            <section
+              aria-label={leftTitle}
+              tabIndex={0}
+              style={{ width: viewMode === 'left' ? '100%' : `${ratio}%` }}
+              className={`px-8 py-6 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 ${
+                isFluidHeight ? 'overflow-visible h-auto' : 'h-full overflow-y-auto'
+              }`}
+            >
+              <div className={`prose w-full ${viewMode === 'left' ? 'max-w-4xl mx-auto' : 'max-w-none'}`}>
+                {leftNode}
+              </div>
+            </section>
+          )}
 
-          {/* 可拖拽调整宽度的分割器 */}
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-valuenow={ratio}
-            aria-valuemin={20}
-            aria-valuemax={80}
-            aria-label="拖拽调整左右栏宽度"
-            tabIndex={0}
-            onMouseDown={handleMouseDown}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowLeft') setRatio((r) => Math.max(r - 5, 20))
-              if (e.key === 'ArrowRight') setRatio((r) => Math.min(r + 5, 80))
-            }}
-            className="group relative flex w-2.5 shrink-0 cursor-col-resize items-center justify-center bg-border-subtle/40 hover:bg-primary/20 active:bg-primary/40 transition-colors select-none"
-          >
-            <div className="flex h-8 w-1.5 items-center justify-center rounded-full bg-border-subtle group-hover:bg-primary/70 transition-colors">
-              <GripVertical className="size-3 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+          {/* 可拖拽调整宽度的分割器（仅在双栏对照模式出现） */}
+          {viewMode === 'split' && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-valuenow={ratio}
+              aria-valuemin={10}
+              aria-valuemax={90}
+              aria-label="拖拽调整左右栏宽度"
+              tabIndex={0}
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+              onDoubleClick={() => setRatio(50)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowLeft') setRatio((r) => Math.max(r - (e.shiftKey ? 1 : 5), 10))
+                if (e.key === 'ArrowRight') setRatio((r) => Math.min(r + (e.shiftKey ? 1 : 5), 90))
+                if (e.key === 'Home') setRatio(10)
+                if (e.key === 'End') setRatio(90)
+                if (e.key === ' ' || e.key === 'Enter') setRatio(50)
+              }}
+              className="group relative flex w-3 shrink-0 cursor-col-resize items-center justify-center bg-border-subtle/50 hover:bg-primary/20 active:bg-primary/40 transition-colors select-none"
+            >
+              {/* 分割线上快捷微调与折叠手柄 */}
+              <div className="flex flex-col items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-0.5 py-2 shadow-2xs group-hover:border-primary/50 group-hover:shadow-sm transition-all">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setViewMode('right')
+                  }}
+                  title="折叠左栏，仅看原著"
+                  className="rounded p-0.5 text-muted-foreground/70 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                >
+                  <ChevronsLeft className="size-2.5" aria-hidden />
+                </button>
+                <GripVertical className="size-3 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setViewMode('left')
+                  }}
+                  title="折叠右栏，仅看精炼"
+                  className="rounded p-0.5 text-muted-foreground/70 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                >
+                  <ChevronsRight className="size-2.5" aria-hidden />
+                </button>
+              </div>
+
+              {/* 拖拽过程中的实时比例浮层 */}
+              {isDragging && (
+                <div className="pointer-events-none absolute top-4 z-30 rounded-md border border-border-subtle bg-popover px-2 py-1 font-mono text-xs font-semibold text-popover-foreground shadow-md whitespace-nowrap">
+                  {ratio}% : {100 - ratio}%
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* 右栏：原著对照（独立滚动） */}
-          <section
-            aria-label={rightTitle}
-            tabIndex={0}
-            style={{ width: `${100 - ratio}%` }}
-            className="h-full overflow-y-auto px-8 py-6 bg-muted/10 text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
-          >
-            <div className="prose w-full max-w-none">{rightNode}</div>
-          </section>
+          {/* 右栏：原著对照 */}
+          {viewMode !== 'left' && (
+            <section
+              aria-label={rightTitle}
+              tabIndex={0}
+              style={{ width: viewMode === 'right' ? '100%' : `${100 - ratio}%` }}
+              className={`px-8 py-6 bg-muted/10 text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 ${
+                isFluidHeight ? 'overflow-visible h-auto' : 'h-full overflow-y-auto'
+              }`}
+            >
+              <div className={`prose w-full ${viewMode === 'right' ? 'max-w-4xl mx-auto' : 'max-w-none'}`}>
+                {rightNode}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>
   )
 }
-
-

@@ -148,7 +148,7 @@ export function EntryView({
 
       {/* 正文呈现区：支持双栏独立滚动与常规单栏模式 */}
       {isSplit ? (
-        <div className="mx-auto w-full max-w-7xl">
+        <div className="mx-auto w-full max-w-7xl has-[.split-reader-wide]:max-w-none has-[.split-reader-wide]:px-2 sm:has-[.split-reader-wide]:px-4 lg:has-[.split-reader-wide]:px-8 transition-all duration-300">
           <SplitReader
             leftNode={
               <>
