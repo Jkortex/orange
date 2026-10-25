@@ -175,7 +175,7 @@ export function EntryView({
           <div className="mt-8">
             <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
           </div>
-          {hasToc && <MobileTocDrawer headings={headings} />}
+          {hasToc && <MobileTocDrawer headings={headings} desktop />}
         </div>
       ) : hasToc ? (
         <div className="mx-auto w-full max-w-7xl">

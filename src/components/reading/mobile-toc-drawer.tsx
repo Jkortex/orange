@@ -27,9 +27,12 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/com
 export function MobileTocDrawer({
   headings,
   className = '',
+  desktop = false,
 }: {
   headings: TocHeading[]
   className?: string
+  /** 分栏文章在桌面端也没有侧栏目录，需把浮动目录扩展到所有断点 */
+  desktop?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const bottomClass = useFloatingStackOffset()
@@ -43,7 +46,7 @@ export function MobileTocDrawer({
   }
 
   return (
-    <div className={`xl:hidden ${className}`}>
+    <div className={desktop ? className : `xl:hidden ${className}`}>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         {/*
          * 悬浮目录触发按钮：统一的尺寸、对齐线、磨砂质感与提示气泡。
@@ -73,7 +76,11 @@ export function MobileTocDrawer({
           showCloseButton={false}
           /* 内容被 Portal 送到 body，外层 div 的 xl:hidden 管不到它：
              抽屉开着时把视口拉宽到 xl，得让抽屉自己也退场 */
-          className="xl:hidden max-h-[75vh] mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5"
+          className={
+            desktop
+              ? 'max-h-[75vh] mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
+              : 'xl:hidden max-h-[75vh] mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
+          }
         >
           {/* 顶栏 */}
           <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-3">
