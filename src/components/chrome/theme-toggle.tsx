@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import { Moon, Sun } from 'lucide-react'
 import { IconButton } from '@/components/primitives/icon-button'
 import { animateThemeChange } from '@/lib/theme-transition'
@@ -43,12 +44,19 @@ export function ThemeToggle() {
     }, origin)
   }
 
+  // t 切换深浅色：单键，输入框内由 hotkeys 默认忽略；浮层开着时不抢
+  useHotkey('T', () => {
+    if (document.querySelector('[role="dialog"]') !== null) return
+    toggle()
+  })
+
   const label = dark ? '切换到浅色' : '切换到深色'
 
   return (
     <IconButton
       label={label}
       onClick={toggle}
+      aria-keyshortcuts="t"
       tipClassName="right-0 top-full mt-1.5"
     >
       {/* key 随状态重挂图标，播放一次淡入缩放，表达明暗切换的即时反馈；

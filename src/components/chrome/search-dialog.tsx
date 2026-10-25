@@ -71,14 +71,38 @@ export function SearchDialog() {
     [router],
   )
 
-  // 1. 快捷键 Ctrl/Cmd+K 唤起
+  // 1. 快捷键唤起：Ctrl/Cmd+K（切换）、/（仅打开，输入框里不抢）
+  //    曾把 Ctrl/Cmd+P 也绑在这里 —— 那是浏览器的打印键，抢过来会让用户按打印时弹出搜索
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'p') && (e.metaKey || e.ctrlKey)) {
+      if (e.isComposing) return
+
+      const mod = e.metaKey || e.ctrlKey
+      const isSearchKey = mod && !e.altKey && e.key.toLowerCase() === 'k'
+      const isSlashKey = !mod && !e.altKey && e.key === '/'
+      if (!isSearchKey && !isSlashKey) return
+
+      const target = e.target as HTMLElement | null
+      const typing =
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '') ||
+        target?.isContentEditable === true
+      // 斜杠在输入框里是正文；Ctrl/Cmd+K 属于全局命令，输入框内也要生效
+      if (isSlashKey && typing) return
+
+      if (isSlashKey) {
+        // 搜索自己开着时焦点在输入框，上面已拦下；这里只防叠到别的浮层上
+        if (document.querySelector('[role="dialog"]') !== null) return
         e.preventDefault()
         openedViaTriggerRef.current = false
-        setOpen((v) => !v)
+        setOpen(true)
+        return
       }
+
+      e.preventDefault()
+      // 关闭永远允许；从关闭态打开时，不叠到灯箱 / 目录 / 帮助页之上
+      const anotherDialogOpen = document.querySelector('[role="dialog"]') !== null
+      setOpen((v) => (v || !anotherDialogOpen ? !v : v))
+      openedViaTriggerRef.current = false
     }
     window.addEventListener('keydown', onKey)
     return () => {
@@ -273,7 +297,7 @@ export function SearchDialog() {
         <button
           type="button"
           aria-label="搜索"
-          aria-keyshortcuts="Control+K Meta+K"
+          aria-keyshortcuts="Control+K Meta+K /"
           className={iconBtnClass}
           onClick={() => {
             openedViaTriggerRef.current = true
@@ -332,7 +356,7 @@ export function SearchDialog() {
             value={query}
             onChange={(e) => handleInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="搜索全站文章、生活、音乐与章节大纲..."
+            placeholder="搜索文章、生活、音乐、技能与本页小节…"
             aria-label="搜索关键词"
             role="combobox"
             aria-expanded={flatItems.length > 0}
@@ -370,7 +394,7 @@ export function SearchDialog() {
           ) : !query.trim() ? (
             /* 空态刻意留白：搜索只负责检索内容，不塞推荐、不列历史 */
             <p className="type-meta p-8 text-center text-muted-foreground">
-              输入关键词，检索全站文章、生活、音乐、技能与本页小节
+              输入关键词，检索文章、生活、音乐、技能与本页小节
             </p>
           ) : flatItems.length === 0 ? (
             <div className="type-meta p-8 text-center text-muted-foreground">

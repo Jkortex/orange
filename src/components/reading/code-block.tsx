@@ -39,7 +39,7 @@ export function CodeBlock({ children, className = '', ...props }: ComponentProps
         type="button"
         onClick={onCopy}
         aria-label={copied ? '已复制' : '复制代码'}
-        className="absolute right-2.5 top-1.5 z-10 flex size-7 items-center justify-center rounded-md border border-border/60 bg-card/80 text-muted-foreground opacity-0 backdrop-blur-md transition-opacity duration-200 group-hover/code:opacity-100 focus:opacity-100 hover:text-foreground"
+        className="absolute right-2.5 top-1.5 z-10 flex size-7 items-center justify-center rounded-md border border-border/60 bg-card/80 text-muted-foreground opacity-0 backdrop-blur-md transition-opacity duration-200 group-hover/code:opacity-100 focus:opacity-100 hover:text-foreground after:absolute after:-inset-1 after:content-[''] [@media(any-pointer:coarse)]:opacity-100"
       >
         {copied ? (
           <Check className="size-3.5 text-primary animate-in zoom-in-75 duration-200" aria-hidden />

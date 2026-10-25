@@ -12,9 +12,6 @@ tags:
   - "DDD"
 ---
 
-> 💡 **学习导读**：本文收录于专栏 [《AI 增强的领域驱动设计》](/columns/ai-ddd)。
-> 🖥️ **双栏模式**：本篇已开启双栏独立滚动对照。左栏为高信噪比实战精炼，右栏为原书完整论述与案例，两栏可各自独立纵向滚动查阅。
-
 # 核心实战精炼：迭代精化限界上下文
 
 ## 1. 核心认知：AI 初稿的破绽价值
@@ -219,7 +216,6 @@ AI 生成的首个模型之所以有价值，恰恰在于它直观地暴露了�
 
 为了直观体会这一循环的实际运转，不妨审视作者在要求 AI 助手对 Order Management 上下文进行建模后，AI 给出的第一版草案：
 
-
 ```yaml
 context: Order Management
 
@@ -285,7 +281,6 @@ Order Management 只拥有 Order 聚合。Order Management 不拥有 `Payment`�
 - **Reasoning Environment**：*推理环境*。由 Agent、Rulebook 与 MCP 共同搭建的约束空间，通过迭代持续收敛。
 :::
 
-
 ```yaml
 Context:
 我们正在精化 BrewUp 的 Order Management 限界上下文。
@@ -295,7 +290,6 @@ Known rules:
 - Payment 和 Stock 是外部概念。
 - 由其他限界上下文产生的事件必须标记为 external_inputs。
 - 如果归属权不明确，请添加一个未决问题（open question），而不是无依据虚构规则。
-
 
 Task:
 请审查下方的模型草案。

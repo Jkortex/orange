@@ -1241,6 +1241,28 @@ export function getColumn(id: string): ColumnInfo | undefined {
 }
 
 /**
+ * 专栏文章的相邻导航应沿专栏章节顺序走，而不是全局文章日期序：
+ * 专栏文章不进入文章列表，用全局上一篇/下一篇会把读者带到别的专栏或非专栏文章。
+ * 返回值与 content.getAdjacentEntries 对齐（next=更新/后一章，prev=更早/前一章）。
+ */
+export function getColumnAdjacentEntries(
+  columnId: string,
+  slug: string,
+): { prev: { title: string; slug: string } | null; next: { title: string; slug: string } | null } {
+  const col = getColumn(columnId)
+  if (!col) return { prev: null, next: null }
+  const chapters = col.phases.flatMap((phase) => phase.chapters)
+  const index = chapters.findIndex((chapter) => chapter.slug === slug)
+  if (index < 0) return { prev: null, next: null }
+  const prevChapter = index > 0 ? chapters[index - 1] : null
+  const nextChapter = index < chapters.length - 1 ? chapters[index + 1] : null
+  return {
+    prev: prevChapter ? { slug: prevChapter.slug, title: prevChapter.title } : null,
+    next: nextChapter ? { slug: nextChapter.slug, title: nextChapter.title } : null,
+  }
+}
+
+/**
  * 构建期守卫：专栏目录与专栏文章必须一一对应。
  * 专栏文章不进文章列表，只靠专栏页暴露入口，一旦失配就会变成死链或孤儿文章，
  * 因此在构建时直接失败，而不是等到读者点击才发现。

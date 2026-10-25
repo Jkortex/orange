@@ -21,13 +21,30 @@ export const defaultNavItems: NavItem[] = [
  * - 栏目名始终是可见文本，不缩写、不图标化；项上 shrink-0，避免 flex 压缩把文字挤变形
  * - py-2 让触摸目标不小于 36px（平板竖屏 640~768px 也在用这一套）
  */
-export function HeaderNav({ items = defaultNavItems }: { items?: NavItem[] }) {
+export function HeaderNav({
+  items = defaultNavItems,
+  columnSlugs = [],
+}: {
+  items?: NavItem[]
+  columnSlugs?: string[]
+}) {
   const pathname = usePathname()
+  const columnSet = new Set(columnSlugs)
+
+  function isColumnPost() {
+    const match = pathname.match(/^\/posts\/([^/]+)$/)
+    return match ? columnSet.has(match[1]) : false
+  }
 
   function isActive(href: string) {
-    // 根路径即文章列表；文章详情在 /posts/<slug>，也归「文章」高亮
+    // 专栏文章详情页（/posts/<slug> 但属于某专栏）归「专栏」高亮，不归「文章」
     if (href === '/') {
+      if (isColumnPost()) return false
       return pathname === '/' || pathname.startsWith('/posts/')
+    }
+    if (href === '/columns') {
+      if (isColumnPost()) return true
+      return pathname === href || pathname.startsWith(`${href}/`)
     }
     return pathname === href || pathname.startsWith(`${href}/`)
   }

@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { SplitReader } from '@/components/reading/split-reader'
+import {
+  SPLIT_READER_PREFS_KEY,
+  SplitReader,
+} from '@/components/reading/split-reader'
 
 afterEach(() => {
   cleanup()
+  localStorage.clear()
+  vi.restoreAllMocks()
 })
 
 describe('SplitReader 双栏独立滚动组件', () => {
@@ -181,6 +186,41 @@ describe('SplitReader 双栏独立滚动组件', () => {
     expect(screen.getByRole('separator', { name: '拖拽调整左右栏宽度' })).toBeDefined()
   })
 
+  it('视图模式、比例与宽屏/长文开关用 aria-pressed 表达当前状态', () => {
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    const pressed = (name: string) =>
+      screen.getByRole('button', { name }).getAttribute('aria-pressed')
+
+    expect(pressed('双栏对照')).toBe('true')
+    expect(pressed('仅看精炼')).toBe('false')
+    expect(pressed('5 : 5')).toBe('true')
+    expect(pressed('7 : 3')).toBe('false')
+    expect(pressed('展开宽屏模式')).toBe('false')
+    expect(pressed('长文展开流动')).toBe('false')
+
+    fireEvent.click(screen.getByRole('button', { name: '7 : 3' }))
+    expect(pressed('7 : 3')).toBe('true')
+    expect(pressed('5 : 5')).toBe('false')
+
+    fireEvent.click(screen.getByRole('button', { name: '仅看精炼' }))
+    expect(pressed('仅看精炼')).toBe('true')
+    expect(pressed('双栏对照')).toBe('false')
+
+    fireEvent.click(screen.getByRole('button', { name: '展开宽屏模式' }))
+    expect(pressed('恢复标准宽度')).toBe('true')
+
+    fireEvent.click(screen.getByRole('button', { name: '长文展开流动' }))
+    expect(pressed('工作台独立滚动')).toBe('true')
+  })
+
   it('分割线支持双击重置为 50:50，并支持点击折叠按钮快速切换单栏', () => {
     render(
       <SplitReader
@@ -214,6 +254,199 @@ describe('SplitReader 双栏独立滚动组件', () => {
     fireEvent.click(collapseRightBtn)
     expect(screen.queryByRole('region', { name: '右栏' })).toBeNull()
     expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('100%')
+  })
+
+  it('把比例/宽屏/长文设置持久化，重新挂载后恢复', () => {
+    const first = render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '7 : 3' }))
+    fireEvent.click(screen.getByRole('button', { name: '展开宽屏模式' }))
+    fireEvent.click(screen.getByRole('button', { name: '长文展开流动' }))
+
+    expect(JSON.parse(localStorage.getItem(SPLIT_READER_PREFS_KEY) ?? '{}')).toEqual({
+      ratio: 70,
+      viewMode: 'split',
+      isWide: true,
+      isFluidHeight: true,
+    })
+
+    first.unmount()
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('70%')
+    expect(screen.getByRole('button', { name: '恢复标准宽度' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '工作台独立滚动' })).toBeDefined()
+  })
+
+  it('恢复「仅看原著」视图模式', () => {
+    localStorage.setItem(
+      SPLIT_READER_PREFS_KEY,
+      JSON.stringify({ ratio: 70, viewMode: 'right', isWide: false, isFluidHeight: false }),
+    )
+
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    expect(screen.queryByRole('region', { name: '左栏' })).toBeNull()
+    expect(screen.getByRole('region', { name: '右栏' }).style.width).toBe('100%')
+    expect(screen.getByRole('button', { name: '仅看原著' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('存储值非法时回退默认值，不崩溃', () => {
+    localStorage.setItem(
+      SPLIT_READER_PREFS_KEY,
+      JSON.stringify({ ratio: 999, viewMode: 'nope', isWide: 'yes', isFluidHeight: 1 }),
+    )
+
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('50%')
+    expect(screen.getByRole('button', { name: '双栏对照' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: '展开宽屏模式' })).toBeDefined()
+  })
+
+  it('JSON 损坏时回退默认值', () => {
+    localStorage.setItem(SPLIT_READER_PREFS_KEY, '{')
+
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('50%')
+  })
+
+  it('重置按钮把比例/视图/宽屏/长文恢复默认，并写回存储', () => {
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '7 : 3' }))
+    fireEvent.click(screen.getByRole('button', { name: '展开宽屏模式' }))
+    fireEvent.click(screen.getByRole('button', { name: '长文展开流动' }))
+    fireEvent.click(screen.getByRole('button', { name: '仅看原著' }))
+
+    // 单栏模式下比例组隐藏，重置按钮仍常驻
+    fireEvent.click(screen.getByRole('button', { name: '重置分栏设置' }))
+
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('50%')
+    expect(screen.getByRole('region', { name: '右栏' }).style.width).toBe('50%')
+    expect(screen.getByRole('button', { name: '双栏对照' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: '展开宽屏模式' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '长文展开流动' })).toBeDefined()
+    expect(JSON.parse(localStorage.getItem(SPLIT_READER_PREFS_KEY) ?? '{}')).toEqual({
+      ratio: 50,
+      viewMode: 'split',
+      isWide: false,
+      isFluidHeight: false,
+    })
+  })
+
+  it('快捷键 1/2/3 切换视图，w/l 切换宽屏与长文，0 重置', () => {
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    fireEvent.keyDown(document, { key: '1' })
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('100%')
+
+    fireEvent.keyDown(document, { key: '3' })
+    expect(screen.getByRole('region', { name: '右栏' }).style.width).toBe('100%')
+
+    fireEvent.keyDown(document, { key: '2' })
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('50%')
+
+    fireEvent.keyDown(document, { key: 'w' })
+    expect(screen.getByRole('button', { name: '恢复标准宽度' })).toBeDefined()
+
+    fireEvent.keyDown(document, { key: 'l' })
+    expect(screen.getByRole('button', { name: '工作台独立滚动' })).toBeDefined()
+
+    fireEvent.keyDown(document, { key: '0' })
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('50%')
+    expect(screen.getByRole('button', { name: '展开宽屏模式' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '长文展开流动' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '双栏对照' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('输入框或浮层内不触发分栏快捷键', () => {
+    render(
+      <>
+        <input aria-label="备注" />
+        <div role="dialog" aria-modal="true" aria-label="站内搜索" />
+        <SplitReader
+          leftNode={<div>左栏</div>}
+          rightNode={<div>右栏</div>}
+          leftTitle="左栏"
+          rightTitle="右栏"
+        />
+      </>,
+    )
+
+    fireEvent.keyDown(screen.getByLabelText('备注'), { key: '1' })
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('50%')
+
+    fireEvent.keyDown(document, { key: '1' })
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('50%')
+  })
+
+  it('localStorage 写入失败时仍能正常切换（仅本次会话生效）', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('denied')
+    })
+
+    render(
+      <SplitReader
+        leftNode={<div>左栏</div>}
+        rightNode={<div>右栏</div>}
+        leftTitle="左栏"
+        rightTitle="右栏"
+      />,
+    )
+
+    expect(() => fireEvent.click(screen.getByRole('button', { name: '7 : 3' }))).not.toThrow()
+    expect(screen.getByRole('region', { name: '左栏' }).style.width).toBe('70%')
   })
 
   it('支持切换宽屏全宽阅读模式与自然长文流动高度模式', () => {

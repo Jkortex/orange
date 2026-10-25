@@ -51,4 +51,24 @@ describe('AdjacentNav 相邻条目快捷翻页组件', () => {
     fireEvent.keyDown(document, { key: ']' })
     expect(clickNext).toHaveBeenCalled()
   })
+
+  it('浮层打开时 [ ] 不翻页（属于浮层内部操作）', () => {
+    render(
+      <>
+        <div role="dialog" aria-modal="true" aria-label="站内搜索" />
+        <AdjacentNav collection="posts" prev={mockPrev} next={mockNext} />
+      </>,
+    )
+
+    const prevLink = screen.getByRole('link', { name: /上一篇/ })
+    const nextLink = screen.getByRole('link', { name: /下一篇/ })
+    const clickPrev = vi.spyOn(prevLink, 'click')
+    const clickNext = vi.spyOn(nextLink, 'click')
+
+    fireEvent.keyDown(document, { key: '[' })
+    fireEvent.keyDown(document, { key: ']' })
+
+    expect(clickPrev).not.toHaveBeenCalled()
+    expect(clickNext).not.toHaveBeenCalled()
+  })
 })

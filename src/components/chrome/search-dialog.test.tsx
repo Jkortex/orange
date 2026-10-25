@@ -50,6 +50,51 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('搜索关键词'))
   })
 
+  it('Ctrl+P 不再被抢占（浏览器打印键）', () => {
+    render(<SearchDialog />)
+
+    fireEvent.keyDown(window, { key: 'p', ctrlKey: true })
+
+    expect(screen.queryByRole('dialog', { name: '站内搜索' })).toBeNull()
+  })
+
+  it('按 / 打开对话框并聚焦输入框', () => {
+    render(<SearchDialog />)
+
+    fireEvent.keyDown(document, { key: '/' })
+
+    expect(screen.getByRole('dialog', { name: '站内搜索' })).toBeTruthy()
+    expect(document.activeElement).toBe(screen.getByLabelText('搜索关键词'))
+  })
+
+  it('输入框里按 / 是正文，不打开搜索', () => {
+    render(
+      <>
+        <input aria-label="正文输入" />
+        <SearchDialog />
+      </>,
+    )
+
+    fireEvent.keyDown(screen.getByLabelText('正文输入'), { key: '/' })
+
+    expect(screen.queryByRole('dialog', { name: '站内搜索' })).toBeNull()
+  })
+
+  it('已有其它浮层打开时，/ 与 Ctrl+K 都不叠加搜索', () => {
+    render(
+      <>
+        <div role="dialog" aria-modal="true" aria-label="图片预览" />
+        <SearchDialog />
+      </>,
+    )
+
+    fireEvent.keyDown(document, { key: '/' })
+    expect(screen.queryByRole('dialog', { name: '站内搜索' })).toBeNull()
+
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    expect(screen.queryByRole('dialog', { name: '站内搜索' })).toBeNull()
+  })
+
   it('移动端不占满视口：保留基类的左右留白，仅 sm 起放宽到 max-w-xl', () => {
     render(<SearchDialog />)
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })

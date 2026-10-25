@@ -17,17 +17,28 @@ export interface ShortcutItem {
 
 /*
  * 只列**真实绑定过**、且别处发现不了的键。
- * 这里曾列过 t（切换深浅主题）与 g c / g a / g s（三条「命令面板 — 命令/分类/页面符号模式」），
+ * 这里曾列过 g c / g a / g s（三条「命令面板 — 命令/分类/页面符号模式」），
  * 全站从未绑定过它们，描述里的那个命令面板也根本不存在 —— 帮助页说错话比不说更糟。
  * 搜索弹窗内部的 ↑↓ / ↵ / ⇧←→ / Tab 由弹窗底栏就地提示，不在此重复。
  * 新增条目请同时确认对应的按键处理器真的存在。
  */
 export const SHORTCUTS: ShortcutItem[] = [
-  { keys: 'Ctrl/⌘ + K', desc: '打开站内搜索' },
+  { keys: 'Ctrl/⌘ + K  或  /', desc: '打开站内搜索' },
   { keys: '[  /  ]', desc: '上一篇 / 下一篇（仅文章详情）' },
+  { keys: '1 / 2 / 3', desc: '分栏文章：仅看精炼 / 双栏 / 仅看原著' },
+  { keys: 'w  /  l', desc: '分栏文章：宽屏模式 / 长文模式' },
+  { keys: '0', desc: '分栏文章：重置分栏设置' },
+  { keys: 't', desc: '切换深浅色' },
   { keys: '?', desc: '显示 / 隐藏本指南' },
   { keys: 'Esc', desc: '关闭弹窗 / 浮层' },
 ]
+
+/** 页脚入口等外部控件用它唤起指南（组件自身不渲染触发器，靠 ? 键与事件两路进入） */
+export const HOTKEY_HELP_EVENT = 'orange:hotkey-help'
+
+export function openHotkeyHelp() {
+  window.dispatchEvent(new Event(HOTKEY_HELP_EVENT))
+}
 
 /*
  * 浮层本体交给 ui/dialog（Radix）：焦点陷阱、Esc、遮罩点击关闭、滚动锁都由它接管。
@@ -44,8 +55,14 @@ export function HotkeyHelpModal() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== '?' || e.isComposing) return
-      // 输入框里 ? 是正常字符，不能抢
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return
+      // 输入框 / 可编辑区域里 ? 是正常字符，不能抢
+      const target = e.target as HTMLElement | null
+      if (
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '') ||
+        target?.isContentEditable
+      ) {
+        return
+      }
       if (isOpen) {
         setIsOpen(false)
         return
@@ -59,6 +76,17 @@ export function HotkeyHelpModal() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpen])
+
+  // 页脚「快捷键」入口：没有可见触发器时只能靠 ?，触屏用户根本不知道有这份指南
+  useEffect(() => {
+    function onOpen() {
+      if (document.querySelector('[role="dialog"]') !== null) return
+      restoreFocusRef.current = document.activeElement as HTMLElement | null
+      setIsOpen(true)
+    }
+    window.addEventListener(HOTKEY_HELP_EVENT, onOpen)
+    return () => window.removeEventListener(HOTKEY_HELP_EVENT, onOpen)
+  }, [])
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -106,7 +134,7 @@ export function HotkeyHelpModal() {
         </div>
 
         <div className="type-caption border-t border-border-subtle pt-3 text-center text-muted-foreground">
-          按 <kbd className="kbd">Esc</kbd> 或点击外部关闭
+          按 Esc 或点击外部关闭 · 输入框中单键快捷键不会触发
         </div>
       </DialogContent>
     </Dialog>

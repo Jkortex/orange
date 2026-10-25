@@ -14,6 +14,7 @@ import { DetailHeader } from '@/components/listing/detail-header'
 import { PagefindFilters } from '@/components/listing/pagefind-filters'
 import { SplitReader } from '@/components/reading/split-reader'
 import { PhotoGallery } from '@/components/listing/photo-gallery'
+import { getColumnAdjacentEntries } from '@/lib/column-data'
 
 /*
  * 集合详情页共用视图（posts/life 结构一致，提炼复用）：
@@ -57,6 +58,11 @@ export function EntryView({
   draft?: boolean
 }) {
   const isLife = entry.collection === 'life'
+  const columnId =
+    entry.collection === 'posts' && typeof (entry.data as { column?: string }).column === 'string'
+      ? (entry.data as { column: string }).column
+      : undefined
+  const isColumn = Boolean(columnId)
   const isSplit = SPLIT_MARKER.test(entry.body)
   const [leftBody, rightBody] = isSplit
     ? entry.body.split(SPLIT_MARKER)
@@ -67,9 +73,11 @@ export function EntryView({
   const fallback =
     backHref && backLabel
       ? { href: backHref, label: backLabel }
-      : isLife
-        ? { href: '/life', label: '生活' }
-        : { href: '/', label: '文章列表' }
+      : isColumn && columnId
+        ? { href: `/columns/${columnId}`, label: '返回专栏' }
+        : isLife
+          ? { href: '/life', label: '生活' }
+          : { href: '/', label: '文章列表' }
   // 长文在正文前生成锚点目录（双栏模式提取左栏主线目录）
   const headings = shouldShowToc(leftBody) ? extractToc(leftBody) : []
   // 阅读时长与字数估算
@@ -77,7 +85,9 @@ export function EntryView({
   // 相邻条目导航（posts 与 life 均支持上一篇/下一篇）；草稿不在任何集合内，留空
   const adjacent = draft
     ? { prev: null, next: null }
-    : getAdjacentEntries(entry.collection, entry.slug)
+    : isColumn && columnId
+      ? getColumnAdjacentEntries(columnId, entry.slug)
+      : getAdjacentEntries(entry.collection, entry.slug)
 
   // 生活随笔随手拍照片
   const photos = 'photos' in entry.data && Array.isArray(entry.data.photos) ? entry.data.photos : undefined
@@ -87,8 +97,9 @@ export function EntryView({
 
   return (
     <div className="w-full animate-in fade-in-50 duration-300">
-      {/* 顶部滚动进度指示条 */}
-      <ReadingProgress />
+      {/* 顶部滚动进度指示条：分栏阅读器滚动发生在左右栏内部，页面进度条会一直停在 0，
+          显示出来只会误导，故分栏文章不渲染 */}
+      {!isSplit && <ReadingProgress />}
 
       {/* 搜索过滤元数据：按类型/分类下推给 Pagefind 索引（草稿不进生产索引，跳过） */}
       {!draft && <PagefindFilters type={entry.collection} category={entry.data.category} />}

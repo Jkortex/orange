@@ -26,14 +26,33 @@ const SECTION_ICONS: Record<string, LucideIcon> = {
   '/skills': Wrench,
 }
 
-export function MobileNavDrawer({ items = defaultNavItems }: { items?: NavItem[] }) {
+export function MobileNavDrawer({
+  items = defaultNavItems,
+  columnSlugs = [],
+}: {
+  items?: NavItem[]
+  columnSlugs?: string[]
+}) {
   const pathname = usePathname()
+  const columnSet = new Set(columnSlugs)
   // 抽屉里第一个栏目链接：打开时把焦点放这里（浮层默认会落到 DOM 末尾的关闭按钮）
   const firstItemRef = useRef<HTMLAnchorElement>(null)
 
+  function isColumnPost() {
+    const match = pathname.match(/^\/posts\/([^/]+)$/)
+    return match ? columnSet.has(match[1]) : false
+  }
+
   function isActive(href: string) {
-    // 根路径即文章列表；文章详情在 /posts/<slug>，也归「文章」高亮
-    if (href === '/') return pathname === '/' || pathname.startsWith('/posts/')
+    // 专栏文章详情页归「专栏」高亮，不归「文章」
+    if (href === '/') {
+      if (isColumnPost()) return false
+      return pathname === '/' || pathname.startsWith('/posts/')
+    }
+    if (href === '/columns') {
+      if (isColumnPost()) return true
+      return pathname === href || pathname.startsWith(`${href}/`)
+    }
     return pathname === href || pathname.startsWith(`${href}/`)
   }
 

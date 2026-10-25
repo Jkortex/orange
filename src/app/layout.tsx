@@ -8,10 +8,12 @@ import { BackToTop } from '@/components/chrome/back-to-top'
 import { DraftFloatingButton } from '@/components/chrome/draft-floating-button'
 import { SearchDialog } from '@/components/chrome/search-dialog'
 import { HotkeyHelpModal } from '@/components/chrome/hotkey-help-modal'
+import { HotkeyHelpTrigger } from '@/components/chrome/hotkey-help-trigger'
 import { RouteScrollReset } from '@/components/chrome/route-scroll-reset'
 import { GeistMono } from 'geist/font/mono'
 import { HeaderNav } from '@/components/chrome/header-nav'
 import { MobileNavDrawer } from '@/components/chrome/mobile-nav-drawer'
+import { getCollection, isColumnEntry } from '@/lib/content'
 import { BrandMark } from '@/components/chrome/brand-mark'
 import './globals.css'
 
@@ -25,6 +27,9 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem('theme-name'
 
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const columnSlugs = getCollection('posts')
+    .filter(isColumnEntry)
+    .map((entry) => entry.slug)
   return (
     <html
       lang="zh-CN"
@@ -60,9 +65,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div className="ml-auto flex items-center gap-x-1 sm:gap-x-2">
                 {/* 行内文字导航只在 sm 及以上出现，移动端由 MobileNavDrawer 承担 */}
                 <div className="hidden sm:block">
-                  <HeaderNav />
+                  <HeaderNav columnSlugs={columnSlugs} />
                 </div>
-                <MobileNavDrawer />
+                <MobileNavDrawer columnSlugs={columnSlugs} />
                 <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/70 sm:inline-block" />
                 <SearchDialog />
                 <ThemeSelect className="hidden sm:inline-flex" />
@@ -89,6 +94,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </p>
               <nav aria-label="页脚" className="type-meta flex items-center gap-4">
                 <Link href="/rss.xml" className="transition-colors hover:text-foreground">RSS</Link>
+                <span aria-hidden="true" className="h-3 w-px bg-border" />
+                <HotkeyHelpTrigger />
                 <span aria-hidden="true" className="h-3 w-px bg-border" />
                 <span className="tabular-nums">© {new Date().getFullYear()}</span>
               </nav>

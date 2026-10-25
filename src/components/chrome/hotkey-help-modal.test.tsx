@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { HotkeyHelpModal, SHORTCUTS } from '@/components/chrome/hotkey-help-modal'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  HOTKEY_HELP_EVENT,
+  HotkeyHelpModal,
+  SHORTCUTS,
+  openHotkeyHelp,
+} from '@/components/chrome/hotkey-help-modal'
 
 afterEach(() => {
   cleanup()
@@ -12,17 +17,40 @@ afterEach(() => {
  * 帮助页曾长期列着 t 与 g c / g a / g s 四条从未绑定过的键，
  * 后三条描述的还是根本不存在的「命令面板模式」。误导比没有更糟，故固化清单：
  * 下面每一条都能在源码里找到对应的处理器 ——
- *   Ctrl/⌘+K → search-dialog.tsx 的 window keydown
- *   [ ]      → adjacent-nav.tsx 的 useHotkey
- *   ?        → 本文件
- *   Esc      → Radix Dialog（ui/dialog.tsx）
+ *   Ctrl/⌘+K 与 / → search-dialog.tsx 的 window keydown
+ *   [ ]           → adjacent-nav.tsx 的 useHotkey
+ *   t             → theme-toggle.tsx 的 useHotkey
+ *   ?             → 本文件
+ *   Esc           → Radix Dialog（ui/dialog.tsx）
  * 要加新条目，先把键真的绑上，再来改这里。
  */
-const IMPLEMENTED_KEYS = ['Ctrl/⌘ + K', '[  /  ]', '?', 'Esc']
+const IMPLEMENTED_KEYS = [
+  'Ctrl/⌘ + K  或  /',
+  '[  /  ]',
+  '1 / 2 / 3',
+  'w  /  l',
+  '0',
+  't',
+  '?',
+  'Esc',
+]
 
 describe('快捷键帮助页的条目真实性', () => {
   it('只列真实绑定的键，不再出现 t 与 g 前缀序列', () => {
     expect(SHORTCUTS.map(({ keys }) => keys)).toEqual(IMPLEMENTED_KEYS)
+  })
+
+  it('页脚入口通过事件打开指南（触屏没有 ? 键）', () => {
+    render(<HotkeyHelpModal />)
+
+    act(() => {
+      openHotkeyHelp()
+    })
+
+    expect(screen.getByRole('dialog', { name: /快捷键指南/ })).toBeDefined()
+
+    // 事件常量与页面里的派发名保持一致
+    expect(HOTKEY_HELP_EVENT).toBe('orange:hotkey-help')
   })
 
   it('描述里不再出现不存在的「命令面板」', () => {
@@ -43,7 +71,7 @@ describe('HotkeyHelpModal 快捷键帮助弹窗组件', () => {
 
     fireEvent.keyDown(document, { key: '?' })
     expect(screen.getByRole('dialog', { name: /快捷键指南/ })).toBeDefined()
-    expect(screen.getByText('Ctrl/⌘ + K')).toBeDefined()
+    expect(screen.getByText(/Ctrl\/⌘ \+ K/)).toBeDefined()
     expect(screen.getByText(/上一篇 \/ 下一篇/)).toBeDefined()
   })
 

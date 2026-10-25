@@ -53,7 +53,9 @@ export function HeadingWithAnchor({
          * 用伪元素而非 padding：padding 会把 hover 底色一起撑大，也会顶开标题行高。
          */
         className={`relative inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-all duration-150 after:absolute after:-inset-1.5 after:content-[''] hover:bg-muted hover:text-foreground focus:opacity-100 ${
-          copied ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-100'
+          copied
+            ? 'opacity-100 text-primary'
+            : 'opacity-0 group-hover:opacity-100 [@media(any-pointer:coarse)]:opacity-100'
         }`}
       >
         {copied ? (

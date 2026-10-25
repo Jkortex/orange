@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import {
   BookOpen,
   Sparkles,
@@ -26,6 +27,38 @@ export type SplitReaderProps = {
 
 export type ViewMode = 'split' | 'left' | 'right'
 
+/** 阅读工作台偏好（比例 / 视图 / 宽屏 / 长文）跨文章、跨会话保留 */
+export const SPLIT_READER_PREFS_KEY = 'split-reader-prefs'
+
+const VIEW_MODES: ViewMode[] = ['split', 'left', 'right']
+
+type StoredPrefs = {
+  ratio?: unknown
+  viewMode?: unknown
+  isWide?: unknown
+  isFluidHeight?: unknown
+}
+
+function readStoredPrefs(): StoredPrefs {
+  try {
+    const raw = localStorage.getItem(SPLIT_READER_PREFS_KEY)
+    if (!raw) return {}
+    const parsed: unknown = JSON.parse(raw)
+    return parsed !== null && typeof parsed === 'object' ? (parsed as StoredPrefs) : {}
+  } catch {
+    // 隐私模式 / 存储被禁用 / JSON 损坏：一律回退默认值，不影响阅读
+    return {}
+  }
+}
+
+function isRatio(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 10 && value <= 90
+}
+
+function isViewMode(value: unknown): value is ViewMode {
+  return VIEW_MODES.includes(value as ViewMode)
+}
+
 export function SplitReader({
   leftNode,
   rightNode,
@@ -39,6 +72,8 @@ export function SplitReader({
   const [viewMode, setViewMode] = useState<ViewMode>('split') // 双栏 / 仅看精炼 / 仅看原著
   const [isWide, setIsWide] = useState(false) // 宽屏通栏铺满模式
   const [isFluidHeight, setIsFluidHeight] = useState(false) // 自然流动长文高度模式
+  // 首帧必须与服务端静态 HTML 一致（默认值），读 localStorage 放到挂载后，避免水合错位
+  const [prefsReady, setPrefsReady] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const toggleAllEn = () => {
@@ -51,6 +86,8 @@ export function SplitReader({
   }
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // 分割线上叠着两颗折叠按钮：从按钮上按下时不能开始拖拽，否则点击会顺带选中正文
+    if ((e.target as HTMLElement).closest('button')) return
     e.preventDefault()
     setIsDragging(true)
   }, [])
@@ -58,6 +95,30 @@ export function SplitReader({
   const handleTouchStart = useCallback(() => {
     setIsDragging(true)
   }, [])
+
+  // 挂载后恢复上次的阅读偏好：同一份设置跟着 [ / ] 翻页继续生效
+  useEffect(() => {
+    const prefs = readStoredPrefs()
+    if (isRatio(prefs.ratio)) setRatio(Math.round(prefs.ratio))
+    if (isViewMode(prefs.viewMode)) setViewMode(prefs.viewMode)
+    if (typeof prefs.isWide === 'boolean') setIsWide(prefs.isWide)
+    if (typeof prefs.isFluidHeight === 'boolean') setIsFluidHeight(prefs.isFluidHeight)
+    setPrefsReady(true)
+  }, [])
+
+  // 写入时机：恢复完成后才写，避免用默认值覆盖已有偏好；
+  // 拖拽中不写（每次 mousemove 都落盘太浪费），松手后 isDragging 变化再补一次最终比例
+  useEffect(() => {
+    if (!prefsReady || isDragging) return
+    try {
+      localStorage.setItem(
+        SPLIT_READER_PREFS_KEY,
+        JSON.stringify({ ratio, viewMode, isWide, isFluidHeight }),
+      )
+    } catch {
+      // 存储不可用时仅本次会话生效
+    }
+  }, [prefsReady, isDragging, ratio, viewMode, isWide, isFluidHeight])
 
   useEffect(() => {
     if (!isDragging) return
@@ -95,6 +156,29 @@ export function SplitReader({
       window.removeEventListener('touchend', handleEnd)
     }
   }, [isDragging])
+
+  /** 重置全部阅读工作台设置：比例、视图、宽屏、长文，并清掉移动端标签 */
+  function resetPrefs() {
+    setRatio(50)
+    setViewMode('split')
+    setIsWide(false)
+    setIsFluidHeight(false)
+    setMobileTab('left')
+  }
+
+  // 浮层开着时（搜索 / 灯箱 / 目录 / 快捷键指南）不抢单键
+  function readerShortcut(run: () => void) {
+    if (document.querySelector('[role="dialog"]') !== null) return
+    run()
+  }
+
+  // 分栏文章专属快捷键：数字选视图、w/l 切宽屏与长文、0 重置
+  useHotkey('1', () => readerShortcut(() => setViewMode('left')))
+  useHotkey('2', () => readerShortcut(() => setViewMode('split')))
+  useHotkey('3', () => readerShortcut(() => setViewMode('right')))
+  useHotkey('W', () => readerShortcut(() => setIsWide((v) => !v)))
+  useHotkey('L', () => readerShortcut(() => setIsFluidHeight((v) => !v)))
+  useHotkey('0', () => readerShortcut(resetPrefs))
 
   return (
     <div className="w-full">
@@ -184,12 +268,13 @@ export function SplitReader({
               <button
                 type="button"
                 onClick={() => setViewMode('left')}
+                aria-pressed={viewMode === 'left'}
+                aria-keyshortcuts="1"
                 className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
                   viewMode === 'left'
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-                title="仅看精炼（100% 独享阅读）"
               >
                 <PanelLeft className="size-3.5" aria-hidden />
                 <span>仅看精炼</span>
@@ -197,12 +282,13 @@ export function SplitReader({
               <button
                 type="button"
                 onClick={() => setViewMode('split')}
+                aria-pressed={viewMode === 'split'}
+                aria-keyshortcuts="2"
                 className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
                   viewMode === 'split'
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-                title="双栏对照（左右协同阅读）"
               >
                 <Columns2 className="size-3.5" aria-hidden />
                 <span>双栏对照</span>
@@ -210,12 +296,13 @@ export function SplitReader({
               <button
                 type="button"
                 onClick={() => setViewMode('right')}
+                aria-pressed={viewMode === 'right'}
+                aria-keyshortcuts="3"
                 className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
                   viewMode === 'right'
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-                title="仅看原著（100% 独享阅读）"
               >
                 <PanelRight className="size-3.5" aria-hidden />
                 <span>仅看原著</span>
@@ -226,77 +313,42 @@ export function SplitReader({
             {viewMode === 'split' && (
               <div className="hidden xl:inline-flex items-center gap-0.5 rounded-lg border border-border-subtle bg-surface/80 p-0.5 text-xs shadow-2xs">
                 <span className="px-1 text-[11px] text-muted-foreground">比例:</span>
-                <button
-                  type="button"
-                  onClick={() => setRatio(80)}
-                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                    ratio >= 75
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  title="8:2 核心实战主导"
-                >
-                  8 : 2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatio(70)}
-                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                    ratio >= 65 && ratio < 75
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  title="7:3 核心实战主导"
-                >
-                  7 : 3
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatio(50)}
-                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                    ratio > 40 && ratio < 65
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  title="5:5 双栏平分对照"
-                >
-                  5 : 5
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatio(30)}
-                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                    ratio > 25 && ratio <= 40
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  title="3:7 原著精读主导"
-                >
-                  3 : 7
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatio(20)}
-                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                    ratio <= 25
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  title="2:8 原著全景精读"
-                >
-                  2 : 8
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatio(50)}
-                  className="rounded p-1 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-                  title="重置为 5:5 平分"
-                  aria-label="重置比例"
-                >
-                  <RotateCcw className="size-3" aria-hidden />
-                </button>
+                {[
+                  { value: 80, label: '8 : 2', active: ratio >= 75 },
+                  { value: 70, label: '7 : 3', active: ratio >= 65 && ratio < 75 },
+                  { value: 50, label: '5 : 5', active: ratio > 40 && ratio < 65 },
+                  { value: 30, label: '3 : 7', active: ratio > 25 && ratio <= 40 },
+                  { value: 20, label: '2 : 8', active: ratio <= 25 },
+                ].map(({ value, label, active }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setRatio(value)}
+                    aria-pressed={active}
+                    className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                      active
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             )}
+
+            {/* 全局重置：比例、视图、宽屏、长文一起回到默认（旧的比例复位钮与 5:5 按钮重复，已并入这里） */}
+            <button
+              type="button"
+              onClick={resetPrefs}
+              aria-label="重置分栏设置"
+              aria-keyshortcuts="0"
+              title="重置分栏设置（5:5 · 双栏 · 标准宽度 · 工作台高度）"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer shadow-2xs"
+            >
+              <RotateCcw className="size-3.5 text-muted-foreground" aria-hidden />
+              <span className="hidden xl:inline">重置</span>
+            </button>
           </div>
 
           {/* 右侧：宽屏模式、流动高度、英文开关与右栏状态 */}
@@ -308,6 +360,8 @@ export function SplitReader({
               className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer shadow-2xs"
               title={isWide ? '恢复标准宽度' : '展开宽屏模式'}
               aria-label={isWide ? '恢复标准宽度' : '展开宽屏模式'}
+              aria-pressed={isWide}
+              aria-keyshortcuts="w"
             >
               {isWide ? (
                 <Minimize2 className="size-3.5 text-primary" aria-hidden />
@@ -324,6 +378,8 @@ export function SplitReader({
               className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer shadow-2xs"
               title={isFluidHeight ? '切换为工作台独立滚动' : '长文展开流动（自适应全文高度）'}
               aria-label={isFluidHeight ? '工作台独立滚动' : '长文展开流动'}
+              aria-pressed={isFluidHeight}
+              aria-keyshortcuts="l"
             >
               <ScrollText
                 className={`size-3.5 ${isFluidHeight ? 'text-primary' : 'text-muted-foreground'}`}
@@ -336,6 +392,7 @@ export function SplitReader({
             <button
               type="button"
               onClick={toggleAllEn}
+              aria-pressed={allEnOpen}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer shadow-2xs"
               title={allEnOpen ? '折叠所有段落的英文对照' : '展开所有段落的英文对照'}
             >
@@ -403,6 +460,7 @@ export function SplitReader({
                     setViewMode('right')
                   }}
                   title="折叠左栏，仅看原著"
+                  aria-label="折叠左栏，仅看原著"
                   className="rounded p-0.5 text-muted-foreground/70 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                 >
                   <ChevronsLeft className="size-2.5" aria-hidden />
@@ -415,6 +473,7 @@ export function SplitReader({
                     setViewMode('left')
                   }}
                   title="折叠右栏，仅看精炼"
+                  aria-label="折叠右栏，仅看精炼"
                   className="rounded p-0.5 text-muted-foreground/70 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                 >
                   <ChevronsRight className="size-2.5" aria-hidden />

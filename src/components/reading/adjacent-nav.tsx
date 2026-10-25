@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, type RefObject } from 'react'
 import Link from 'next/link'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import type { CollectionType } from '@/lib/content'
@@ -16,17 +16,18 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
   const prevRef = useRef<HTMLAnchorElement>(null)
   const nextRef = useRef<HTMLAnchorElement>(null)
 
-  useHotkey('[', () => {
-    if (prevRef.current) {
-      prevRef.current.click()
-    }
-  })
+  /*
+   * 浮层（搜索 / 图片预览 / 目录 / 快捷键指南）开着时，[ ] 属于浮层内部操作，
+   * 不能让背后正文静默翻页 —— 尤其是搜索框里按 [ 检索时，焦点在 input 已被 hotkeys 拦下，
+   * 但焦点落在浮层按钮上仍会触发。
+   */
+  function go(ref: RefObject<HTMLAnchorElement | null>) {
+    if (document.querySelector('[role="dialog"]') !== null) return
+    ref.current?.click()
+  }
 
-  useHotkey(']', () => {
-    if (nextRef.current) {
-      nextRef.current.click()
-    }
-  })
+  useHotkey('[', () => go(prevRef))
+  useHotkey(']', () => go(nextRef))
 
   if (!prev && !next) return null
 
@@ -45,6 +46,7 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
         <Link
           ref={prevRef}
           href={`/${collection}/${prev.slug}`}
+          aria-keyshortcuts="["
           onClick={handleNav}
           className="surface-card surface-interactive group flex flex-col justify-between p-4"
         >
@@ -69,6 +71,7 @@ export function AdjacentNav({ collection, prev, next, className = '' }: Adjacent
         <Link
           ref={nextRef}
           href={`/${collection}/${next.slug}`}
+          aria-keyshortcuts="]"
           onClick={handleNav}
           className="surface-card surface-interactive group flex flex-col justify-between p-4 text-right sm:col-start-2"
         >

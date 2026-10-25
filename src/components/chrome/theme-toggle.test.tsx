@@ -41,6 +41,21 @@ describe('ThemeToggle 正常渲染', () => {
     expect(button.className === '' ? '' : button.className).toMatch(/size-9|p-2\.5/)
   })
 
+  it('按 t 切换深浅色；输入框内按 t 不触发', () => {
+    render(
+      <>
+        <input aria-label="备注" />
+        <ThemeToggle />
+      </>,
+    )
+
+    fireEvent.keyDown(document, { key: 't' })
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+
+    fireEvent.keyDown(screen.getByLabelText('备注'), { key: 't' })
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+  })
+
   it('深色模式下显示太阳图标（点击进入浅色）', () => {
     document.documentElement.classList.add('dark')
     render(<ThemeToggle />)

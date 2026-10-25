@@ -12,8 +12,6 @@ tags:
   - 微服务
 ---
 
-> 💡 **专栏导读**：本文收录于专栏 [《Go 云原生分布式系统实战》](/columns/distributed-go)。全专栏共 17 篇，深入剖析现代 Go 在并发模型、微服务通信、JWT 鉴权、分布式事务、可观测性与生产集群落地的完整工程实践。
-
 ## 1. 为什么内部通信选择 gRPC（Why gRPC for Internal Communication）
 
 HTTP/JSON 是外部 API 的绝佳选择 —— 任何客户端、任何编程语言都能轻松调用，并且直接用 `curl` 即可调试。然而，对于两端都由你完全掌控的**内部服务间通信（Internal Service Communication）**，gRPC 提供了三项至关重要的核心优势：

@@ -1,17 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import {
-  BookOpen,
-  Layers,
-  ArrowRight,
-  Cpu,
-  ShieldCheck,
-  Terminal,
-  Compass,
-} from 'lucide-react'
+import { Layers, ArrowRight, Cpu, ShieldCheck, Terminal, Compass } from 'lucide-react'
 import { BackButton } from '@/components/reading/back-button'
-import { PageHeader } from '@/components/listing/page-header'
 import { getAllColumns, getColumn } from '@/lib/column-data'
 
 type Params = { params: Promise<{ id: string }> }
@@ -46,13 +37,8 @@ export default async function ColumnDetailPage({ params }: Params) {
     <div className="mx-auto w-full max-w-5xl animate-in fade-in-50 duration-300">
       <BackButton fallbackHref="/columns" fallbackLabel="返回专栏列表" className="mb-6" />
 
-      <PageHeader
-        title={col.title}
-        description="专栏全景大纲与进阶学习路线图。"
-        icon={<BookOpen aria-hidden />}
-      />
+      {/* 头图卡片即页面标题：此前上面还叠了一层 PageHeader，同一个标题与简介在一屏里出现两次 */}
 
-      {/* 专栏头图卡片 */}
       <section className="mb-12 overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-xs sm:p-8">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -68,9 +54,9 @@ export default async function ColumnDetailPage({ params }: Params) {
             ))}
           </div>
 
-          <h2 className="type-display tracking-tight text-foreground sm:text-3xl">
+          <h1 className="type-display tracking-tight text-foreground sm:text-3xl">
             {col.title}
-          </h2>
+          </h1>
 
           <p className="type-item font-medium text-muted-foreground">
             {col.subtitle}
@@ -109,18 +95,18 @@ export default async function ColumnDetailPage({ params }: Params) {
       <div className="space-y-12">
         <div className="flex items-center gap-3 border-b border-border pb-4">
           <Layers className="size-5 text-primary" aria-hidden />
-          <h3 className="type-title">专栏全景路线图与目录（共 {col.totalArticles} 篇）</h3>
+          <h2 className="type-title">专栏全景路线图与目录（共 {col.totalArticles} 篇）</h2>
         </div>
 
         {col.phases.map((phase, pIndex) => (
           <section key={phase.name} className="space-y-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <h4 className="type-item flex items-center gap-2 font-semibold text-foreground">
+              <h3 className="type-item flex items-center gap-2 font-semibold text-foreground">
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">
                   {pIndex + 1}
                 </span>
                 {phase.name}
-              </h4>
+              </h3>
               <p className="type-meta text-muted-foreground">
                 {phase.description}
               </p>

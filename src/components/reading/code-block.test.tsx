@@ -18,6 +18,10 @@ describe('CodeBlock', () => {
     const btn = screen.getByRole('button', { name: '复制代码' })
     expect(btn).toBeTruthy()
     expect(screen.getByTestId('pre')).toBeTruthy()
+
+    // 触屏没有 hover：按钮必须常显，且热区用伪元素撑到 36px
+    expect(btn.className).toContain('[@media(any-pointer:coarse)]:opacity-100')
+    expect(btn.className).toContain('after:-inset-1')
   })
 
   it('不渲染 macOS 三色指示点（硬编码颜色已清除），保留语言标签', () => {
