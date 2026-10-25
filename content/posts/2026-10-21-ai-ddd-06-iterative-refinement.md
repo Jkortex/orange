@@ -456,6 +456,254 @@ required_external_inputs:
 
 当反复的迭代不再引发重大的结构性剧变，并且残留的不确定性已被显式暴露而非深藏于隐性假设之中时，限界上下文便达到了足够自洽的标准。
 
+### 自洽性源于反复比较
+
+一个常见误区，是把每次 AI 输出当作孤立产物：团队请求一个模型、审查它、纠正它，然后继续下一步。但只有在跨轮次比较输出时，迭代精化才会真正产生力量。
+
+与其只问“当前输出是否正确”，不如把它与上一轮迭代对比，问：**所有权、角色与未决问题是否变得更加自洽**。
+
+这种比较让进展变得可见：哪些歧义已经消失，哪些边界已经稳定，哪些不确定性仍然存在。
+
+限界上下文不是在一步之内发现完美边界而形成的，而是在多轮迭代中逐步消除那些本不该共存于同一模型中的矛盾而形成的。
+
+阅读每一轮迭代时，一个有用的问题清单是：
+
+- 已拥有的聚合是否保持稳定？
+- 外部输入是否仍然是外部的？
+- 内部事件是否仍然由内部产生？
+- 命令是否保持了其角色？
+- 策略是否从隐含叙述变成了显式声明？
+- 不清楚的决策是否变成了未决问题？
+- 模型是否避免重新引入已被拒绝的概念？
+
+如果答案持续为“是”，限界上下文就在向更稳定的表达收敛。
+
+如果同样的错误反复出现，说明推理环境仍然太弱：规则手册需要更锋利的约束，词汇可能需要更精确，或者提示词在一步之内要求了太多。因此，上下文自洽性是在多轮迭代中观察到的，而不是单次模型输出就能提供的。
+
+### 稳定的所有权与稳定的角色
+
+如果概念的所有权不断摇摆，限界上下文就不可能自洽。如果 `Payment` 在一轮迭代中属于 Order Management，下一轮又跑到别处，模型就不是在精化，而是在漂移。
+
+在 BrewUp Order Management 中，所有权边界应在各轮迭代中保持稳定：
+
+```yaml
+owned_by_order_management:
+  - Order
+
+not_owned_by_order_management:
+  - Payment
+  - StockReservation
+  - Shipment
+  - Invoice
+```
+
+重要的不是这些关系曾被团队定义过一次，而是后续迭代会保留它们。角色也需要同样的稳定性：命令、内部事件、外部输入与策略应在连续迭代中保持相同的语义角色。
+
+对于 BrewUp Order Management，分类可能稳定为：
+
+```yaml
+commands:
+  confirmed:
+    user_initiated:
+      - SubmitOrder
+    policy_triggered:
+      - ConfirmOrder
+  proposed:
+    user_initiated:
+      - CancelOrder
+    policy_triggered:
+      - ExpireOrder
+
+internal_events:
+  confirmed:
+    - OrderSubmitted
+    - OrderConfirmed
+  proposed:
+    - OrderCancelled
+    - OrderExpired
+
+external_inputs:
+  - PaymentAuthorized
+  - StockReserved
+  - StockReservationFailed
+
+policies:
+  confirmed:
+    - Confirm an order when payment authorization and stock reservation
+      have both been observed.
+```
+
+与所有权一样，分类的重要性低于其持久性。外部输入不会变成内部事件，提议中的转换不会悄悄变成已确认，**策略触发的命令**也不会变成用户动作。这些区分保护上下文不发生语义坍塌。
+
+### 未决问题也是自洽性的一部分
+
+一个自洽的模型仍然会有未决问题；而如果一个模型过快地把所有疑难“解决”，反而应该引起更仔细的审视。LLM 天然倾向于补齐缺失结构，即使完成它所需的领域知识尚未提供。这正是未决问题作为安全机制而非弱点的原因。
+
+比较下面两种输出：
+
+```yaml
+policy:
+  - If stock reservation fails, automatically cancel the order.
+```
+
+与：
+
+```yaml
+open_questions:
+  - What should Order Management do after StockReservationFailed?
+  - Should the order be cancelled immediately, kept pending, or retried?
+  - What should happen to the existing payment authorization?
+```
+
+第一种输出是“完整的”；第二种输出更“自洽”。
+
+第一种虚构了一条业务规则；第二种保留了不确定性，并暴露了团队仍需做出的决策。
+
+一条虚构的规则很容易在后续迭代中存活下来，因为它已经成为上下文的一部分。未决问题通过标出已知领域知识与合理推测之间的边界，阻止这种倒退。
+
+这种行为本身也应该沉淀为可复用约束：
+
+```yaml
+uncertainty_rules:
+  - Do not invent domain rules to complete the model.
+  - If ownership, policy, or reaction behavior is unclear, preserve it as an open
+    question.
+  - Keep proposed concepts separate from confirmed concepts.
+```
+
+### 上下文快照强化自洽性
+
+随着迭代累积，团队需要一个稳定产物来表示限界上下文的当前状态。否则，某一轮精化中存活下来的决策可能在下一轮消失或倒退。因此，团队维护一份**上下文快照（Context Snapshot）**。
+
+上下文快照是对当前限界上下文的紧凑、可复用表示，而不是完整规格。它捕获精化后存活下来的决策、必须保持稳定的关键区分，以及仍然开放的问题。实践中，快照作为受版本控制的文档与它所描述的限界上下文放在一起，而不是放在聊天记录里；它也是后续任何关于 Order Management 的 AI 会话的第一手资料。*第 7 章* 会进一步把这种习惯变成可维护的领域载体。
+
+对于 BrewUp Order Management，快照可能如下：
+
+```yaml
+bounded_context: Order Management
+
+purpose:
+  - Manage the Order-owned lifecycle of a customer order and the decisions
+    that belong to Order Management.
+
+owned_concepts:
+  aggregates:
+    confirmed:
+      - Order
+
+  commands:
+    confirmed:
+      user_initiated:
+        - SubmitOrder
+      policy_triggered:
+        - ConfirmOrder
+    proposed:
+      user_initiated:
+        - CancelOrder
+      policy_triggered:
+        - ExpireOrder
+
+  internal_events:
+    confirmed:
+      - OrderSubmitted
+      - OrderConfirmed
+    proposed:
+      - OrderCancelled
+      - OrderExpired
+
+external_inputs:
+  - PaymentAuthorized
+  - StockReserved
+  - StockReservationFailed
+
+policies:
+  confirmed:
+    - Confirm an order when payment authorization and stock reservation
+      have both been observed.
+
+ownership_constraints:
+  - Payment is not owned by Order Management.
+  - StockReservation is not owned by Order Management.
+  - Shipment is not owned by Order Management.
+  - Invoice is not owned by Order Management.
+  - External inputs must not be modeled as events emitted by the Order aggregate.
+
+open_questions:
+  - Is cancellation always allowed before confirmation?
+  - How long can an order remain unconfirmed before it expires?
+  - What should Order Management do after StockReservationFailed?
+```
+
+这个产物把迭代变成累积的知识。快照给模型一个稳定起点，把已确认与提议中的概念分开，保留未决问题，并防止先前已解决的所有权与建模决策在后续迭代中倒退。没有上下文快照，团队只有对话；有了它，团队就有了后续会话可以检视与保留的持久记录。
+
+### 用最终审查提示词测试自洽性
+
+一旦快照存在，就可以让模型审查它内部是否存在矛盾，而不是让它宣布“正确”。
+
+一个有用的提示词是有意保持怀疑的：
+
+```yaml
+Context:
+You are reviewing the current BrewUp Order Management bounded context snapshot.
+
+Task:
+Evaluate the snapshot for contextual coherence.
+
+Check for:
+1. Concepts whose ownership contradicts the bounded context.
+2. External inputs incorrectly treated as internal events.
+3. Commands that belong to another bounded context.
+4. Proposed concepts promoted to confirmed without supporting domain knowledge.
+5. Policies that invent missing business rules.
+6. Open questions that have been silently resolved without domain input.
+7. Naming or role inconsistencies across commands, events, policies, and external
+   inputs.
+
+Return:
+- assessment
+- detected_inconsistencies
+- recommended_corrections
+- rules_to_add
+- open_questions_to_preserve
+
+Do not add new domain rules unless they are directly supported by the snapshot.
+Do not resolve open questions.
+```
+
+最后两条指令至关重要：它们防止审查变成另一轮生成。提示词要求 `recommended_corrections` 与 `rules_to_add`，这看起来像生成，因此必须明确告诉模型，这两者必须来自快照而非它自己的判断：它是在按既定标准审计快照，而不是完成设计。一个可能的审查结果如下：
+
+```yaml
+assessment: coherent_with_open_questions
+
+detected_inconsistencies: []
+recommended_corrections: []
+rules_to_add: []
+
+open_questions_to_preserve:
+  - Is cancellation always allowed before confirmation?
+  - How long can an order remain unconfirmed before it expires?
+  - What should Order Management do after StockReservationFailed?
+```
+
+这个输出之所以有用，恰恰在于它**没有**试图完成领域模型。审查没有发现当前快照中的矛盾，但它保留了仍需领域输入的决策。这个区分很重要。上下文自洽性并不意味着所有问题都已回答；它意味着团队提出的内容、提议中的内容与仍不确定的内容可以共存，而不相互矛盾。
+
+### 何时限界上下文足够自洽
+
+团队最终必须继续前进；迭代不能无限进行。精化的目的是把歧义降低到足以安全开展下一步设计活动的程度。
+
+当反复迭代不再产生重大的结构性变化，并且残余的不确定性是显式暴露的，而不是隐藏在假设之中时，限界上下文就足够自洽了。
+
+对于 BrewUp Order Management，这些问题的答案现在都是“是”。所有权保持住了：Order 仍然是唯一拥有的聚合，Payment、Stock、Shipment 与 Invoice 没有重新出现为被拥有的概念。角色也保持住了：`PaymentAuthorized`、`StockReserved` 与 `StockReservationFailed` 仍然是外部输入，内部事件仍然只由 Order 聚合发出，命令仍然按来源分类。没有任何东西悄悄“硬化”：已确认与提议中的概念保持分离，未决问题保持开放而不是被转换成虚构规则，先前解决的所有权或角色决策也没有倒退。
+
+这些标准是语义标准，而不是实现标准：在这个阶段，问题不在于最终架构或代码是否正确，而在于限界上下文是否对领域表达了**一致**的内容。
+
+因此，本章的输出是一个可以支撑未来决策的稳定限界上下文模型，而不是最终架构。
+
+自洽的模型为后续架构决策提供了更坚实的基础。
+
+模型生成候选方案，架构师施加判断，规则手册保留纠正，快照稳定限界上下文。一旦限界上下文达到这种稳定水平，快照就可以成为更持久的 AI 协作形式的基础。下一章就从这一点出发，把保留下来的领域理解转化为可复用的工作上下文。
+
+
 :::en
 > **Original**: A bounded context is coherent when its language, responsibilities, rules, and boundaries support each other across iterations... Open questions are part of coherence: they keep uncertainty visible until the team can decide. A context snapshot turns iterative refinement into accumulated domain knowledge by preserving confirmed concepts, proposed concepts, ownership boundaries, and unresolved questions.
 
@@ -465,3 +713,8 @@ required_external_inputs:
 - **Visible Uncertainty**：*显式不确定性*。用 `open_questions` 留白保留真实业务未知，防止模型以概率臆测掩盖歧义。
 :::
 
+
+## 本章图示
+
+![图 6.1 – Refinement loop](/media/posts/ai-ddd/fig-6-1.png)
+![图 6.2 – The classification filter used during critique](/media/posts/ai-ddd/fig-6-2.png)

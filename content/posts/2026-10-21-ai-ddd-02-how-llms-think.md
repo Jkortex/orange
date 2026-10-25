@@ -628,3 +628,15 @@ AI 辅助领域建模的终极成败，完全取决于这套语言的纪律性�
 - OpenAI (2024). tiktoken: a fast BPE tokenizer for use with OpenAI's models. <https://github.com/openai/tiktoken>
 - OpenAI (2026). models. <https://developers.openai.com/api/docs/models> (accessed September 2026).
 - Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., and Polosukhin, I. (2017). Attention Is All You Need. Advances in Neural Information Processing Systems 30 (NeurIPS 2017). <https://arxiv.org/abs/1706.03762>
+
+
+## 本章图示
+
+![图 2.1 – Next-token prediction flow](/media/posts/ai-ddd/fig-2-1.png)
+![图 2.2 – Tokenization example](/media/posts/ai-ddd/fig-2-2.png)
+![图 2.3 – Apparent reasoning versus statistical completion](/media/posts/ai-ddd/fig-2-3.png)
+![图 2.4 – Probability distribution under uncertainty](/media/posts/ai-ddd/fig-2-4.png)
+![图 2.5 – BPE tokenization of DDD terms](/media/posts/ai-ddd/fig-2-5.png)
+![图 2.6 – The context window as working memory](/media/posts/ai-ddd/fig-2-6.png)
+![图 2.7 – Attention connecting distant tokens](/media/posts/ai-ddd/fig-2-7.png)
+![图 2.8 – Temperature and output variability (illustrative probabilities)](/media/posts/ai-ddd/fig-2-8.png)
