@@ -16,7 +16,6 @@ import {
   ChevronsRight,
   RotateCcw,
   ScrollText,
-  ArrowUp,
 } from 'lucide-react'
 
 export type SplitReaderProps = {
@@ -182,21 +181,6 @@ export function SplitReader({
     setMobileTab('left')
   }
 
-  /** 工作台模式下栏内滚动回顶；长文模式交由页面全局回到顶部处理 */
-  function scrollToTop() {
-    const reduce =
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (isFluidHeight) {
-      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
-      return
-    }
-    containerRef.current?.querySelectorAll('section').forEach((section) => {
-      section.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
-    })
-  }
-
   // 浮层开着时（搜索 / 灯箱 / 目录 / 快捷键指南）不抢单键
   function readerShortcut(run: () => void) {
     if (document.querySelector('[role="dialog"]') !== null) return
@@ -267,6 +251,7 @@ export function SplitReader({
 
       {/* 桌面端视图 (≥ lg)：多模式阅读工作台 */}
       <div
+        data-split-reader
         className={`hidden lg:flex lg:flex-col w-full rounded-2xl border border-border-subtle bg-surface shadow-card transition-all duration-200 split-reader-container ${
           isWide ? 'split-reader-wide' : ''
         } ${
@@ -384,18 +369,6 @@ export function SplitReader({
 
           {/* 右侧：宽屏模式、流动高度、英文开关与右栏状态 */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* 工作台模式（固定高度、栏内滚动）下提供栏内回顶；长文模式走全局回到顶部 */}
-            {!isFluidHeight && (
-              <button
-                type="button"
-                onClick={scrollToTop}
-                aria-label="回到顶部"
-                title="回到顶部"
-                className="inline-flex size-7 items-center justify-center rounded-md border border-border-subtle bg-surface text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-              >
-                <ArrowUp className="size-3.5" aria-hidden />
-              </button>
-            )}
             {/* 宽屏铺满切换按钮 */}
             <button
               type="button"

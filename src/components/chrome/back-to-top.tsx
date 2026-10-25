@@ -1,11 +1,11 @@
 'use client'
 
 import { ArrowUp } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { usePlayerIndex } from '@/components/player/player-provider'
 import { IconButton } from '@/components/primitives/icon-button'
 import {
   floatingStackOffset,
-  useScrolledPast,
   FLOATING_STACK_ANCHOR,
   FLOATING_STACK_BUTTON,
   FLOATING_STACK_TIP,
@@ -13,16 +13,34 @@ import {
 
 /*
  * 回到顶部：
- * - 滚动出现（阈值 = floating-stack 的 BACK_TO_TOP_THRESHOLD），不常驻占位；滚回顶部后平滑消失
- * - 档位取浮动栈的基准格 floatingStackOffset(false, …)：它是整条浮动栈的锚点，
- *   未滚动时常驻按钮正落在它的档位上；有播放队列时整栈（含它自己）抬一层避让播放条
- * - 动效尊重减少动态偏好；图标化按钮语义与全站一致（aria-label + hover 提示）
- * - 磨砂玻璃按钮，层次靠边框与背景，不靠阴影与浮动
+ * - 普通页面与长文模式：监听 window 滚动。
+ * - 分栏工作台模式：滚动发生在栏内 section，因此额外监听这些滚动容器；
+ *   点击时优先把已滚动的栏滚回顶部，没有栏滚动时再回页面顶部。
  */
+
+function getSplitPanes(): HTMLElement[] {
+  return Array.from(document.querySelectorAll('[data-split-reader] section')) as HTMLElement[]
+}
 
 export function BackToTop() {
   const index = usePlayerIndex()
-  const visible = useScrolledPast()
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const threshold = 300
+    function update() {
+      const paneScrolled = getSplitPanes().some((pane) => pane.scrollTop > threshold)
+      setVisible(window.scrollY > threshold || paneScrolled)
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    // 捕获阶段：栏内滚动不会冒泡到 window，但能被 document 捕获
+    document.addEventListener('scroll', update, { capture: true, passive: true })
+    return () => {
+      window.removeEventListener('scroll', update)
+      document.removeEventListener('scroll', update, { capture: true })
+    }
+  }, [])
 
   if (!visible) return null
 
@@ -30,7 +48,12 @@ export function BackToTop() {
     const reduce =
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+    const panes = getSplitPanes().filter((pane) => pane.scrollTop > 0)
+    if (panes.length > 0) {
+      panes.forEach((pane) => pane.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }))
+    } else {
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+    }
   }
 
   return (
