@@ -16,6 +16,7 @@ import {
   ChevronsRight,
   RotateCcw,
   ScrollText,
+  ArrowUp,
 } from 'lucide-react'
 
 export type SplitReaderProps = {
@@ -59,6 +60,26 @@ function isViewMode(value: unknown): value is ViewMode {
   return VIEW_MODES.includes(value as ViewMode)
 }
 
+/** 阅读工作台偏好：恢复与持久化拆成 hook，主组件只关心交互与布局 */
+function useSplitReaderPrefs() {
+  const [ratio, setRatio] = useState<number>(50)
+  const [viewMode, setViewMode] = useState<ViewMode>('split')
+  const [isWide, setIsWide] = useState(false)
+  const [isFluidHeight, setIsFluidHeight] = useState(false)
+  const [prefsReady, setPrefsReady] = useState(false)
+
+  useEffect(() => {
+    const prefs = readStoredPrefs()
+    if (isRatio(prefs.ratio)) setRatio(Math.round(prefs.ratio))
+    if (isViewMode(prefs.viewMode)) setViewMode(prefs.viewMode)
+    if (typeof prefs.isWide === 'boolean') setIsWide(prefs.isWide)
+    if (typeof prefs.isFluidHeight === 'boolean') setIsFluidHeight(prefs.isFluidHeight)
+    setPrefsReady(true)
+  }, [])
+
+  return { ratio, setRatio, viewMode, setViewMode, isWide, setIsWide, isFluidHeight, setIsFluidHeight, prefsReady }
+}
+
 export function SplitReader({
   leftNode,
   rightNode,
@@ -67,14 +88,33 @@ export function SplitReader({
 }: SplitReaderProps) {
   const [mobileTab, setMobileTab] = useState<'left' | 'right'>('left')
   const [allEnOpen, setAllEnOpen] = useState(false)
-  const [ratio, setRatio] = useState<number>(50) // 左栏宽度百分比 (10 - 90)
   const [isDragging, setIsDragging] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('split') // 双栏 / 仅看精炼 / 仅看原著
-  const [isWide, setIsWide] = useState(false) // 宽屏通栏铺满模式
-  const [isFluidHeight, setIsFluidHeight] = useState(false) // 自然流动长文高度模式
-  // 首帧必须与服务端静态 HTML 一致（默认值），读 localStorage 放到挂载后，避免水合错位
-  const [prefsReady, setPrefsReady] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const {
+    ratio,
+    setRatio,
+    viewMode,
+    setViewMode,
+    isWide,
+    setIsWide,
+    isFluidHeight,
+    setIsFluidHeight,
+    prefsReady,
+  } = useSplitReaderPrefs()
+
+  // 写入时机：恢复完成后才写；拖拽中不写
+  useEffect(() => {
+    if (!prefsReady || isDragging) return
+    try {
+      localStorage.setItem(
+        SPLIT_READER_PREFS_KEY,
+        JSON.stringify({ ratio, viewMode, isWide, isFluidHeight }),
+      )
+    } catch {
+      // 存储不可用时仅本次会话生效
+    }
+  }, [prefsReady, isDragging, ratio, viewMode, isWide, isFluidHeight])
 
   const toggleAllEn = () => {
     const nextState = !allEnOpen
@@ -95,30 +135,6 @@ export function SplitReader({
   const handleTouchStart = useCallback(() => {
     setIsDragging(true)
   }, [])
-
-  // 挂载后恢复上次的阅读偏好：同一份设置跟着 [ / ] 翻页继续生效
-  useEffect(() => {
-    const prefs = readStoredPrefs()
-    if (isRatio(prefs.ratio)) setRatio(Math.round(prefs.ratio))
-    if (isViewMode(prefs.viewMode)) setViewMode(prefs.viewMode)
-    if (typeof prefs.isWide === 'boolean') setIsWide(prefs.isWide)
-    if (typeof prefs.isFluidHeight === 'boolean') setIsFluidHeight(prefs.isFluidHeight)
-    setPrefsReady(true)
-  }, [])
-
-  // 写入时机：恢复完成后才写，避免用默认值覆盖已有偏好；
-  // 拖拽中不写（每次 mousemove 都落盘太浪费），松手后 isDragging 变化再补一次最终比例
-  useEffect(() => {
-    if (!prefsReady || isDragging) return
-    try {
-      localStorage.setItem(
-        SPLIT_READER_PREFS_KEY,
-        JSON.stringify({ ratio, viewMode, isWide, isFluidHeight }),
-      )
-    } catch {
-      // 存储不可用时仅本次会话生效
-    }
-  }, [prefsReady, isDragging, ratio, viewMode, isWide, isFluidHeight])
 
   useEffect(() => {
     if (!isDragging) return
@@ -164,6 +180,21 @@ export function SplitReader({
     setIsWide(false)
     setIsFluidHeight(false)
     setMobileTab('left')
+  }
+
+  /** 工作台模式下栏内滚动回顶；长文模式交由页面全局回到顶部处理 */
+  function scrollToTop() {
+    const reduce =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (isFluidHeight) {
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+      return
+    }
+    containerRef.current?.querySelectorAll('section').forEach((section) => {
+      section.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+    })
   }
 
   // 浮层开着时（搜索 / 灯箱 / 目录 / 快捷键指南）不抢单键
@@ -353,6 +384,18 @@ export function SplitReader({
 
           {/* 右侧：宽屏模式、流动高度、英文开关与右栏状态 */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* 工作台模式（固定高度、栏内滚动）下提供栏内回顶；长文模式走全局回到顶部 */}
+            {!isFluidHeight && (
+              <button
+                type="button"
+                onClick={scrollToTop}
+                aria-label="回到顶部"
+                title="回到顶部"
+                className="inline-flex size-7 items-center justify-center rounded-md border border-border-subtle bg-surface text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                <ArrowUp className="size-3.5" aria-hidden />
+              </button>
+            )}
             {/* 宽屏铺满切换按钮 */}
             <button
               type="button"

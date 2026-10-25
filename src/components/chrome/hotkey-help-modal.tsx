@@ -29,6 +29,7 @@ export const SHORTCUTS: ShortcutItem[] = [
   { keys: 'w  /  l', desc: '分栏文章：宽屏模式 / 长文模式' },
   { keys: '0', desc: '分栏文章：重置分栏设置' },
   { keys: 't', desc: '切换深浅色' },
+  { keys: 'c', desc: '打开专栏目录（仅专栏页）' },
   { keys: '?', desc: '显示 / 隐藏本指南' },
   { keys: 'Esc', desc: '关闭弹窗 / 浮层' },
 ]

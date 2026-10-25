@@ -31,6 +31,7 @@ const IMPLEMENTED_KEYS = [
   'w  /  l',
   '0',
   't',
+  'c',
   '?',
   'Esc',
 ]

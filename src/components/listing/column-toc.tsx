@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import { List, X } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -28,13 +29,22 @@ export type ColumnTocPhase = {
 export function ColumnToc({ phases }: { phases: ColumnTocPhase[] }) {
   const [open, setOpen] = useState(false)
 
+  // c 打开专栏目录：单键，输入框内由 hotkeys 默认忽略；浮层开着时不抢
+  useHotkey('C', () => {
+    if (document.querySelector('[role="dialog"]') !== null) return
+    setOpen(true)
+  })
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
           type="button"
           aria-label="打开专栏目录"
-          className="fixed right-4 bottom-20 z-40 flex size-9 items-center justify-center rounded-full border border-border-strong bg-surface/85 text-muted-foreground backdrop-blur-md transition-colors duration-150 hover:border-primary/50 hover:bg-surface hover:text-primary active:scale-95"
+          className={iconButtonClass(
+            'md',
+            'fixed right-4 bottom-20 z-40 border border-border-strong bg-surface/85 backdrop-blur-md transition-colors duration-150 hover:border-primary/50 hover:bg-surface hover:text-primary active:scale-95',
+          )}
         >
           <List className="size-4" aria-hidden />
         </button>
