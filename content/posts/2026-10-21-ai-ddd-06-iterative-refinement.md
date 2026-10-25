@@ -705,11 +705,30 @@ open_questions_to_preserve:
 
 
 :::en
-> **Original (full chapter)**:
+> **Original**: A bounded context is coherent when its language, responsibilities, rules, and boundaries support each other across iterations... Open questions are part of coherence: they keep uncertainty visible until the team can decide. A context snapshot turns iterative refinement into accumulated domain knowledge by preserving confirmed concepts, proposed concepts, ownership boundaries, and unresolved questions.
+
+**📌 核心术语与语境解析**：
+- **Contextual Coherence**：*上下文自洽性*。语言、边界与规则在多轮推演中形成闭环，不再产生结构性矛盾。
+- **Context Snapshot**：*限界上下文快照*。代码化记录已确认事实、提议项与未决问题的架构状态档案。
+- **Visible Uncertainty**：*显式不确定性*。用 `open_questions` 留白保留真实业务未知，防止模型以概率臆测掩盖歧义。
+:::
+
+
+
+## 原著完整参考（分段）
+
+:::en
+> **Original (part 1/23)**:
 >
 > Iterative Refinement: Building the Bounded Context In the previous chapters, we turned AI collaboration from a vague interaction into a disciplined modeling practice. Chapter 4 showed how EventStorming and Domain Storytelling can transform raw domain exploration into structured material. Chapter 5 showed how to protect that material through rules, constraints, and reusable output structures. However, rules alone do not produce a coherent bounded context. A bounded context becomes clear through repeated refinement. The model generates a candidate interpretation. The architect critiques it against domain knowledge and promotes corrections into rules. The team runs the model again under sharper constraints. Each cycle makes the boundary more explicit, and the reasoning environment less generic. This chapter applies that loop to the BrewUp Order Management context. You start from a first AI-generated draft that looks reasonable on the surface but silently collapses ownership across Order, Payment, and Stock. From there, you use feedback loops to separate owned concepts from external inputs, introduce command-query responsibility segregation (CQRS) as a role-separation lens, refine commands, events, and aggregates, and finally evaluate whether the bounded context is coherent enough to support the next design step. The goal is not to obtain a perfect model in one prompt. The goal is to make mistakes visible, turn corrections into reusable constraints, and make the same mistakes progressively harder to repeat. In this chapter, you will learn: • How generate–critique–correct loops turn flawed AI output into reusable modeling constraints.
 >
-> • How to distinguish naming mistakes from ownership mistakes, and why external facts must not be treated by the model as events emitted by the wrong aggregate. • How CQRS separates commands from queries, while complementary DDD roles preserve the meaning of events, policies, read models, and external inputs during AIassisted reasoning. • How to refine aggregate boundaries by separating collaboration from ownership and confirmed concepts from proposed ones. • How to recognize contextual coherence and capture it in a bounded context snapshot that preserves decisions, rejected concepts, and open questions.
+> • How to distinguish naming mistakes from ownership mistakes, and why external facts must not be treated by the model as events emitted by the wrong aggregate. • How CQRS separates commands from queries, while complementary DDD roles preserve the meaning of events, policies, read models, and external inputs during AIassisted reasoning. • H
+:::
+
+:::en
+> **Original (part 2/23)**:
+>
+> ow to refine aggregate boundaries by separating collaboration from ownership and confirmed concepts from proposed ones. • How to recognize contextual coherence and capture it in a bounded context snapshot that preserves decisions, rejected concepts, and open questions.
 >
 > Guiding the model through feedback loops The first AI-generated model is useful because it is wrong in a visible way: its errors give the team something concrete to inspect and challenge. The visible error may sound counterintuitive, especially after the emphasis on rules and constraints, but that is precisely the point. You do not use AI because the first output is reliable; you use it because it can quickly externalize a plausible interpretation of the domain. Once that interpretation is visible, you can inspect it, criticize it, and transform its errors into sharper rules. That inspection is where iterative refinement begins. To see the loop in action, consider this first draft produced by an AI assistant after the author asked it to model the Order Management context:
 >
@@ -723,7 +742,13 @@ open_questions_to_preserve:
 >
 > - StockReserved - OrderConfirmed
 >
-> At first glance, this output looks good. The output uses DDD-shaped language and defines aggregates, commands, and events. The names are clear: commands use the imperative form, and events use the past tense. The sequence also resembles a reasonable e-commerce flow: the customer submits an order, the payment service authorizes payment, the stock service reserves stock, and the system confirms the order. The output reads fluently, which is precisely what makes it difficult to question. The AI has produced something that looks like a domain model while quietly violating the ownership rules established in the previous chapter. The primary problem is semantic ownership rather than naming. More precisely, there are multiple violations: • Order Management does not own Payment. • Order Management does not own StockReservation. • AuthorizePayment is not an Order Management command.
+> At first glance, this output looks good. The output uses DDD-shaped language and defines aggregates, commands, and events. The names are clear: commands use the imperative form, and events use the past tense. The sequence also resembles a reasonable e-commerce flow: the customer submits an order, the payment service authorizes payment, the stock service reserves stock, and the system confirms the order. The output reads fluently, which is precisely what makes it difficult to question. The AI has produced something that looks like a domain model while quietly violating the ownership rules established in the previous chapter. The primary problem is semantic ownership rather than naming. More precisely, ther
+:::
+
+:::en
+> **Original (part 3/23)**:
+>
+> e are multiple violations: • Order Management does not own Payment. • Order Management does not own StockReservation. • AuthorizePayment is not an Order Management command.
 >
 > • ReserveStock is not an Order Management command.
 >
@@ -737,7 +762,13 @@ open_questions_to_preserve:
 >
 > Figure 6.1 – Refinement loop
 >
-> The loop is a modeling discipline. The rest of this chapter applies it four times. The applications are first to ownership, then to reasoning roles through CQRS, then to aggregate boundaries, and finally to the coherence of the whole bounded context. Each pass leaves behind a rule that the next pass inherits. The generation step gives you a visible draft. The critique step applies human judgment against domain knowledge, ownership, and boundaries, while the correction step produces a better version of the model. The important move comes next: the correction must become a reusable rule. Only then do you run the model again and compare the new output with the previous one. Without that promotion step, you will keep correcting the same failure manually. With it, every correction improves the reasoning environment. Here is a practical prompt that applies this discipline to the BrewUp Order Management draft:
+> The loop is a modeling discipline. The rest of this chapter applies it four times. The applications are first to ownership, then to reasoning roles
+:::
+
+:::en
+> **Original (part 4/23)**:
+>
+>  through CQRS, then to aggregate boundaries, and finally to the coherence of the whole bounded context. Each pass leaves behind a rule that the next pass inherits. The generation step gives you a visible draft. The critique step applies human judgment against domain knowledge, ownership, and boundaries, while the correction step produces a better version of the model. The important move comes next: the correction must become a reusable rule. Only then do you run the model again and compare the new output with the previous one. Without that promotion step, you will keep correcting the same failure manually. With it, every correction improves the reasoning environment. Here is a practical prompt that applies this discipline to the BrewUp Order Management draft:
 >
 > Context: We are refining the BrewUp Order Management bounded context.
 >
@@ -753,7 +784,13 @@ open_questions_to_preserve:
 >
 > Notice the shape of the prompt. The prompt does not ask the model to improve the design in a generic way. A generic request would invite the model to invent more structure. Instead, it gives the model a classification task under known ownership rules. Figure 6.2 shows the four verbs that carry the weight here – keep, move, reject, and question – because each one narrows what the model is allowed to do with an item.
 >
-> Figure 6.2 – The classification filter used during critique
+> Figure 6.2 – The classification filter used dur
+:::
+
+:::en
+> **Original (part 5/23)**:
+>
+> ing critique
 >
 > The assistant is not allowed to absorb everything into Order Management. The assistant must decide whether each item belongs inside the context, crosses into it from outside, should be rejected by the assistant because it invents ownership, or exposes a question that the current domain knowledge cannot answer.
 >
@@ -777,7 +814,13 @@ open_questions_to_preserve:
 >
 > 115 Iterative Refinement: Building the Bounded Context
 >
-> This output is not yet the final model, but it is already a stronger modeling artifact. The output keeps Order as the only aggregate owned by Order Management, moves PaymentAuthorized and StockReserved to external_inputs, and rejects Payment, StockReservation, AuthorizePayment, and ReserveStock because they imply ownership this bounded context does not have. The more important result is the new rule set. PaymentAuthorized is not merely moved once; its classification confirms an existing rule: events produced by other bounded contexts must remain external inputs. ReserveStock, however, exposes a more specific constraint worth preserving: stock reservation commands are not part of Order Management. The rulebook grows this way: concrete failures become reusable modeling constraints. The refined output exposes what the happy path hides: what happens if stock reservation fails after payment authorization, whether cancellation is always allowed before confirmation, and how long an order can remain unconfirmed. These questions should not be answered by invention. The following listing shows the resulting open questions: StockReservationFailed belongs in external input; what Order Management should do after receiving it remains an open question. Expiration might become part of the Order life cycle, but the timing rule is still missing. At this stage, visible uncertainty is more useful than artificial completeness.
+> This output is not yet the final model, but it is already a stronger modeling artifact. The output keeps Order as the only aggregate owned by Order Management, moves PaymentAuthorized and StockReserved to external_inputs, and rejects Payment, StockReservation, AuthorizePayment, and ReserveStock because they imply ownership this bounded context does not have. The more important result is the new rule set. PaymentAuthorized is not merely moved once; its classification confirms an existing rule: events produced by other bounded contexts must remain external inputs. ReserveStock, however, exposes a more specific constraint worth preserving: stock reservation commands are not part of Order Management. The rulebook gro
+:::
+
+:::en
+> **Original (part 6/23)**:
+>
+> ws this way: concrete failures become reusable modeling constraints. The refined output exposes what the happy path hides: what happens if stock reservation fails after payment authorization, whether cancellation is always allowed before confirmation, and how long an order can remain unconfirmed. These questions should not be answered by invention. The following listing shows the resulting open questions: StockReservationFailed belongs in external input; what Order Management should do after receiving it remains an open question. Expiration might become part of the Order life cycle, but the timing rule is still missing. At this stage, visible uncertainty is more useful than artificial completeness.
 >
 > context: Order Management owned_aggregate: - Order
 >
@@ -797,15 +840,33 @@ open_questions_to_preserve:
 >
 > open_questions: - Is cancellation always allowed before confirmation? - How long can an order remain unconfirmed before it expires? - What should Order Management do after StockReservationFailed?
 >
-> Notice that ExpireOrder is marked as proposed. The refinement loop has surfaced expiration as a likely Order life cycle concern, but the business rule that governs it is still missing. The model can identify a candidate transition, but it cannot confirm the policy that would make it valid. This draft is therefore intentionally incomplete. This draft does not decide how the coordination around payment and stock will later be implemented: through a saga, process manager, application service, or another coordination mechanism. That decision belongs to a later architectural step. For now, the important modeling distinction is simpler and more foundational: Order Management can react to external inputs, but it must not claim ownership of the processes that produce them. ConfirmOrder is therefore better understood as a policy-triggered command. It is still a command because it requests a state transition in the Order aggregate. What changes is its origin: it is not issued directly by the customer but triggered by an Order Management policy once the required external facts have been observed. PaymentAuthorized and StockReserved do not become internal Order events merely because they influence that decision. They remain external inputs. If the policy decides that the order can be confirmed, the resulting Orderowned transition is expressed through ConfirmOrder and, if successful, through the internal event OrderConfirmed. LLMs often blur exactly this kind of distinction. The model sees a familiar e-commerce sequence and tends to place related concepts together unless ownership has been made explicit. That is why feedback loops must keep applying pressure to the boundary: they prevent a familiar narrative from flattening the domain into a generic retail workflow.
+> Notice that ExpireOrder is marked as proposed. The refinement loop has surfaced expiration as a likely Order life cycle concern, but the business rule that governs it is still missing. The model can identify a candidate transition, but it cannot confirm the policy that would make it valid. This draft is therefore intentionally incomplete. This draft does not decide how the coordination around payment and stock will later be implemented: through a saga, process manager, application service, or another coordination mechanism. That decision belongs to a later architectural step. For now, the important modeling distinction is simpler and more foundational: Order Management can react to external inputs, but it must not claim ownership of t
+:::
+
+:::en
+> **Original (part 7/23)**:
+>
+> he processes that produce them. ConfirmOrder is therefore better understood as a policy-triggered command. It is still a command because it requests a state transition in the Order aggregate. What changes is its origin: it is not issued directly by the customer but triggered by an Order Management policy once the required external facts have been observed. PaymentAuthorized and StockReserved do not become internal Order events merely because they influence that decision. They remain external inputs. If the policy decides that the order can be confirmed, the resulting Orderowned transition is expressed through ConfirmOrder and, if successful, through the internal event OrderConfirmed. LLMs often blur exactly this kind of distinction. The model sees a familiar e-commerce sequence and tends to place related concepts together unless ownership has been made explicit. That is why feedback loops must keep applying pressure to the boundary: they prevent a familiar narrative from flattening the domain into a generic retail workflow.
 >
 > 117 Iterative Refinement: Building the Bounded Context
 >
-> Maintaining that pressure is your job, and in practice it means asking one question each time the model crosses the boundary: • When the model introduces Payment as an aggregate, ask: who owns it? • When the model proposes AuthorizePayment, ask: who can issue that command? • When the model emits PaymentAuthorized internally, ask: which aggregate raised it? • When the model invents a rule for cancellation, ask: is this known domain knowledge or a plausible assumption? If the answer is unclear, the correct output is not a fabricated rule. It is an open question. Preserving that gap is one of the most important habits in AI-assisted modeling: open questions prevent plausible assumptions from hardening into structure before the team has made a decision. After each iteration, the architect should ask two questions: • What did the model get wrong? • What rule would prevent this class of error from returning? That second question turns feedback from a comment into an asset. The assistant becomes less generic not because it has learned in the human sense, but because the reasoning environment has become narrower, clearer, and more domain-specific. Before CQRS can help you separate commands from queries, and before you can classify the surrounding domain roles consistently, you must first establish who owns each concept.
+> Maintaining that pressure is your job, and in practice it means asking one question each time the model crosses the boundary: • When the model introduces Payment as an aggregate, ask: who owns it? • When the model proposes AuthorizePayment, ask: who can issue that command? • When the model emits PaymentAuthorized internally, ask: which aggregate raised it? • When the model invents a rule for cancellation, ask: is this known domain knowledge or a plausible assumption? If the answer is unclear, the correct output is not a fabricated rule. It is an open question. Preserving that gap is one of the most important habits in AI-assisted modeling: open questions prevent plausible assumptions from hardening into structure before the team has made a decision. After each iteration, the architect should ask two questions: • What did the model get wrong? • What rule would prevent this class of error fro
+:::
+
+:::en
+> **Original (part 8/23)**:
+>
+> m returning? That second question turns feedback from a comment into an asset. The assistant becomes less generic not because it has learned in the human sense, but because the reasoning environment has become narrower, clearer, and more domain-specific. Before CQRS can help you separate commands from queries, and before you can classify the surrounding domain roles consistently, you must first establish who owns each concept.
 >
 > Introducing CQRS and role separation in AI reasoning Ownership refinement has taken you as far as it can: it settles that context a concept belongs to, but not what type of thing that concept is once it is inside. At this point, in the refinement process, the problem is no longer discovering events or stabilizing vocabulary. The challenge becomes more subtle: preventing the model from collapsing different responsibilities into the same conceptual space. Command Query Responsibility Segregation (CQRS) gives us the first axis of separation. In many software discussions, CQRS is introduced as an architectural pattern focused on separating reads from writes. While technically correct, that framing is too narrow for the modeling work you are doing here. In the context of AI-assisted Domain-Driven Design, its value begins with a simpler distinction: separating intentions that might change state from requests that only observe it. Around that distinction, you can make the other domain roles explicit instead of allowing the model to collapse them into a single flow.
 >
-> When an LLM receives a partially refined domain flow, it naturally tends to compress related concepts into a single narrative. Commands become events, events become process steps, queries become business decisions, and policies disappear entirely inside generic prose. The result is not obviously wrong. In fact, it often looks fluent and coherent. However, the semantic distinctions that make a bounded context stable begin to dissolve. CQRS gives you one axis of separation: commands express intent to change state, while queries request information without changing it. This distinction does not define the rest of the classification used here. Alongside that CQRS axis, you keep four additional domain roles explicit: internal events, external inputs, policies, and read models. An internal event expresses a fact produced within the bounded context. An external input represents a fact produced elsewhere but relevant to its decisions. A policy expresses the reaction rule that might turn an observed fact into a new command. A read model organizes information for the query side. Keeping these roles distinct prevents the model from collapsing ownership, reaction, and observation into the command/query distinction. Consider the following BrewUp example:
+> When an LLM receives a partially refined domain flow, it naturally tends to compress related concepts into a single narrative. Commands become events, events become process steps, queries become business decisions, and policies disappear entirely inside generic prose. The result is not obviously wrong. In fact, it often looks fluent and coherent. However, the semantic distinctions that make a bounded context stable begin to dissolve. CQRS gives you one axis of separation: commands expres
+:::
+
+:::en
+> **Original (part 9/23)**:
+>
+> s intent to change state, while queries request information without changing it. This distinction does not define the rest of the classification used here. Alongside that CQRS axis, you keep four additional domain roles explicit: internal events, external inputs, policies, and read models. An internal event expresses a fact produced within the bounded context. An external input represents a fact produced elsewhere but relevant to its decisions. A policy expresses the reaction rule that might turn an observed fact into a new command. A read model organizes information for the query side. Keeping these roles distinct prevents the model from collapsing ownership, reaction, and observation into the command/query distinction. Consider the following BrewUp example:
 >
 > commands: - SubmitOrder - ConfirmOrder
 >
@@ -821,7 +882,13 @@ open_questions_to_preserve:
 >
 > Customer submits order payment is authorized stock is reserved order is confirmed user checks status
 >
-> The sequence is coherent from a linguistic perspective, but it hides ownership, decision boundaries, and responsibility separation. The CQRS command/query split gives you one axis of separation, while the surrounding domain roles keep ownership, reactions, and external facts from collapsing into the same narrative. Ask the model this question:
+> The sequence is coherent from a linguistic perspective, but it hides ownership, decision boundaries, and responsibility separation. The CQRS command/query split gives you one axi
+:::
+
+:::en
+> **Original (part 10/23)**:
+>
+> s of separation, while the surrounding domain roles keep ownership, reactions, and external facts from collapsing into the same narrative. Ask the model this question:
 >
 > Design the order flow.
 >
@@ -833,7 +900,13 @@ open_questions_to_preserve:
 >
 > At this stage, CQRS is about protecting conceptual integrity rather than handlers, buses, or distributed architecture. The important shift is subtle but fundamental. Here, CQRS is introduced to help you separate meanings, not technologies. Once the reasoning environment consistently distinguishes intentions, facts, reactions, and reads, the bounded context stops behaving like a generic workflow description and starts behaving like a structured domain model. What role separation does not tell us is how those elements group together, and that is what the next round of refinement has to settle.
 >
-> Refining events, commands, and aggregates Once commands, events, queries, and policies have been separated conceptually, the refinement process can move to a deeper level. The question is no longer only: what type of element is this? The question becomes: Which elements truly belong together inside the same consistency boundary? At this stage, however, we must be careful not to approach aggregates as technical containers or persistence structures. In AI-assisted modeling, aggregates are first and foremost semantic boundaries. They define where invariants are protected, where decisions are made, and which events can legitimately emerge from the same transactional consistency boundary. This distinction matters because LLMs tend to group concepts that frequently appear together in business workflows. If payment, stock reservation, and order confirmation appear together repeatedly, the model might infer that they belong to the same aggregate or bounded context. On the surface, that compression looks coherent. Architecturally, it might be wrong. Consider this early AI-generated refinement for BrewUp Order Management:
+> Refining events, commands, and aggregates Once commands, events, queries, and policies have been
+:::
+
+:::en
+> **Original (part 11/23)**:
+>
+>  separated conceptually, the refinement process can move to a deeper level. The question is no longer only: what type of element is this? The question becomes: Which elements truly belong together inside the same consistency boundary? At this stage, however, we must be careful not to approach aggregates as technical containers or persistence structures. In AI-assisted modeling, aggregates are first and foremost semantic boundaries. They define where invariants are protected, where decisions are made, and which events can legitimately emerge from the same transactional consistency boundary. This distinction matters because LLMs tend to group concepts that frequently appear together in business workflows. If payment, stock reservation, and order confirmation appear together repeatedly, the model might infer that they belong to the same aggregate or bounded context. On the surface, that compression looks coherent. Architecturally, it might be wrong. Consider this early AI-generated refinement for BrewUp Order Management:
 >
 > aggregate: name: Order
 >
@@ -847,7 +920,13 @@ open_questions_to_preserve:
 >
 > events: - OrderSubmitted - PaymentAuthorized - StockReserved - OrderConfirmed - ShipmentCreated
 >
-> The output looks structured, fluent, and superficially aligned with DDD terminology. Yet almost every modeling boundary has collapsed. The aggregate now appears responsible for: • Accepting orders • Authorizing payments • Reserving inventory • Tracking shipments These concepts participate in the same collaboration without sharing ownership. The Order aggregate might depend on external facts produced by Payment or stock contexts, but dependency does not imply containment. An aggregate should not absorb every concept that participates in the same business flow. Separating coordination from ownership is the refinement challenge here. The most useful way to critique these AI-generated drafts is not to ask whether the model understood DDD, but to ask a sequence of ownership-oriented questions: • Which invariants does the aggregate protect? • Which decisions require transactional consistency? • Which events does the aggregate truly emit? • Which concepts belong to another bounded context? • Which actions are reactions rather than owned behavior? When you apply these questions to the previous example, several corrections immediately emerge. AuthorizePayment and ReserveStock are not Order commands, and ShipmentCreated is not an Order event.
+> The output looks structured, fluent, and superficially aligned with DDD terminology. Yet almost every modeling boundary has collapsed. The aggregate now appears responsible for: • Accepting orders • Authorizing payments • Reserving inventory • Tracking shipments These concepts participate in the same collaboration without sharing ownership. The Order aggregate might depend on external facts produced by Payment or stock contexts, but dependency does not imply containment. An aggregate should not absorb every concept that participates in the same business flow. Separating coordination from ownership is the refinement c
+:::
+
+:::en
+> **Original (part 12/23)**:
+>
+> hallenge here. The most useful way to critique these AI-generated drafts is not to ask whether the model understood DDD, but to ask a sequence of ownership-oriented questions: • Which invariants does the aggregate protect? • Which decisions require transactional consistency? • Which events does the aggregate truly emit? • Which concepts belong to another bounded context? • Which actions are reactions rather than owned behavior? When you apply these questions to the previous example, several corrections immediately emerge. AuthorizePayment and ReserveStock are not Order commands, and ShipmentCreated is not an Order event.
 >
 > PaymentStatus and ReservedStock should not represent internally owned lifecycles. The Order aggregate might store minimal state derived from external facts, such as whether
 >
@@ -869,7 +948,13 @@ open_questions_to_preserve:
 >
 > The same principle applies to events. During early iterations, models frequently produce events that are technically plausible but semantically weak:
 >
-> OrderProcessed PaymentCompleted InventoryUpdated OrderHandled
+> OrderProcesse
+:::
+
+:::en
+> **Original (part 13/23)**:
+>
+> d PaymentCompleted InventoryUpdated OrderHandled
 >
 > These names sound reasonable because they match generic enterprise software patterns. However, they often hide important domain distinctions. PaymentCompleted may incorrectly collapse authorization, capture, and settlement into a single business transition. InventoryUpdated says almost nothing about the business meaning of the change.
 >
@@ -885,7 +970,13 @@ open_questions_to_preserve:
 >
 > SubmitOrder ConfirmOrder CancelOrder ExpireOrder
 >
-> Refinement often removes ambiguity rather than adding concepts. Every iteration removes interpretations that the model might otherwise consider plausible. Over time, the reasoning space becomes narrower. Feedback loops become essential here too. The model alone cannot determine whether an aggregate boundary is correct because aggregate boundaries are not statistical truths. They are business decisions shaped by consistency requirements, ownership, organizational structure, and domain semantics. The AI helps accelerate the refinement cycle by exposing collapsed boundaries, proposing candidate separations, surfacing missing transitions, revealing naming inconsistencies, and externalizing implicit assumptions. The architect still owns the decision; the model helps expose the choices required to define the aggregate.
+> Refinement often removes ambiguity rather than adding concepts. Every iteration removes interpretations that the model might otherwise consider plausible. Over time, the reasoning space becomes narrower. Feedback loops become essential here too. The model alone cannot determine whether an aggregate boundary is correct because aggregate boundaries are not statistical truths. They are business decisions shaped by consistency requirements, ownership, organizational structure, and domain semantics. The AI helps accelerate the refinement cycle 
+:::
+
+:::en
+> **Original (part 14/23)**:
+>
+> by exposing collapsed boundaries, proposing candidate separations, surfacing missing transitions, revealing naming inconsistencies, and externalizing implicit assumptions. The architect still owns the decision; the model helps expose the choices required to define the aggregate.
 >
 > Achieving contextual coherence through iteration At this point, the BrewUp Order Management context has gone through the full refinement loop. Ownership has been corrected, reasoning roles have been separated, and the Order aggregate has been narrowed to the decisions it actually owns. The next question is practical: when is the bounded context coherent enough for the team to move forward? The rest of this section builds the answer in five steps: comparing outputs across cycles, checking that ownership and roles hold still, treating open questions as part of coherence, freezing the result in a context snapshot, and finally asking the model to audit that snapshot. A bounded context becomes coherent when its language, responsibilities, rules, and boundaries reinforce each other across repeated iterations. Coherence is a weaker claim than completeness: the answers already available fit together without semantic contradiction, while unanswered questions remain visible. In early domain modeling, this is the safer target. A coherent model with visible open questions is more useful than a complete-looking model built on unstable ownership.
 >
@@ -897,11 +988,23 @@ open_questions_to_preserve:
 >
 > internal_events: proposed: - OrderCancelled
 >
-> Everything else remains unchanged from the earlier listing: the single owned aggregate, the confirmed commands, the external inputs, and the three open questions. The stability is the point. The model is incomplete. It still contains open questions, does not define every policy, and leaves implementation concerns such as coordination and message transport undecided. Yet it is already more coherent than the first AI-generated draft. The reason is the stability of the model's boundaries and roles. Order Management owns the Order aggregate. Payment and Stock remain outside Order Management. Events raised by other bounded contexts Order Management treats as external inputs. Commands you classify by origin. Internal events the Order aggregate emits only. Missing domain knowledge appears as open questions instead of fabricated rules. This stability is contextual coherence: stable ownership, explicit roles, clear external inputs, internal events emitted only by the Order aggregate, and visible uncertainty where domain knowledge is still missing. That level of maturity is what you want before moving into a deeper design or implementation.
+> Everything else remains unchanged from the earlier listing: the single owned aggregate, the confirmed commands, the external inputs, and the three open questions. The stability is the point. The model is incomplete. It still contains open qu
+:::
+
+:::en
+> **Original (part 15/23)**:
+>
+> estions, does not define every policy, and leaves implementation concerns such as coordination and message transport undecided. Yet it is already more coherent than the first AI-generated draft. The reason is the stability of the model's boundaries and roles. Order Management owns the Order aggregate. Payment and Stock remain outside Order Management. Events raised by other bounded contexts Order Management treats as external inputs. Commands you classify by origin. Internal events the Order aggregate emits only. Missing domain knowledge appears as open questions instead of fabricated rules. This stability is contextual coherence: stable ownership, explicit roles, clear external inputs, internal events emitted only by the Order aggregate, and visible uncertainty where domain knowledge is still missing. That level of maturity is what you want before moving into a deeper design or implementation.
 >
 > Coherence emerges from repeated comparison A common mistake is to treat each AI output as an isolated artifact. The team asks for a model, reviews it, corrects it, and then moves on. But iterative refinement becomes powerful only when the team compares outputs across cycles. Instead of asking only whether the current output is correct, compare it with the previous iteration and ask whether its ownership, roles, and unresolved questions are becoming more coherent. This comparison makes progress visible by showing which ambiguities have disappeared, which boundaries have stabilized, and which uncertainties remain.
 >
-> The bounded context takes shape that way, not by discovering a perfect boundary in one step but by progressively eliminating contradictions that should not survive inside the same model. A useful way to read each iteration is to ask what changed: • Did owned aggregates remain stable? • Did external inputs stay external? • Did internal events remain internally produced? • Did commands preserve their role? • Did policies become explicit instead of hidden in prose? • Did unclear decisions become open questions? • Did the model avoid reintroducing rejected concepts? If the answer is consistently yes, the bounded context is converging toward a more stable representation. If the same mistakes keep returning, the reasoning environment is still too weak. The rulebook needs sharper constraints, the vocabulary might need more precision, or the prompt might be asking for too much in one step. Contextual coherence is therefore observed across iterations rather than supplied by a single model output.
+> The bounded context takes shape that way, not by discovering a perfect boundary in one step but by progressively eliminating contradictions that should not survive inside the same model. A useful way to read each iteration is to ask what changed: • Did owned aggregates remain stable? • Did external inputs stay external? • Did internal events remain internally produced? • Did commands preserve their role? • Did policies become explicit instead of hidden in prose? • D
+:::
+
+:::en
+> **Original (part 16/23)**:
+>
+> id unclear decisions become open questions? • Did the model avoid reintroducing rejected concepts? If the answer is consistently yes, the bounded context is converging toward a more stable representation. If the same mistakes keep returning, the reasoning environment is still too weak. The rulebook needs sharper constraints, the vocabulary might need more precision, or the prompt might be asking for too much in one step. Contextual coherence is therefore observed across iterations rather than supplied by a single model output.
 >
 > Stable ownership and stable roles A bounded context cannot be coherent if the ownership of concepts keeps shifting. If Payment belongs to Order Management in one iteration and somewhere else in the next, the model is not refining; it is drifting. In BrewUp Order Management, the ownership boundary should remain stable across iterations:
 >
@@ -923,7 +1026,13 @@ open_questions_to_preserve:
 >
 > policies: confirmed: - Confirm an order when payment authorization and stock reservation have both been observed.
 >
-> As with ownership, the classification matters less than its persistence. External inputs do not become internal events, proposed transitions do not silently become confirmed, and policytriggered commands do not turn into user actions. These distinctions protect the context from semantic collapse.
+> As with ownership, the classification matters less than its persistence. External inputs do not become internal events, proposed transitions d
+:::
+
+:::en
+> **Original (part 17/23)**:
+>
+> o not silently become confirmed, and policytriggered commands do not turn into user actions. These distinctions protect the context from semantic collapse.
 >
 > Open questions are part of coherence A coherent model still has open questions, and a model that resolves them too quickly should prompt closer scrutiny. LLMs naturally tend to complete missing structure, even when the
 >
@@ -939,7 +1048,13 @@ open_questions_to_preserve:
 >
 > uncertainty_rules: - Do not invent domain rules to complete the model. - If ownership, policy, or reaction behavior is unclear, preserve it as an open question. - Keep proposed concepts separate from confirmed concepts.
 >
-> Coherence is reinforced by a context snapshot As iterations accumulate, the team needs a stable artifact that represents the current state of the bounded context. Otherwise, the decision that survived one refinement cycle might disappear or regress in the next. The team therefore maintains a context snapshot. A context snapshot is a compact, reusable representation of the current bounded context rather than a full specification. It captures the decisions that have survived refinement, the distinctions that must remain stable, and the questions that remain open. In practice, the snapshot is kept as a versioned document alongside the bounded context it describes, not in
+> Coherence is reinforced by a context snapshot As iterations accumulate, the team needs a stable artifact that represents the current state of the bounded context. Otherwise, the decision that survived one refinement cycle might disappear or regress in the next. The team therefore maintains a context snapshot. A context snapshot is a compact, reusable representation of the current bounded context rather than a full specification. It captures the decisi
+:::
+
+:::en
+> **Original (part 18/23)**:
+>
+> ons that have survived refinement, the distinctions that must remain stable, and the questions that remain open. In practice, the snapshot is kept as a versioned document alongside the bounded context it describes, not in
 >
 > 129 Iterative Refinement: Building the Bounded Context
 >
@@ -963,7 +1078,13 @@ open_questions_to_preserve:
 >
 > open_questions: - Is cancellation always allowed before confirmation? - How long can an order remain unconfirmed before it expires? - What should Order Management do after StockReservationFailed?
 >
-> This artifact turns iteration into accumulated knowledge. The snapshot gives the model a stable starting point, keeps confirmed decisions separate from proposed ones, preserves open questions, and prevents previously resolved ownership and modeling decisions from regressing in later iterations. Without a context snapshot, the team has a conversation. With one, the team has a durable record that later sessions can inspect and preserve.
+> This artifact turns iteration into accumulated knowledge. The snapshot gives the model a stable starting point, keeps confirmed decisions separate from proposed ones, preserves open questions, and prevents previously resolved ownership and modeling decisions from regressing in later iterations. Without a context snapshot, the t
+:::
+
+:::en
+> **Original (part 19/23)**:
+>
+> eam has a conversation. With one, the team has a durable record that later sessions can inspect and preserve.
 >
 > Testing coherence with a final review prompt Once the snapshot exists, you can use the model to review it for internal contradictions rather than to declare it correct. A useful prompt is deliberately skeptical:
 >
@@ -989,9 +1110,21 @@ open_questions_to_preserve:
 >
 > open_questions_to_preserve: - Is cancellation always allowed before confirmation? - How long can an order remain unconfirmed before it expires? - What should Order Management do after StockReservationFailed?
 >
-> This output is useful precisely because it does not attempt to complete the domain model. The review finds no contradiction in the current snapshot, but it preserves the decisions that still require domain input. That distinction matters. Contextual coherence does not mean that every question has been answered. Contextual coherence means that what the team proposes, what is proposed, and what remains uncertain can coexist without contradicting each other.
+> This output is useful precisely because
+:::
+
+:::en
+> **Original (part 20/23)**:
 >
-> When the bounded context is coherent enough The team eventually needs to move forward; iteration cannot continue indefinitely. The purpose of refinement is to reduce ambiguity enough for the next design activity to proceed safely. A bounded context is coherent enough when repeated iterations stop producing major structural changes, and the remaining uncertainty is explicit rather than hidden inside assumptions. For BrewUp Order Management, the answer to each of those questions is now yes. Ownership has held: Order is still the only owned aggregate, and Payment, Stock, Shipment, and Invoice have not reappeared as owned concepts. The roles have held too: PaymentAuthorized, StockReserved, and StockReservationFailed are still external inputs, internal events are still emitted only by the Order aggregate, and commands are still classified by origin. Nothing has quietly hardened: confirmed concepts remain separate from proposed ones, open questions remain open rather than converted into invented rules, and no ownership or role decision resolved earlier has regressed. These criteria are semantic rather than implementation criteria: at this stage the question is not whether the eventual architecture or code is correct, but whether the bounded context says one consistent thing about the domain. The output of this chapter is therefore a stable bounded context model that can support future decisions, not a final architecture. Coherent models provide a stronger foundation for later architectural decisions. The model generates candidates, the architect applies judgment, the rulebook preserves corrections, and the snapshot stabilizes the bounded context. Once the bounded context reaches this level of stability, the snapshot can become the foundation for more durable forms of AI collaboration. The next chapter builds on exactly this point, turning preserved domain understanding into reusable working context.
+>  it does not attempt to complete the domain model. The review finds no contradiction in the current snapshot, but it preserves the decisions that still require domain input. That distinction matters. Contextual coherence does not mean that every question has been answered. Contextual coherence means that what the team proposes, what is proposed, and what remains uncertain can coexist without contradicting each other.
+>
+> When the bounded context is coherent enough The team eventually needs to move forward; iteration cannot continue indefinitely. The purpose of refinement is to reduce ambiguity enough for the next design activity to proceed safely. A bounded context is coherent enough when repeated iterations stop producing major structural changes, and the remaining uncertainty is explicit rather than hidden inside assumptions. For BrewUp Order Management, the answer to each of those questions is now yes. Ownership has held: Order is still the only owned aggregate, and Payment, Stock, Shipment, and Invoice have not reappeared as owned concepts. The roles have held too: PaymentAuthorized, StockReserved, and StockReservationFailed are still external inputs, internal events are still emitted only by the Order aggregate, and commands are still classified by origin. Nothing has quietly hardened: confirmed concepts remain separate from proposed ones, open questions remain open rather than converted into invented rules, and no ownership or role decision resolved earlier has regressed. These criteria are semantic rather than implementation criteria: at this stage the question is not whether the eventual architecture or code is correct, but whether the bounded context says one consistent thing about the domain. The output of this chapter is therefore a stable bounded context model that can support future decisions, not a final architecture. Coherent models provide a stronger foundation for later architectural decisions. The model generates candidates, the architect applies judg
+:::
+
+:::en
+> **Original (part 21/23)**:
+>
+> ment, the rulebook preserves corrections, and the snapshot stabilizes the bounded context. Once the bounded context reaches this level of stability, the snapshot can become the foundation for more durable forms of AI collaboration. The next chapter builds on exactly this point, turning preserved domain understanding into reusable working context.
 >
 > Summary In this chapter, you moved from defining rules to applying them through iterative refinement. The first AI-generated model of BrewUp Order Management looked plausible, but it silently collapsed Order, Payment, and StockReservation. This made the central problem visible: the model was not only making naming mistakes, but ownership mistakes. You used this flawed draft as the starting point for a generate–critique–correct loop. Each correction became more than a local fix: it was promoted into a reusable rule.
 >
@@ -999,16 +1132,26 @@ open_questions_to_preserve:
 >
 > PaymentAuthorized and StockReserved were moved to external_inputs, Payment and StockReservation were removed from the concepts owned by Order Management, and missing decisions became open questions instead of fabricated policies. CQRS provided an additional role-separation lens. It helped distinguish intentions that might change state from requests that only observe it, while the broader domain classification kept internal events, external inputs, and policies semantically distinct. This made it possible to preserve ConfirmOrder as a policy-triggered command, while keeping PaymentAuthorized and StockReserved as external facts observed by Order Management.
 >
-> You also refined the Order aggregate by separating collaboration from ownership. Concepts can participate in the same business flow without belonging to the same consistency boundary. The Order aggregate can react to external facts, but it must not own the processes that produce them. Finally, you introduced contextual coherence: the point where ownership, roles, confirmed and proposed concepts, and open questions fit together without contradiction, and the context snapshot that holds that state from one cycle to the next. You learned that: • The value of the first AI-generated draft is that it makes a flawed interpretation visible. • Feedback becomes valuable when you promote each correction into a reusable rule. • Ownership mistakes are more dangerous than naming mistakes because they change the meaning of the bounded context. • CQRS can be used as a role-separation lens before it becomes an implementation pattern. • Collaboration does not imply ownership: a bounded context can react to external facts without owning the processes that produce them. • Open questions are part of coherence: they keep uncertainty visible until the team can decide. • A context snapshot turns iterative refinement into accumulated domain knowledge by preserving confirmed concepts, proposed concepts, ownership boundaries, and unresolved questions. In the next chapter, you build on this result and explore how the domain understanding preserved in the context snapshot can become reusable working context for future AI interactions.
+> You also refined the Order aggregate by separating collaboration from ownership. Concepts can participate in the same business flow without belonging to the same consistency boundary. The Order aggregate can react to external facts, but it must not own the processes that produce them. Finally, you introduced contextual coherence: the point where ownership, roles, confirmed and proposed concepts, and open
+:::
+
+:::en
+> **Original (part 22/23)**:
+>
+>  questions fit together without contradiction, and the context snapshot that holds that state from one cycle to the next. You learned that: • The value of the first AI-generated draft is that it makes a flawed interpretation visible. • Feedback becomes valuable when you promote each correction into a reusable rule. • Ownership mistakes are more dangerous than naming mistakes because they change the meaning of the bounded context. • CQRS can be used as a role-separation lens before it becomes an implementation pattern. • Collaboration does not imply ownership: a bounded context can react to external facts without owning the processes that produce them. • Open questions are part of coherence: they keep uncertainty visible until the team can decide. • A context snapshot turns iterative refinement into accumulated domain knowledge by preserving confirmed concepts, proposed concepts, ownership boundaries, and unresolved questions. In the next chapter, you build on this result and explore how the domain understanding preserved in the context snapshot can become reusable working context for future AI interactions.
 >
 > Subscribe to Deep Engineering Join thousands of developers and architects who want to understand how software is changing, deepen their expertise, and build systems that last. Deep Engineering is a weekly expert-led newsletter for experienced practitioners, featuring original analysis, technical interviews, and curated insights on architecture, system design, and modern programming practice. Scan the QR or visit the link to subscribe for free.
 >
 > https://packt.link/deep-engineering-newsletter
 >
-> Prompt as Domain Carrier In the previous chapter, we used iterative feedback loops to refine a bounded context until ownership, events, commands, aggregates, and policies became semantically coherent. The result was a bounded context snapshot: a representation of the team's current understanding of the domain. However, a snapshot alone is not enough. If the knowledge discovered during modeling remains buried inside a conversation, the same ambiguities eventually return. Rejected concepts reappear, open questions become assumptions, and previously resolved decisions must be rediscovered. This chapter explores how to preserve and reuse that knowledge through a new part of the domain: BrewUp Stock Management. Working in a second bounded context keeps the emphasis on applying the workflow rather than revisiting it, and shows that the technique is not tied to Order Management. The same discipline can preserve meaning across classification, specification, review, change workflows, and later agent-oriented collaboration. Instead of treating prompts as disposable requests, you begin treating them as domain carriers: artifacts that encode what a bounded context owns and what it refuses to assume, so that future interactions can build on a stable foundation. The chapter also examines a deeper shift. Once domain knowledge becomes part of the prompt itself, an AI output reveals how the model is interpreting the domain. The output also reveals whether the surrounding reasoning environment is strong enough to preserve meaning consistently. By the end of this chapter, you will understand: • Why prompts can evolve from temporary instructions into reusable domain carriers • How to encode domain knowledge so it can be preserved across interactions • How to use domain carriers to reduce semantic drift and regression
+> Prompt as Domain Carrier In the previous chapter, we used iterative feedback loops to refine a bounded context until ownership, events, commands, aggregates, and policies became semantically coherent. The result was a bounded context snapshot: a representation of the team's current understanding of the domain. However, a snapshot alone is not enough. If the knowledge discove
 :::
 
-
+:::en
+> **Original (part 23/23)**:
+>
+> red during modeling remains buried inside a conversation, the same ambiguities eventually return. Rejected concepts reappear, open questions become assumptions, and previously resolved decisions must be rediscovered. This chapter explores how to preserve and reuse that knowledge through a new part of the domain: BrewUp Stock Management. Working in a second bounded context keeps the emphasis on applying the workflow rather than revisiting it, and shows that the technique is not tied to Order Management. The same discipline can preserve meaning across classification, specification, review, change workflows, and later agent-oriented collaboration. Instead of treating prompts as disposable requests, you begin treating them as domain carriers: artifacts that encode what a bounded context owns and what it refuses to assume, so that future interactions can build on a stable foundation. The chapter also examines a deeper shift. Once domain knowledge becomes part of the prompt itself, an AI output reveals how the model is interpreting the domain. The output also reveals whether the surrounding reasoning environment is strong enough to preserve meaning consistently. By the end of this chapter, you will understand: • Why prompts can evolve from temporary instructions into reusable domain carriers • How to encode domain knowledge so it can be preserved across interactions • How to use domain carriers to reduce semantic drift and regression
+:::
 ## 本章图示
 
 ![图 6.1 – Refinement loop](/media/posts/ai-ddd/fig-6-1.png)
