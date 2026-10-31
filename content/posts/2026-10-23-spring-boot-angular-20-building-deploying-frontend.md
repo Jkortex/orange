@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（二十）：前端生产级构建与 Node SSR 容器化打包
 date: 2026-10-23T00:20:00Z
-description: 双栏独立滚动对照：实战 Angular AOT 生产构建优化，编写多阶段 Node.js Dockerfile 容器化 SSR 服务，配置 Express 反向代理打通前后端通信契约。
+description: 实战 Angular AOT 生产构建优化，编写多阶段 Node.js Dockerfile 容器化 SSR 服务，配置 Express 反向代理打通前后端通信契约。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - SSR
   - 生产构建
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 前端构建与容器化打包决策矩阵
 

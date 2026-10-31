@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（导读）：从内存安全基石到云原生与内核级编程全景"
 date: 2026-10-25T01:00:00Z
-description: "双栏独立滚动对照：系统梳理 2026 年最新第 3 版《Programming Rust》技术演化、专栏 4 大进阶阶段路线图与工程决策指南。"
+description: "系统梳理 2026 年最新第 3 版《Programming Rust》技术演化、专栏 4 大进阶阶段路线图与工程决策指南。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 系统编程, 学习指南, 内存安全, 架构设计]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为系统级工程技术决策矩阵、四大阶段路线图拓扑、生产级 RAII 资源管理范式与避坑指南；**右栏**为原著完整精译参考（Preface 前言），附有核心段落的英文原文展开与核心术语解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ![《Rust 现代系统级工程实战》全景封面](/media/posts/rust-systems-engineering/cover.png)
 

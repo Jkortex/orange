@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十八）：Angular 现代服务端渲染（SSR）与水合优化
 date: 2026-10-23T00:18:00Z
-description: 双栏独立滚动对照：配置 RenderMode 细粒度路由策略，结合 AngularNodeAppEngine、isPlatformBrowser 平台守卫与增量水合优化，构建高性能首屏与 SEO 交付体系。
+description: 配置 RenderMode 细粒度路由策略，结合 AngularNodeAppEngine、isPlatformBrowser 平台守卫与增量水合优化，构建高性能首屏与 SEO 交付体系。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - SEO
   - 服务端渲染
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 前端渲染策略与平台适配决策矩阵
 

@@ -550,11 +550,3 @@ sub, err := nc.QueueSubscribe("orders.created", "fulfilment-workers", handler)
 消息队列在时间维度上成功解耦了服务。然而，绝大多数直接面向终端用户的核心系统，依然不可避免地需要同步的 HTTP 即时响应。
 
 下一章我们将亲手构建 HTTP 服务层 —— 绝不套用任何现成框架，而是直接基于标准库 `net/http` 和优雅的可组合中间件链条（Composable Middleware Chains）从零搭建。这套模式，正是 Gin、Chi、Echo 等一切现代主流 Go HTTP 框架赖以生存的底层基石。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（二）：并发即微缩分布式系统：Goroutine、Channel 与工作池](/posts/2026-10-18-distributed-go-02-concurrency)
-> - 下一篇：[Go 分布式系统实战（四）：HTTP 服务与中间件链路：Go 1.22 原生路由与核心中间件](/posts/2026-10-18-distributed-go-04-http-middleware)

@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十一）：Traits 与泛型参数：静态多态、单态化（Monomorphization）与 Trait Objects"
 date: 2026-10-25T01:11:00Z
-description: "双栏独立滚动对照：深入解析 Rust Trait 核心抽象体系、泛型单态化（Monomorphization）与零成本静态分发、Trait Objects 胖指针（Fat Pointer）与虚表内存拓扑、孤儿规则与对象安全（Object Safety）边界。"
+description: "深入解析 Rust Trait 核心抽象体系、泛型单态化（Monomorphization）与零成本静态分发、Trait Objects 胖指针（Fat Pointer）与虚表内存拓扑、孤儿规则与对象安全（Object Safety）边界。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, Trait, 泛型, 静态分发, 动态分发, 单态化]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为静态多态 vs 动态多态技术决策矩阵、单态化物理展开机理、生产级分布式块存储存储抽象范式、Mermaid 胖指针与虚表拓扑图、避坑清单；**右栏**为原著完整精译参考（Chapter 11: Traits and Generics），配齐原著虚表布局图与韦恩图引用及核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：现代系统级抽象体系与多态分发机理
 

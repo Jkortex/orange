@@ -2,13 +2,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import ColumnDetailPage, { generateStaticParams, generateMetadata } from './page'
-import {
-  AI_DDD_COLUMN,
-  DISTRIBUTED_GO_COLUMN,
-  RUST_SYSTEMS_COLUMN,
-  DATA_INTENSIVE_COLUMN,
-  getAllColumns,
-} from '@/lib/column-data'
+import { getAllColumns, getColumn } from '@/lib/column-data'
+
+const DISTRIBUTED_GO_COLUMN = getColumn('distributed-go')!
+const AI_DDD_COLUMN = getColumn('ai-ddd')!
+const RUST_SYSTEMS_COLUMN = getColumn('rust-systems-engineering')!
+const DATA_INTENSIVE_COLUMN = getColumn('data-intensive-systems')!
 
 afterEach(() => {
   cleanup()

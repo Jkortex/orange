@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（一）：技术全景、演进脉络与架构蓝图
 date: 2026-10-23T00:01:00Z
-description: 双栏独立滚动对照：梳理 Spring Boot 4.1.0 与 Angular 22 核心技术演进，剖析 Java 26 结构化并发、Signals 细粒度响应式系统与微服务书店系统架构。
+description: 梳理 Spring Boot 4.1.0 与 Angular 22 核心技术演进，剖析 Java 26 结构化并发、Signals 细粒度响应式系统与微服务书店系统架构。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -12,8 +12,6 @@ tags:
   - 微服务
   - 架构设计
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与系统拓扑；**右栏**为全栈微服务体系演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动互不干扰。
 
 ## 1. 架构选型与决策矩阵
 

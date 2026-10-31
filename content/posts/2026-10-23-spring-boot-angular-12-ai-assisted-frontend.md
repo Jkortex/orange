@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十二）：前端 AI 辅助开发规范与指令调优
 date: 2026-10-23T00:12:00Z
-description: 双栏独立滚动对照：建立前端 AI 研发规范库，配置针对 Angular Material、Reactive Forms 与 Vitest 测试的专属 instruction 文件，实现可控可复用的代码生成。
+description: 建立前端 AI 研发规范库，配置针对 Angular Material、Reactive Forms 与 Vitest 测试的专属 instruction 文件，实现可控可复用的代码生成。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -10,8 +10,6 @@ tags:
   - GitHub Copilot
   - 前端工程化
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 前端 AI 辅助开发模式决策矩阵
 

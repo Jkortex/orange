@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（八）：Crates、Modules 与工作区：大型复杂工程骨架与可见性治理"
 date: 2026-10-25T01:08:00Z
-description: "双栏独立滚动对照：系统梳理 Cargo 编译单元、虚拟工作区（Virtual Workspaces）、细粒度可见性阶梯（pub(crate)/pub(super)）与工业级模块化解耦规范。"
+description: "系统梳理 Cargo 编译单元、虚拟工作区（Virtual Workspaces）、细粒度可见性阶梯（pub(crate)/pub(super)）与工业级模块化解耦规范。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, Crates, Modules, Workspace, 工程架构, 可见性]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为大型软件工程架构选型矩阵、虚拟工作区（Workspace）工业级骨架搭建、生产级细粒度可见性治理范式、Mermaid 依赖分层拓扑与避坑清单；**右栏**为原著完整精译参考（Chapter 8: Crates and Modules），配齐原著名图引用与核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：现代系统级工作区工程骨架与可见性治理
 

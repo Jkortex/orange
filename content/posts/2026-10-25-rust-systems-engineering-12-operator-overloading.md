@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十二）：操作符重载与定制契约：标准库核心 Trait 实现范式"
 date: 2026-10-25T01:12:00Z
-description: "双栏独立滚动对照：系统梳理 Rust 操作符重载（Operator Overloading）设计哲学、算术/位运算 Trait 契约、偏序与全序（PartialEq/Eq、PartialOrd/Ord）数学公理、动态切片索引（Index/IndexMut）底层脱糖机理。"
+description: "系统梳理 Rust 操作符重载（Operator Overloading）设计哲学、算术/位运算 Trait 契约、偏序与全序（PartialEq/Eq、PartialOrd/Ord）数学公理、动态切片索引（Index/IndexMut）底层脱糖机理。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 操作符重载, 算术Trait, 索引重载, 语言契约]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为系统级操作符设计决策矩阵、数学公理代数拓扑图、生产级定点数与二维矩阵切片操作符实现范式、Mermaid 索引脱糖拓扑与避坑清单；**右栏**为原著完整精译参考（Chapter 12: Operator Overloading），配齐关键术语解析与核心段落英文对照。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：操作符定制契约与现代代数系统设计
 

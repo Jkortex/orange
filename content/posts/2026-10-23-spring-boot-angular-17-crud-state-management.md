@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十七）：状态管理驱动的完整 CRUD 交互闭环
 date: 2026-10-23T00:17:00Z
-description: 双栏独立滚动对照：结合 AuthorStore 与 BookStore，实战分页列表契约适配、动态防抖检索、模态框创建编辑与级联下拉关联的生产级 CRUD 治理闭环。
+description: 结合 AuthorStore 与 BookStore，实战分页列表契约适配、动态防抖检索、模态框创建编辑与级联下拉关联的生产级 CRUD 治理闭环。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - 分页检索
   - 业务实战
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. CRUD 状态流与并发治理决策矩阵
 

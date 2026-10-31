@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十）：枚举与代数数据类型：模式解构与非空指针优化（NPO）"
 date: 2026-10-25T01:10:00Z
-description: "双栏独立滚动对照：深入解析 Rust 代数数据类型（ADT）、判别标签（Discriminant）内存排布、非空指针优化（NPO）与空穴（Niching）黑魔法、高性能模式解构与 API 向下兼容性规范。"
+description: "深入解析 Rust 代数数据类型（ADT）、判别标签（Discriminant）内存排布、非空指针优化（NPO）与空穴（Niching）黑魔法、高性能模式解构与 API 向下兼容性规范。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 枚举, ADT, 模式匹配, NPO, 内存优化]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为代数数据类型选型决策矩阵、非空指针优化（NPO）物理位图比对、生产级网络帧递归解构范式、Mermaid 内存空穴排布拓扑与避坑清单；**右栏**为原著完整精译参考（Chapter 10: Enums and Patterns），包含全部 6 张原著核心架构图引用与关键术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：代数数据类型（ADT）与非空指针优化
 

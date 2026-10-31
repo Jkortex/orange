@@ -891,11 +891,3 @@ client := inventoryv1.NewInventoryServiceClient(conn)
 ---
 
 > **下一章预告**：gRPC 为跨服务的点对点单次调用提供了可靠而高效的基础底座。然而，现代业务中几乎任何一个用户页面（如用户主页、聚合商品详情）都需要**同时并发获取**来自不同微服务的数据 —— 用户画像、历史订单、推荐列表等。第 10 章将深入讲解如何利用读者在第 2 章中已经熟练掌握的 Goroutine 与 Channel，以并行扇出（Parallel Fan-Out）的姿态将页面渲染的网络等待延迟直接削减一半以上。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（八）：深入消息队列：Kafka 账本模型、背压控制与消费者组](/posts/2026-10-18-distributed-go-08-kafka-queues)
-> - 下一篇：[Go 分布式系统实战（十）：并行编排与扇出调用：errgroup 并发控制与优雅降级](/posts/2026-10-18-distributed-go-10-orchestration-fan-out)

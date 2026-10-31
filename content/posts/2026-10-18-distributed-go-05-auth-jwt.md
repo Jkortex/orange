@@ -1039,11 +1039,3 @@ func (c *JWKSClient) GetPublicKey(ctx context.Context) (*ecdsa.PublicKey, error)
 身份认证解决了“**来者何人（Who is calling）**”的身份与边界信任问题。在掌握了安全的跨网络调用之后，我们必须将目光投向分布式架构中最核心、同时也是最复杂的资产 —— **数据（Where the data lives）**。
 
 在接下来的 **第 6 章：数据库访问与迁移（Database Access and Migrations）** 中，我们将深入剖析在多实例高并发场景下安全使用 PostgreSQL 的最佳实践、连接池调优法则、零停机数据库平滑迁移（Zero-Downtime Migrations）策略，以及捍卫微服务独立自治底线的“**一服务一数据库（One Database Per Service）**”工程铁律。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（四）：HTTP 服务与中间件链路：Go 1.22 原生路由与核心中间件](/posts/2026-10-18-distributed-go-04-http-middleware)
-> - 下一篇：[Go 分布式系统实战（六）：数据库访问与平滑迁移：连接池调优与 Expand-Contract 模式](/posts/2026-10-18-distributed-go-06-database-migrations)

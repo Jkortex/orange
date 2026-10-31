@@ -798,11 +798,3 @@ func (f *FakePublisher) Close() error {
 ---
 
 Kafka 完美支撑了那些可以容忍异步解耦的事件传输链路。然而，在分布式体系中，部分方法调用必须立即获得同步结果 —— 比如订单服务在确认下单前，必须即刻获知库存是否已完成锁定。下一章将全面深入探讨**基于 gRPC 与 Protocol Buffers 的服务间同步通信**，以及防止单点慢服务引发全集群雪崩级瘫痪的关键韧性治理模式（超时控制、智能重试与断路器）。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（七）：Context 贯穿全链路：超时预算收窄与生命周期避坑](/posts/2026-10-18-distributed-go-07-context-propagation)
-> - 下一篇：[Go 分布式系统实战（九）：服务间 RPC：gRPC、Protobuf 契约与断路器容错](/posts/2026-10-18-distributed-go-09-grpc-circuit-breaker)

@@ -728,11 +728,3 @@ func RunSaga(ctx context.Context,
 一致性设计模式能够构筑坚固的数据防线，防止你的数据发生不可挽回的分歧与错乱。但它们无法直接阻止你的微服务因下游拥堵而变慢、抛出意外错误、或在内存中发生隐蔽的资源泄漏。
 
 在下一章中，我们将为你交付洞悉系统内部黑盒运行状态的现代化观测利器：**基于标准库 `slog` 的结构化日志（Structured Logging）、Prometheus 监控指标（Metrics），以及能够将每一行孤立日志精准串联至特定用户请求的分布式链路追踪（Distributed Tracing）**。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（十）：并行编排与扇出调用：errgroup 并发控制与优雅降级](/posts/2026-10-18-distributed-go-10-orchestration-fan-out)
-> - 下一篇：[Go 分布式系统实战（十二）：可观测性：结构化日志、Prometheus 指标与 OTel 追踪](/posts/2026-10-18-distributed-go-12-observability)

@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（二十三）：Unsafe Rust 与底层契约：裸指针算术、未定义行为（UB）边界与安全封装"
 date: 2026-10-25T01:23:00Z
-description: "双栏独立滚动对照：系统剖析 Unsafe Rust 的核心边界与底层契约，从裸指针算术、内存对齐与 MaybeUninit，到 GapBuffer 间隙缓冲区实战与 Panic 安全封装准则。"
+description: "系统剖析 Unsafe Rust 的核心边界与底层契约，从裸指针算术、内存对齐与 MaybeUninit，到 GapBuffer 间隙缓冲区实战与 Panic 安全封装准则。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, Unsafe, 裸指针, 未定义行为, 内存安全, 契约安全]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为 Unsafe 契约技术选型矩阵、最小可信基底（TCB）防御拓扑、内存移动原语比对表、生产级指针打标器与 GapBuffer 实战范式及避坑清单；**右栏**为原著完整精译参考（Chapter 23: Unsafe Code），包含图 23-1 至 23-7 裸内存排布、移动语义与间隙缓冲区图谱、原著关键段落英文对照及底层术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：未定义行为边界与安全抽象契约
 

@@ -1,13 +1,11 @@
 ---
 title: "数据密集型系统架构实战（十一）：批处理系统（Batch Processing）：MapReduce 演化、离线计算与现代湖仓一体"
 date: 2026-10-25T02:11:00Z
-description: "双栏独立滚动对照：系统剖析批处理系统的演进历程，从 Unix 管道哲学到 MapReduce 分布式计算，再到现代对象存储与湖仓一体（Data Lakehouse）存算分离范式。"
+description: "系统剖析批处理系统的演进历程，从 Unix 管道哲学到 MapReduce 分布式计算，再到现代对象存储与湖仓一体（Data Lakehouse）存算分离范式。"
 category: distributed-systems
 column: data-intensive-systems
 tags: [批处理, MapReduce, 数据湖仓, 离线计算, 容错重算, 分布式计算]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 # 核心实战精炼：现代批处理系统与湖仓架构演进
 

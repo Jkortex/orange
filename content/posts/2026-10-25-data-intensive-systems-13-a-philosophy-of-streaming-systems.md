@@ -1,13 +1,11 @@
 ---
 title: "数据密集型系统架构实战（十三）：解构数据库与未来架构：流表二象性、端到端不可变账本与无捆绑系统"
 date: 2026-10-25T02:13:00Z
-description: "双栏独立滚动对照：深入 Martin Kleppmann 与 Chris Riccomini 的流系统哲学与未来数据架构，系统解析解构数据库（Unbundling Databases）、流表二象性、不可变审计日志、端到端正确性与避免全局协调的高吞吐设计。"
+description: "深入 Martin Kleppmann 与 Chris Riccomini 的流系统哲学与未来数据架构，系统解析解构数据库（Unbundling Databases）、流表二象性、不可变审计日志、端到端正确性与避免全局协调的高吞吐设计。"
 category: distributed-systems
 column: data-intensive-systems
 tags: [解构数据库, 流表二象性, 不可变性, 事件驱动, 衍生数据, 架构演进]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 # 核心实战精炼：解构数据库与流系统哲学体系
 

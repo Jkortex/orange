@@ -1,13 +1,11 @@
 ---
 title: "数据密集型系统架构实战（五）：数据编码与模式演化：Protobuf、Avro 与 Durable Execution 现代工作流"
 date: 2026-10-25T02:05:00Z
-description: "双栏独立滚动对照：系统化拆解 Protobuf/Avro 紧凑二进制编码、向前向后模式兼容性、RPC 网络调用陷阱以及 Temporal 等现代 Durable Execution 持久化工作流引擎的确定性重放物理内幕。"
+description: "系统化拆解 Protobuf/Avro 紧凑二进制编码、向前向后模式兼容性、RPC 网络调用陷阱以及 Temporal 等现代 Durable Execution 持久化工作流引擎的确定性重放物理内幕。"
 category: distributed-systems
 column: data-intensive-systems
 tags: [数据编码, 模式演进, Protobuf, Avro, RPC, Durable-Execution]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为四类主流数据编码决策矩阵、跨版本模式治理与 Durable Execution 状态机重放拓扑以及避坑清单 (Do's & Don'ts)；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 # 核心实战精炼：契约演化、序列化底层与持久化执行架构
 

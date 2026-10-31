@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（九）：从护栏到专家：为 DDD 设计智能体"
 date: 2026-10-21T09:00:00Z
-description: "双栏独立滚动工作台：解构事件风暴、故事叙述、命令编写与上下文映射四大专家智能体，用契约与人工关卡筑牢认知边界。"
+description: "解构事件风暴、故事叙述、命令编写与上下文映射四大专家智能体，用契约与人工关卡筑牢认知边界。"
 category: domain-driven-design
 column: ai-ddd
 tags:
@@ -11,8 +11,6 @@ tags:
   - "领域建模"
   - "AI 协作"
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 # 核心实战精炼：构建 DDD 专家智能体与认知边界
 
@@ -51,10 +49,14 @@ flowchart TD
 
 | 专家智能体 | 权威输入 | 单项转换任务 | 允许产出的候选类别 | 标志性绝对禁令 (Characteristic Prohibition) |
 | :--- | :--- | :--- | :--- | :--- |
-| **EventStormer** | 原始证据（访谈材料、观察记录） | 原始证据 $ightarrow$ 候选事实 | `fact` (过去时), `trigger` (诱因), `participant` (参与者) | **不得擅自裁定模棱两可的业务策略**；不得将预期作为已发生事实。 |
-| **Storyteller** | 已采纳事实（`accepted-facts.md`） | 已采纳事实 $ightarrow$ 具体业务情境 | `scenario` (主场景), `variation` (变体情境) | **证据止步之处故事必须戛然而止**；严禁引入未经证实的假设结局。 |
-| **Command & Event Writer** | 已采纳场景（`accepted-scenarios.md`） | 已采纳场景 $ightarrow$ 候选系统行为 | `command` (意图指令), `event` (既成事实), `rule` (约束) | **严禁捏造“图省事的顺手命令”**；口头习惯与未定规程绝不可升格为 rule。 |
-| **Context Mapper** | 完整已采纳链（`accepted-behavior.md` 等） | 已采纳行为 $ightarrow$ 职责边界与关系 | `boundary` (职责边界), `relationship` (交互关系) | **严禁绘制缺乏证据支撑的连接线**；严禁以物理房间或代码模块命名边界。 |
+| **EventStormer** | 原始证据（访谈材料、观察记录） | 原始证据 $
+ightarrow$ 候选事实 | `fact` (过去时), `trigger` (诱因), `participant` (参与者) | **不得擅自裁定模棱两可的业务策略**；不得将预期作为已发生事实。 |
+| **Storyteller** | 已采纳事实（`accepted-facts.md`） | 已采纳事实 $
+ightarrow$ 具体业务情境 | `scenario` (主场景), `variation` (变体情境) | **证据止步之处故事必须戛然而止**；严禁引入未经证实的假设结局。 |
+| **Command & Event Writer** | 已采纳场景（`accepted-scenarios.md`） | 已采纳场景 $
+ightarrow$ 候选系统行为 | `command` (意图指令), `event` (既成事实), `rule` (约束) | **严禁捏造“图省事的顺手命令”**；口头习惯与未定规程绝不可升格为 rule。 |
+| **Context Mapper** | 完整已采纳链（`accepted-behavior.md` 等） | 已采纳行为 $
+ightarrow$ 职责边界与关系 | `boundary` (职责边界), `relationship` (交互关系) | **严禁绘制缺乏证据支撑的连接线**；严禁以物理房间或代码模块命名边界。 |
 
 ### 3.2 跨阶段通用交接 Schema 规范
 

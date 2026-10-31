@@ -770,11 +770,3 @@ func IsDuplicate(err error) bool {
 如果不传递正确的 Context，每一次数据库查询都相当于一次潜在的资源泄漏。
 
 下一章将探讨贯穿本专栏的核心主线：**Context 在整个调用链路中的自顶向下透传（Context Propagation）** —— 从最外层的 HTTP Handler 穿透至架构的每一层，确保取消信号（Cancellation）、超时截止时间（Deadlines）和请求元数据（Request Metadata）能够在整个分布式系统中无缝流转，不留任何断环。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（五）：跨服务认证与 JWT 鉴权：无状态验证与 JWKS 动态轮换](/posts/2026-10-18-distributed-go-05-auth-jwt)
-> - 下一篇：[Go 分布式系统实战（七）：Context 贯穿全链路：超时预算收窄与生命周期避坑](/posts/2026-10-18-distributed-go-07-context-propagation)

@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（六）：迭代精化：构建限界上下文"
 date: 2026-10-21T06:00:00Z
-description: "双栏独立滚动对照：运用反馈循环、四动词分类器与 CQRS 角色分离透镜，精化聚合边界并沉淀上下文快照。"
+description: "运用反馈循环、四动词分类器与 CQRS 角色分离透镜，精化聚合边界并沉淀上下文快照。"
 category: domain-driven-design
 column: ai-ddd
 tags:

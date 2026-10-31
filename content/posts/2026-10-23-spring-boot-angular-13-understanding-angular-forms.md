@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十三）：深入理解 Angular 响应式表单设计哲学
 date: 2026-10-23T00:13:00Z
-description: 双栏独立滚动对照：对比模板驱动表单与响应式表单，剖析 FormGroup、FormControl 与 FormArray 的模型不可变性，解析同步与异步校验器的运行机制。
+description: 对比模板驱动表单与响应式表单，剖析 FormGroup、FormControl 与 FormArray 的模型不可变性，解析同步与异步校验器的运行机制。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -10,8 +10,6 @@ tags:
   - 响应式表单
   - 前端表单
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 表单架构体系选型决策矩阵
 

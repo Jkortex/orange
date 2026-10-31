@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（二十四）：FFI 跨语言互操作：C-ABI 兼容性、内存布局与安全绑定实战"
 date: 2026-10-25T01:24:00Z
-description: "双栏独立滚动对照：系统剖析 Rust 跨语言互操作（FFI）工程体系，从 C-ABI 兼容内存布局（#[repr(C)]）、CString/CStr 边界转换，到基于 PhantomData 生命周期绑定的 libgit2 生产级 RAII 安全封装与双向调用。"
+description: "系统剖析 Rust 跨语言互操作（FFI）工程体系，从 C-ABI 兼容内存布局（#[repr(C)]）、CString/CStr 边界转换，到基于 PhantomData 生命周期绑定的 libgit2 生产级 RAII 安全封装与双向调用。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, FFI, C-ABI, 跨语言调用, 动态链接, 外部函数]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为跨语言 FFI 技术选型矩阵、三层绑定分层架构、C-ABI 内存排布与生命周期绑架（Lifetime Bonding）拓扑、双向 FFI 生产代码范式与避坑清单；**右栏**为原著完整精译参考（Chapter 24: Foreign Functions），详述 libgit2 裸接口与安全封装全流程、原著关键段落英文对照及跨语言底层术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：C-ABI 兼容性与高层安全抽象架构
 

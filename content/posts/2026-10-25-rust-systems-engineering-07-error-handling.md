@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（七）：错误处理之道：Result、Panic 与模块化错误传播实践"
 date: 2026-10-25T01:07:00Z
-description: "双栏独立滚动对照：深入解析 Rust 双轨错误处理体系（Panic vs Result），精通 thiserror 强类型错误定义、anyhow 统一上下文汇聚与 ? 操作符零成本展开。"
+description: "深入解析 Rust 双轨错误处理体系（Panic vs Result），精通 thiserror 强类型错误定义、anyhow 统一上下文汇聚与 ? 操作符零成本展开。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 错误处理, Result, Panic, thiserror, anyhow]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为系统级错误处理决策矩阵、模块化分层错误架构、生产级 thiserror/anyhow 融合工程范式、Mermaid 机制拓扑图与避坑清单；**右栏**为原著完整精译参考（Chapter 7: Error Handling），包含原著英文段落引用与核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：现代系统级双轨错误处理与分层治理
 

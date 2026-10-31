@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十四）：闭包系统：Fn、FnMut、FnOnce 捕获语义与生命周期"
 date: 2026-10-25T01:14:00Z
-description: "双栏独立滚动对照：系统剖析 Rust 闭包底层实现机理，深度解密 Fn、FnMut 与 FnOnce 捕获语义、生命周期推演、函数指针转化与零成本抽象内联优化。"
+description: "系统剖析 Rust 闭包底层实现机理，深度解密 Fn、FnMut 与 FnOnce 捕获语义、生命周期推演、函数指针转化与零成本抽象内联优化。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 闭包, Fn, FnMut, FnOnce, 函数式编程]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为系统级工程技术决策矩阵、闭包底层内存排布、生产级异步事件调度器与避坑清单 (Do's & Don'ts)；**右栏**为原著完整参考（Chapter 14: Closures），附有核心段落的英文原文展开与核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：闭包底层实现机理与高阶工程抽象
 

@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十九）：多线程并发体系：Send/Sync 契约、Mutex、RwLock、Channels 与无畏并发"
 date: 2026-10-25T01:19:00Z
-description: "双栏独立滚动对照：系统剖析 Rust 编译期并发安全契约（Send/Sync）、Scoped Threads 作用域借用、流水线 Channels 与共享内存同步原语（Mutex/RwLock/Condvar/Atomics）。"
+description: "系统剖析 Rust 编译期并发安全契约（Send/Sync）、Scoped Threads 作用域借用、流水线 Channels 与共享内存同步原语（Mutex/RwLock/Condvar/Atomics）。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 并发编程, Send, Sync, Mutex, Channels, 多线程]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为现代多线程并发体系核心架构选型矩阵、`Send`/`Sync` 类型推导拓扑、流水线与反压设计模式、高并发生产代码范式与避坑清单；**右栏**为原著完整精译参考（Chapter 19: Threads），包含图 19-1 至 19-11 拓扑图谱、原著关键段落英文对照及核心术语剖析。左右两栏支持独立滚动与宽度比例调节。
 
 # 核心实战精炼：无畏并发与现代多线程工程基石
 

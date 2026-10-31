@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十一）：Angular 22 现代脚手架与独立组件架构
 date: 2026-10-23T00:11:00Z
-description: 双栏独立滚动对照：深入 Angular 22 现代工程体系，落地纯 Standalone 架构、基于 Signals 的输入输出、Smart/Dumb 组件分层与 Vitest 现代测试框架。
+description: 深入 Angular 22 现代工程体系，落地纯 Standalone 架构、基于 Signals 的输入输出、Smart/Dumb 组件分层与 Vitest 现代测试框架。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - 前端架构
   - Vitest
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 前端工程选型决策矩阵
 

@@ -1234,10 +1234,3 @@ Kafka 中用于协调协同消费指定 Topic 的一组消费者集群。Topic �
   系统性讲解如何将现代云原生微服务完整部署、编排并在生产级 Kubernetes 集群中稳定运行。
 - **《Site Reliability Engineering》（SRE：Google 运维解密）** — Betsy Beyer 等（Google SRE 团队）著  
   Google 运行超大规模超高可用分布式生产系统的核心思想沉淀，涵盖 SLO 体系构建、生产事件响应以及运维成熟度模型。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（十五）：终极实战：OrderFlow 电商订单微服务系统端到端落地](/posts/2026-10-18-distributed-go-15-capstone-complete-system)

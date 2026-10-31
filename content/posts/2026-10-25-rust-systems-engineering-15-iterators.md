@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十五）：迭代器模式与惰性求值：零成本高阶管道抽象"
 date: 2026-10-25T01:15:00Z
-description: "双栏独立滚动对照：深度解密 Rust 迭代器底层 Pull-based 拉式状态机、惰性求值适配器链、IntoIterator 契约与单态化编译器极致内联优化。"
+description: "深度解密 Rust 迭代器底层 Pull-based 拉式状态机、惰性求值适配器链、IntoIterator 契约与单态化编译器极致内联优化。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 迭代器, 惰性求值, 适配器, 零成本抽象]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为系统级迭代器三阶段流水线拓扑、架构决策矩阵、生产级零拷贝日志解析引擎与避坑清单 (Do's & Don'ts)；**右栏**为原著完整参考（Chapter 15: Iterators），附有核心段落的英文原文展开与核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：迭代器模式与零成本高阶流式管道
 

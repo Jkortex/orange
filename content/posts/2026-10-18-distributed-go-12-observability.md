@@ -789,11 +789,3 @@ import _ "github.com/yourorg/platform/observability" // 自动向 Prometheus 全
 可观测性能告诉你系统坏在了哪里。但作为一名优秀的系统架构师，你肯定更希望在测试阶段就能将缺陷捕获，而不是在生产环境中直面熊熊烈火。
 
 第 13 章将深入探讨**分布式系统的测试之道** —— 这里没有把所有依赖都 mock 掉的脆弱单元测试，我们将使用真实数据库与真实消息中间件进行集成测试，在流水线上真实暴露并发竞态条件、部分失败与幂等性漏洞，让分布式缺陷在上线前无所遁形。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（十一）：分布式一致性实战：幂等键、乐观锁与 Saga 逆序补偿](/posts/2026-10-18-distributed-go-11-consistency-in-practice)
-> - 下一篇：[Go 分布式系统实战（十三）：分布式系统测试：测试金字塔、Testcontainers 与混沌注入](/posts/2026-10-18-distributed-go-13-testing-distributed-systems)

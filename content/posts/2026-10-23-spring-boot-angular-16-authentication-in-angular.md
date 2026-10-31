@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十六）：Angular 客户端鉴权、拦截器与路由守卫
 date: 2026-10-23T00:16:00Z
-description: 双栏独立滚动对照：前端对接后端认证微服务，解析 HttpInterceptorFn 令牌注入、无感刷新并发锁机制、SignalStore 登录态持久化与函数式路由守卫。
+description: 前端对接后端认证微服务，解析 HttpInterceptorFn 令牌注入、无感刷新并发锁机制、SignalStore 登录态持久化与函数式路由守卫。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - 路由守卫
   - 前端安全
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 客户端鉴权与状态架构决策矩阵
 

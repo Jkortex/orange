@@ -1,13 +1,11 @@
 ---
 title: "数据密集型系统架构实战（十二）：流处理系统（Stream Processing）：日志型 Broker、CDC 实时捕获、流式 Join 与 Exactly-Once"
 date: 2026-10-25T02:12:00Z
-description: "双栏独立滚动对照：系统剖析实时流处理核心机制，涵盖基于日志的消息代理（Kafka/Redpanda）、变更数据捕获（CDC）、事件驱动状态机、流式窗口关联与精确一次（Exactly-Once）语义保障。"
+description: "系统剖析实时流处理核心机制，涵盖基于日志的消息代理（Kafka/Redpanda）、变更数据捕获（CDC）、事件驱动状态机、流式窗口关联与精确一次（Exactly-Once）语义保障。"
 category: distributed-systems
 column: data-intensive-systems
 tags: [流处理, CDC, 消息队列, 事件流, 时间窗口, Exactly-Once]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心精炼架构、实战代码与避坑决策；**右栏**为原著完整参考译文，附有关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 # 核心实战精炼：现代流处理系统与事件驱动中枢
 

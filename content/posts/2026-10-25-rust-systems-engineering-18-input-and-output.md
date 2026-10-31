@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十八）：输入输出体系：Read/Write 契约、缓冲流与跨平台文件系统"
 date: 2026-10-25T01:18:00Z
-description: "双栏独立滚动对照：深度解密 Rust 系统级 I/O 体系，剖析 Read 与 Write 特征契约、用户态缓冲与内核页缓存协同、跨平台 Path 路径哲学与崩溃安全的原子文件写入范式。"
+description: "深度解密 Rust 系统级 I/O 体系，剖析 Read 与 Write 特征契约、用户态缓冲与内核页缓存协同、跨平台 Path 路径哲学与崩溃安全的原子文件写入范式。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, I/O, Read, Write, 缓冲流, 文件系统]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为系统级 I/O 技术决策矩阵、多层缓冲物理数据流拓扑、生产级原子落盘写入器与避坑清单 (Do's & Don'ts)；**右栏**为原著完整参考（Chapter 18: Input and Output），附有核心段落的英文原文展开与核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：系统级 I/O 流契约与跨平台文件引擎
 

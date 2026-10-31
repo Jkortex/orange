@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（二十一）：深入 Futures 底层：Poll 驱动轮询、Waker 唤醒机制与 Pinning 内存钉住"
 date: 2026-10-25T01:21:00Z
-description: "双栏独立滚动对照：深度逆向 Rust 异步底层机制，解密 Future::poll 轮询契约、Waker 事件唤醒闭环、自引用状态机内存拓扑与 Pin/Unpin 内存钉住安全证明。"
+description: "深度逆向 Rust 异步底层机制，解密 Future::poll 轮询契约、Waker 事件唤醒闭环、自引用状态机内存拓扑与 Pin/Unpin 内存钉住安全证明。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, Future, Pin, Unpin, Waker, 异步底层, 内存钉住]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为异步底层核心组件架构选型矩阵、Future 自引用状态机演进图谱、Waker 虚表与事件通知闭环拓扑、生产级底层执行器与自定义 Future 范式及避坑清单；**右栏**为原著完整精译参考（Chapter 21: Futures），包含图 21-1 至 21-4 反应堆与自引用内存损坏图谱、原著关键段落英文对照及底层术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：Future 状态机逆向与 Pin 内存安全契约
 

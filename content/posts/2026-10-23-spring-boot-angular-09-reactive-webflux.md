@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（九）：Spring WebFlux 响应式流与 SSE 实时消息推送
 date: 2026-10-23T00:09:00Z
-description: 双栏独立滚动对照：探索 Reactor 非阻塞反应式编程模型，构建 Server-Sent Events (SSE) 实时通道，实现图书上新与库存变动的流式推送。
+description: 探索 Reactor 非阻塞反应式编程模型，构建 Server-Sent Events (SSE) 实时通道，实现图书上新与库存变动的流式推送。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - Reactor
   - 实时通信
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 实时消息传输与并发模型技术决策矩阵
 

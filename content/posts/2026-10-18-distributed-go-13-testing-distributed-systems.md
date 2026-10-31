@@ -879,11 +879,3 @@ func AssertEventually(t *testing.T, condition func() bool, timeout time.Duration
 测试能够检验代码逻辑与架构设计的正确性。然而在生产环境中，如果缺少了正确的系统配置 —— 数据库连接串、服务机密密钥（Secrets）、超时时间阈值以及在不同环境之间差异巨大的特性开关（Feature Flags），你的服务甚至根本无法成功启动。
 
 下一章我们将深入探讨**环境无关、启动期强校验以及对敏感凭证绝对安全的配置与机密管理体系（Configuration and Secrets）**。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（十二）：可观测性：结构化日志、Prometheus 指标与 OTel 追踪](/posts/2026-10-18-distributed-go-12-observability)
-> - 下一篇：[Go 分布式系统实战（十四）：配置与密钥管理：12-Factor 原则与原子指针动态热重载](/posts/2026-10-18-distributed-go-14-config-and-secrets)

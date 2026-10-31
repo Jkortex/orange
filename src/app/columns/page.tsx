@@ -104,7 +104,7 @@ export default function ColumnsPage() {
               {/* 底部跳转入口 */}
               <div className="mt-6 flex flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="type-meta text-muted-foreground font-mono">
-                  共 {col.phases.length} 个学习阶段 · 涵盖 {col.totalArticles} 篇核心工程实践
+                  共 {col.phases.length} 个学习阶段
                 </div>
 
                 <Link

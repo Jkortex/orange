@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（五）：应用服务层与企业级 RESTful API 实战
 date: 2026-10-23T00:05:00Z
-description: 双栏独立滚动对照：深入 Spring Boot 服务分层设计，构建具备 Record DTO 转换、参数校验、RFC 9457 全局异常治理与分页能力的生产级 REST API。
+description: 深入 Spring Boot 服务分层设计，构建具备 Record DTO 转换、参数校验、RFC 9457 全局异常治理与分页能力的生产级 REST API。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - 数据校验
   - 异常处理
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 架构选型与决策矩阵
 

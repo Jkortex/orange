@@ -683,11 +683,3 @@ g.Go(func() (err error) {
 然而，它也成倍放大了**系统状态发生偏离与分歧的风险敞口**。当订单服务、支付服务和通知服务各自维护着自己独立的专属数据库时，你该如何确保它们之间的数据最终达成一致？
 
 在下一章中，我们将深入实战攻克**分布式一致性（Distributed Consistency）**这一终极挑战：探索跨服务边界的 Saga 事务编排、让重试天然安全的幂等键（Idempotency Keys），以及如何构建能够精准捕捉并修复一切不可避免数据分歧的对账巡检任务（Reconciliation Jobs）。
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（九）：服务间 RPC：gRPC、Protobuf 契约与断路器容错](/posts/2026-10-18-distributed-go-09-grpc-circuit-breaker)
-> - 下一篇：[Go 分布式系统实战（十一）：分布式一致性实战：幂等键、乐观锁与 Saga 逆序补偿](/posts/2026-10-18-distributed-go-11-consistency-in-practice)

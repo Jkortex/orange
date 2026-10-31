@@ -1,7 +1,7 @@
 ---
 title: "AI 增强的领域驱动设计（五）：定义规则：教会模型运用 DDD 进行思考"
 date: 2026-10-21T05:00:00Z
-description: "双栏独立滚动对照：摒弃泛化提示词，通过三层架构规则手册与三大容器（Agent/Skill/MCP）为 AI 推理装上刚性护栏。"
+description: "摒弃泛化提示词，通过三层架构规则手册与三大容器（Agent/Skill/MCP）为 AI 推理装上刚性护栏。"
 category: domain-driven-design
 column: ai-ddd
 tags:

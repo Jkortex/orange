@@ -9,7 +9,7 @@ import {
 } from '@/lib/content'
 import { listSkillAttachments, skillFileHref } from '@/lib/skill-routes'
 import { getSiteUrl, joinSiteUrl } from '@/lib/site-url'
-import { getAllColumns } from '@/lib/column-data'
+import { ALL_COLUMNS } from '@/lib/column-data'
 
 export const dynamic = 'force-static'
 
@@ -51,7 +51,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ]
 
   // 专栏详情
-  for (const col of getAllColumns()) {
+  for (const col of ALL_COLUMNS) {
     routes.push({
       url: joinSiteUrl(siteUrl, `/columns/${col.id}`),
       lastModified: generatedAt,

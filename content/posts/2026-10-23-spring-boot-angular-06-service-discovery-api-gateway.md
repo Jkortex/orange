@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（六）：Spring Cloud 服务发现与统一 API 网关
 date: 2026-10-23T00:06:00Z
-description: 双栏独立滚动对照：剖析 Eureka 服务注册与心跳健康感知机制，实战 Spring Cloud Gateway 反应式动态路由编排、路径重写与 Resilience4j 熔断降级。
+description: 剖析 Eureka 服务注册与心跳健康感知机制，实战 Spring Cloud Gateway 反应式动态路由编排、路径重写与 Resilience4j 熔断降级。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - Eureka
   - API Gateway
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 服务寻址与 API 网关技术决策矩阵
 

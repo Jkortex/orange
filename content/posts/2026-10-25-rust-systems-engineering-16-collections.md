@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十六）：标准库集合剖析：Vec、HashMap、BTreeMap 底层性能与权衡"
 date: 2026-10-25T01:16:00Z
-description: "双栏独立滚动对照：深度解密 Rust 标准库集合底层物理内存排布、Vec 几何扩容与迭代器失效免疫、SwissTable 与 B-Tree 缓存局部性博弈及 HashDoS 防御。"
+description: "深度解密 Rust 标准库集合底层物理内存排布、Vec 几何扩容与迭代器失效免疫、SwissTable 与 B-Tree 缓存局部性博弈及 HashDoS 防御。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 集合, Vec, HashMap, BTreeMap, 内存结构]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为系统级标准集合技术决策矩阵、SwissTable 与 B-Tree 物理内存排布、生产级高性能缓存与避坑清单 (Do's & Don'ts)；**右栏**为原著完整参考（Chapter 16: Collections），附有核心段落的英文原文展开与核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：标准库集合底层物理结构与工程权衡
 

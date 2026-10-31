@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（二十）：现代异步编程：async/await 语法糖、Tokio 任务调度与取消安全（Cancel Safety）"
 date: 2026-10-25T01:20:00Z
-description: "双栏独立滚动对照：系统剖析现代 Rust 异步多任务机制，从 async/await 状态机、Tokio 工作窃取调度器，到 Trait 异步方法（AFIT）、CancellationToken 与取消安全（Cancel Safety）工程实践。"
+description: "系统剖析现代 Rust 异步多任务机制，从 async/await 状态机、Tokio 工作窃取调度器，到 Trait 异步方法（AFIT）、CancellationToken 与取消安全（Cancel Safety）工程实践。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 异步编程, async, await, Tokio, 取消安全]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为现代异步编程核心架构选型矩阵、Tokio 调度器与反应堆拓扑、取消安全（Cancel Safety）数学判定矩阵、生产级高可靠异步调度代码与避坑清单；**右栏**为原著完整精译参考（Chapter 20: Asynchronous Programming），包含图 20-1 与 20-2 对比图谱、原著关键段落英文对照及核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：异步任务调度与取消安全工程范式
 

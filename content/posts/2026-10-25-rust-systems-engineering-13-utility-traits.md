@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（十三）：实用 Traits 全解：Drop、Clone、Copy、Deref 与类型解构生态"
 date: 2026-10-25T01:13:00Z
-description: "双栏独立滚动对照：系统剖析 Rust 核心实用 Trait 生态（Drop、Sized、Copy、Deref、AsRef、Borrow、From/Into、Cow），掌握 RAII 资源守卫、动态大小类型（DST）胖指针与写时复制零拷贝架构。"
+description: "系统剖析 Rust 核心实用 Trait 生态（Drop、Sized、Copy、Deref、AsRef、Borrow、From/Into、Cow），掌握 RAII 资源守卫、动态大小类型（DST）胖指针与写时复制零拷贝架构。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, Drop, Clone, Copy, Deref, 智能指针, RAII]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为实用 Trait 决策矩阵、RAII 析构时序与智能指针解引用链机理、生产级 Cow 零拷贝文本清洗器实战范式、Mermaid 动态大小类型（DST）胖指针拓扑与避坑清单；**右栏**为原著完整精译参考（Chapter 13: Utility Traits），配齐原著动态大小类型引用图引用与核心术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：现代系统级实用 Trait 契约与解构生态
 

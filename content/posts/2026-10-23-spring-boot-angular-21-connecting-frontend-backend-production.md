@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（二十一）：端到端联调、网络代理与生产级编排
 date: 2026-10-23T00:21:00Z
-description: 双栏独立滚动对照：汇聚全栈成果，编写 Nginx 边缘流式反向代理与 Docker Compose 生产拓扑，统筹编排数据库、Keycloak、网关与 Angular SSR 前端实现一键交付。
+description: 汇聚全栈成果，编写 Nginx 边缘流式反向代理与 Docker Compose 生产拓扑，统筹编排数据库、Keycloak、网关与 Angular SSR 前端实现一键交付。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - 端到端联调
   - 微服务架构
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 全栈生产拓扑与交付决策矩阵
 

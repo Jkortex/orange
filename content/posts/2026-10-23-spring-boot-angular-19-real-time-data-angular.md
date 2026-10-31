@@ -1,7 +1,7 @@
 ---
 title: Spring Boot & Angular 全栈实战（十九）：SSE 实时数据流与 RxJS 响应式集成
 date: 2026-10-23T00:19:00Z
-description: 双栏独立滚动对照：在 Angular 客户端封装 EventSource 响应式流，消费后端 Server-Sent Events，落地自创建事件去重、搜索状态保护与长连接生命周期闭环。
+description: 在 Angular 客户端封装 EventSource 响应式流，消费后端 Server-Sent Events，落地自创建事件去重、搜索状态保护与长连接生命周期闭环。
 category: fullstack
 column: spring-boot-angular
 tags:
@@ -11,8 +11,6 @@ tags:
   - 实时通信
   - EventSource
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为核心技术决策矩阵、生产级代码范式与避坑清单；**右栏**为技术实现演化参考，并提供关键段落的英文原文展开与难词解析。左右两栏可独立滚动，并支持顶栏自定义宽度比例（7:3 / 5:5 / 3:7）与拖拽调节。
 
 ## 1. 实时通信架构决策矩阵
 

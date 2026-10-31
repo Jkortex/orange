@@ -1212,11 +1212,3 @@ consumerLagMetric.WithLabelValues(groupID, topic).Set(float64(lag))
 
 > **先构建能满足需求的最简单系统；当未来的规模证明了复杂度的合理性时，你再将它分布式化。**  
 > （Build the simplest thing that works. You can distribute it later.）
-
----
-
-> 💡 **专栏导航**：
-> - 专栏目录：[《Go 云原生分布式系统实战》全集路线图](/columns/distributed-go)
-> - 专栏广场：[浏览全部技术专栏](/columns)
-> - 上一篇：[Go 分布式系统实战（十四）：配置与密钥管理：12-Factor 原则与原子指针动态热重载](/posts/2026-10-18-distributed-go-14-config-and-secrets)
-> - 下一篇：[Go 分布式系统实战（十六）：附录全景：并发速查、存储抽象与运维 CLI 工具链](/posts/2026-10-18-distributed-go-16-appendices)

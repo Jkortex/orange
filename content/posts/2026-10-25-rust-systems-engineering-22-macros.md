@@ -1,13 +1,11 @@
 ---
 title: "Rust 现代系统级工程实战（二十二）：元编程与宏体系：声明式宏（macro_rules!）与过程宏扩展"
 date: 2026-10-25T01:22:00Z
-description: "双栏独立滚动对照：系统剖析 Rust 编译期元编程体系，深入声明式宏（macro_rules!）Token 树匹配、宏卫生性（Hygiene）、$crate 跨包导出机制与现代过程宏（Procedural Macros）扩展。"
+description: "系统剖析 Rust 编译期元编程体系，深入声明式宏（macro_rules!）Token 树匹配、宏卫生性（Hygiene）、$crate 跨包导出机制与现代过程宏（Procedural Macros）扩展。"
 category: rust
 column: rust-systems-engineering
 tags: [Rust, 宏, 元编程, macro_rules, 过程宏, 代码生成]
 ---
-
-> 💡 **双栏独立滚动工作台导读**：本文采用双栏对照架构。**左栏**为元编程技术选型矩阵、宏展开编译管线拓扑、宏卫生性着色数学模型、生产级声明式 DSL 与过程宏实战范式及避坑清单；**右栏**为原著完整精译参考（Chapter 22: Macros），包含图 22-1 至 22-3 宏模式匹配展开图谱、原著关键段落英文对照及元编程术语解析。左右两栏支持独立滚动与宽度比例自由调节。
 
 # 核心实战精炼：TokenStream 变换与编译期代码生成
 
