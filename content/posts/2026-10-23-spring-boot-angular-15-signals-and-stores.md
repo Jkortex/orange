@@ -637,7 +637,7 @@ export const AuthStore = signalStore(
 
 ## 4. 单元测试与事件流可观测性验证（Vitest）
 
-得益于事件驱动架构的解耦，测试 `AuthStore` 流程清晰：**构造前置状态 $\rightarrow$ 派发目标事件 $\rightarrow$ 断言 Store 的 Signals 状态变化**。
+得益于事件驱动架构的解耦，测试 `AuthStore` 流程清晰：**构造前置状态 → 派发目标事件 → 断言 Store 的 Signals 状态变化**。
 
 在 `src/app/features/auth/store/auth.store.spec.ts` 中编写测试套件：
 

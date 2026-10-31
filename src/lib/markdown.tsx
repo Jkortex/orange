@@ -2,9 +2,11 @@ import type { ComponentProps, CSSProperties } from 'react'
 import { createElement, isValidElement } from 'react'
 import { MarkdownAsync } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import remarkCjkFriendly from 'remark-cjk-friendly'
 import remarkDirective from 'remark-directive'
 import rehypePrettyCode from 'rehype-pretty-code'
+import rehypeKatex from 'rehype-katex'
 import type { Components } from 'react-markdown'
 import { remarkCallouts } from '@/lib/remark-callouts'
 import { remarkMermaid } from '@/lib/remark-mermaid'
@@ -40,7 +42,12 @@ const rehypePrettyCodeOptions = {
 }
 
 // rehypeKeepCssVars 把 style 字符串暂存在 data-hast-style（见插件注释），这里还原成
-// React style 对象；React 19 不接受字符串 style，也丢弃不了 CSS 变量
+// React style 对象；React 19 不接受字符串 style，且标准 CSS 属性需要 camelCase（自定义属性 --* 除外）
+function toCamelCase(prop: string): string {
+  if (prop.startsWith('--')) return prop
+  return prop.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+}
+
 function parseStyle(style: unknown): CSSProperties | undefined {
   if (typeof style !== 'string' || !style) return undefined
   return Object.fromEntries(
@@ -48,7 +55,7 @@ function parseStyle(style: unknown): CSSProperties | undefined {
       .split(';')
       .map((decl) => decl.split(':'))
       .filter(([key, value]) => key && value)
-      .map(([key, value]) => [key.trim(), value.trim()]),
+      .map(([key, ...values]) => [toCamelCase(key.trim()), values.join(':').trim()]),
   ) as CSSProperties
 }
 
@@ -165,6 +172,7 @@ export async function MarkdownRenderer({ children }: { children: string }) {
           // 修掉 `**…（DDD）**这样` 这类全角标点收尾的加粗不生效（见 markdown.test.ts）
           remarkCjkFriendly,
           remarkGfm,
+          remarkMath,
           remarkDirective,
           remarkCallouts,
           remarkMermaid,
@@ -175,6 +183,7 @@ export async function MarkdownRenderer({ children }: { children: string }) {
         ]}
         rehypePlugins={[
           [rehypePrettyCode, rehypePrettyCodeOptions],
+          rehypeKatex,
           rehypeKeepCssVars,
           rehypeHeadingIds,
         ]}

@@ -16,7 +16,7 @@ tags:
 
 ## 1. 核心心智模型：领域探索到 AI 协作四阶段演进
 
-与大语言模型协作开展领域驱动设计的前提，是将存在于人类头脑中的隐性知识转化为显式的结构化制品。探索演进严格遵循 **Discover $\to$ Refine $\to$ Name $\to$ Reinforce** 四步流水线：
+与大语言模型协作开展领域驱动设计的前提，是将存在于人类头脑中的隐性知识转化为显式的结构化制品。探索演进严格遵循 **Discover → Refine → Name → Reinforce** 四步流水线：
 
 ```mermaid
 flowchart LR

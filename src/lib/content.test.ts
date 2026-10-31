@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllEntries, getAllTags, getArticleEntries, getCategories, getCollection, getDraft, getDrafts, getEntriesByCategory, getEntriesByTag, getEntry, getSkillEntries, getSkillPackage, isDraftsEnabled, listSkillSlugs } from '@/lib/content'
+import { assertMarkdownFences, buildContentManifest, clearContentCache, ContentNotFoundError, getAdjacentEntries, getAllEntries, getAllTags, getArticleEntries, getCategories, getCollection, getDraft, getDrafts, getEntriesByCategory, getEntriesByTag, getEntry, getSkillEntries, getSkillPackage, isDraftsEnabled, listSkillSlugs } from '@/lib/content'
 
 // 内容层测试：用临时目录构造 fixture，不依赖真实 content/
 let contentDir: string
@@ -787,3 +787,73 @@ describe('草稿读取（dev-only 专区）', () => {
     expect(manifest.allEntries.map((entry) => String(entry.collection))).not.toContain('drafts')
   })
 })
+
+describe('assertMarkdownFences 代码块语法完整性校验', () => {
+  it('合法的单层代码块与空正文正常通过', () => {
+    expect(() => assertMarkdownFences('test.md', '正文内容')).not.toThrow()
+    expect(() =>
+      assertMarkdownFences(
+        'test.md',
+        '```ts\nconst a = 1\n```\n\n```bash\necho "hello"\n```',
+      ),
+    ).not.toThrow()
+  })
+
+  it('使用 4 个反引号嵌套 3 个反引号的代码块正常通过', () => {
+    expect(() =>
+      assertMarkdownFences(
+        'test.md',
+        '````markdown\n# 文档示例\n```text\nSTATUS: OK\n```\n````',
+      ),
+    ).not.toThrow()
+  })
+
+  it('内层代码块标记长度 >= 外层定界符时抛出明确错误', () => {
+    expect(() =>
+      assertMarkdownFences(
+        'test.md',
+        '```markdown\n# 错误示例\n```text\nSTATUS: BAD\n```\n```',
+      ),
+    ).toThrowError(/内层代码块标记（```text）反引号长度大于等于外层定界符/)
+  })
+
+  it('发现连续紧邻的代码块定界符时抛错（提示内层代码块提前截断外层）', () => {
+    expect(() =>
+      assertMarkdownFences(
+        'test.md',
+        '```ts\nconst a = 1\n```\n```\n## 误吞的后续章节\n```',
+      ),
+    ).toThrowError(/发现紧邻的代码块定界符/)
+  })
+
+  it('未闭合的代码块在文件末尾报错', () => {
+    expect(() =>
+      assertMarkdownFences(
+        'test.md',
+        '```ts\nconst unclosed = true',
+      ),
+    ).toThrowError(/代码块（```）未正常闭合/)
+  })
+
+  it('getCollection 加载坏代码块文件时直接阻断并抛出异常', () => {
+    writeFixture(
+      'posts/2026-09-01-bad-fence.md',
+      `---
+title: 坏代码块文章
+date: 2026-09-01
+tags: [a]
+---
+
+\`\`\`markdown
+\`\`\`text
+nested
+\`\`\`
+\`\`\`
+`,
+    )
+    expect(() => getCollection('posts', { contentDir })).toThrowError(
+      /Markdown 代码块校验失败/,
+    )
+  })
+})
+

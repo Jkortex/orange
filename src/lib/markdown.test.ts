@@ -70,6 +70,23 @@ describe('MarkdownRenderer 正常渲染', () => {
     expect(html).toContain('Original Text Here')
   })
 
+  it('支持行内数学公式渲染（如 $\\rightarrow$、$O(\\log N)$）', async () => {
+    const html = await renderToHtml('测试公式：$\\rightarrow$ 与 $O(\\log N)$')
+
+    // 不应原样输出裸 LaTeX 语法
+    expect(html).not.toContain('$\\rightarrow$')
+    expect(html).not.toContain('$O(\\log N)$')
+    // 应当包含 katex 生成的 html 结构
+    expect(html).toContain('katex')
+  })
+
+  it('支持块级数学公式渲染（$$...$$）', async () => {
+    const html = await renderToHtml('$$\n\\sum_{i=1}^n i\n$$')
+
+    expect(html).not.toContain('$$\n\\sum_{i=1}^n i\n$$')
+    expect(html).toContain('katex-display')
+  })
+
   it(':::demo 指令转换为 CodeDemo 组件与 iframe 沙箱', async () => {
     const md = [
       ':::demo[卡片测试]',

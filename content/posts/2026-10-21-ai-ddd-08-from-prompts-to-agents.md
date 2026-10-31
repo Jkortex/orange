@@ -103,7 +103,7 @@ if (string.IsNullOrWhiteSpace(paymentAuthorizationId.Value))
 
 ### 3.2 认知边界守卫智能体配置模版（`.github/agents/speckit.brewup.boundary-guard.agent.md`）
 
-```markdown
+````markdown
 ---
 name: speckit.brewup.boundary-guard
 description: "审查各工件转换节点，设立认知边界，阻断越权推断与证据伪造"
@@ -136,7 +136,7 @@ OFFENDING_SNIPPET: [违规片段]
 REASON: [说明为何该推断超出了当前参与者的合法权限]
 REQUIRED_ACTION: [要求人类专家给出的业务裁决或工件回退动作]
 ```
-```
+````
 
 ## 4. 从 Prompt 到 Agent 的演进蓝图
 

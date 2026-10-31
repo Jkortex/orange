@@ -545,8 +545,8 @@ public class BookController {
 ### 5.4 网关路由与安全接入配置
 
 网关对外暴露统一接入端口，并根据请求路径进行转发：
-- `/packt/inventory/api/**` $\rightarrow$ 路由转发至 Book Inventory 微服务；
-- `/packt/user/api/**` $\rightarrow$ 路由转发至 User Management 微服务。
+- `/packt/inventory/api/**` → 路由转发至 Book Inventory 微服务；
+- `/packt/user/api/**` → 路由转发至 User Management 微服务。
 
 网关在转发前解析 Authorization Bearer Token，完成验签并剥离敏感信息，将用户身份字段注入下游微服务的请求头中。
 

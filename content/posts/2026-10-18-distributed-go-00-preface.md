@@ -207,19 +207,19 @@ platform/
 在本专栏中，我们将步步为营，在第 15 章最终组装出一套多服务协同的完整系统：
 
 - **Chapter 1**：为什么需要分布式？协同的成本与何时避免拆分
-- **Chapter 2**：并发作为微缩分布式系统 $\rightarrow$ 产出 `platform/concurrency`
-- **Chapter 3**：双服务通过消息队列解耦 $\rightarrow$ 产出 `platform/messaging`
-- **Chapter 4**：具备生产级中间件链的 HTTP 服务 $\rightarrow$ 产出 `platform/middleware`
-- **Chapter 5**：跨服务边界的 JWT 认证鉴权 $\rightarrow$ 产出 `platform/auth`
-- **Chapter 6**：数据库平滑访问与零停机数据迁移 $\rightarrow$ 产出 `platform/database`
-- **Chapter 7**：贯穿全栈每一个角落的 Context 级联传播 $\rightarrow$ 产出 `platform/context`
+- **Chapter 2**：并发作为微缩分布式系统 → 产出 `platform/concurrency`
+- **Chapter 3**：双服务通过消息队列解耦 → 产出 `platform/messaging`
+- **Chapter 4**：具备生产级中间件链的 HTTP 服务 → 产出 `platform/middleware`
+- **Chapter 5**：跨服务边界的 JWT 认证鉴权 → 产出 `platform/auth`
+- **Chapter 6**：数据库平滑访问与零停机数据迁移 → 产出 `platform/database`
+- **Chapter 7**：贯穿全栈每一个角落的 Context 级联传播 → 产出 `platform/context`
 - **Chapter 8**：处理背压与重平衡的 Kafka 深度实战（扩展 `platform/messaging`）
-- **Chapter 9**：基于 gRPC、Protobuf、超时重试与断路器的内部 RPC $\rightarrow$ 产出 `platform/rpc`
-- **Chapter 10**：基于并发扇出（Fan-out）的并行编排 $\rightarrow$ 产出 `platform/orchestration`
-- **Chapter 11**：基于幂等键与 Saga 的分布式最终一致性 $\rightarrow$ 产出 `platform/consistency`
-- **Chapter 12**：结构化日志、Prometheus 与 OTel 全链路可观测性 $\rightarrow$ 产出 `platform/observability`
-- **Chapter 13**：基于 testcontainers 与混沌故障注入的分布式测试 $\rightarrow$ 产出 `platform/testing`
-- **Chapter 14**：配置中心与安全密钥管理 $\rightarrow$ 产出 `platform/config`
+- **Chapter 9**：基于 gRPC、Protobuf、超时重试与断路器的内部 RPC → 产出 `platform/rpc`
+- **Chapter 10**：基于并发扇出（Fan-out）的并行编排 → 产出 `platform/orchestration`
+- **Chapter 11**：基于幂等键与 Saga 的分布式最终一致性 → 产出 `platform/consistency`
+- **Chapter 12**：结构化日志、Prometheus 与 OTel 全链路可观测性 → 产出 `platform/observability`
+- **Chapter 13**：基于 testcontainers 与混沌故障注入的分布式测试 → 产出 `platform/testing`
+- **Chapter 14**：配置中心与安全密钥管理 → 产出 `platform/config`
 - **Chapter 15**：终极大作业 —— 组装全部积木，打造由 6 个独立服务构成的完整订单集群。
 
 ---

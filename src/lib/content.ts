@@ -165,6 +165,56 @@ function assertEntryFilename(filePath: string) {
   }
 }
 
+/**
+ * 校验正文 Markdown 代码块定界符的语法完整性：
+ * 1. 嵌套代码块长度冲突：内层 ```lang 长度 >= 外层定界符长度，内层闭合时会提前截断外层；外层必须使用至少 4 个反引号（````）
+ * 2. 连续紧邻定界符（如 ```\n```）：内层嵌套代码块提前闭合外层引发结构断裂
+ * 3. 代码块未正常闭合
+ */
+export function assertMarkdownFences(filePath: string, content: string): void {
+  const lines = content.split('\n')
+  let inCode = false
+  let openFence = ''
+  let openLine = 0
+  let lastCloseLine = -1
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const match = line.match(/^ {0,3}([`~]{3,})(.*)$/)
+    if (match) {
+      const fence = match[1]
+      const info = match[2].trim()
+      const lineNum = i + 1
+
+      if (!inCode) {
+        if (lastCloseLine === lineNum - 1) {
+          throw new Error(
+            `Markdown 代码块校验失败 ${filePath}:${lineNum}：发现紧邻的代码块定界符（与第 ${lastCloseLine} 行连续），疑似内层嵌套代码块提前闭合外层引发结构断裂。若需在代码块内展示代码，外层必须使用至少 4 个反引号（\`\`\`\`）。`,
+          )
+        }
+        inCode = true
+        openFence = fence
+        openLine = lineNum
+      } else {
+        if (fence[0] === openFence[0] && fence.length >= openFence.length && info === '') {
+          inCode = false
+          lastCloseLine = lineNum
+        } else if (fence[0] === openFence[0] && fence.length >= openFence.length && info !== '') {
+          throw new Error(
+            `Markdown 代码块校验失败 ${filePath}:${lineNum}：内层代码块标记（${fence}${info}）反引号长度大于等于外层定界符（第 ${openLine} 行 ${openFence}），内层闭合时会提前截断外层！外层必须使用至少 ${fence.length + 1} 个反引号（如 \`\`\`\`）。`,
+          )
+        }
+      }
+    }
+  }
+
+  if (inCode) {
+    throw new Error(
+      `Markdown 代码块校验失败 ${filePath}:${openLine}：代码块（${openFence}）未正常闭合，请检查文件末尾或嵌套匹配。`,
+    )
+  }
+}
+
 function compareEntries<T extends CollectionType>(
   a: CollectionEntry<T>,
   b: CollectionEntry<T>,
@@ -188,6 +238,7 @@ function parseEntry<T extends CollectionType>(
     throw new Error(`frontmatter 解析失败 ${filePath}: ${message}`, { cause: error })
   }
   const { data, content } = parsed
+  assertMarkdownFences(filePath, content)
   const schema = collectionSchemas[type]
   const result = schema.safeParse(data)
   if (!result.success) {
@@ -518,6 +569,7 @@ export function getSkillPackage(slug: string, options?: GetOptions): SkillPackag
     throw new ContentNotFoundError(`skill 包缺入口：${skillFile}`)
   }
   const { data, content } = matter(fs.readFileSync(skillFile, 'utf8'))
+  assertMarkdownFences(skillFile, content)
   const result = skillSchema.safeParse(data)
   if (!result.success) {
     const issues = result.error.issues

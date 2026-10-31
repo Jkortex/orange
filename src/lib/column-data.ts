@@ -727,12 +727,364 @@ export const DATA_INTENSIVE_COLUMN: ColumnSource = {
   ],
 }
 
+export const FABULOUS_ALGORITHMS_COLUMN: ColumnSource = {
+  id: 'fabulous-algorithms',
+  title: '《数据结构与算法的奇妙冒险》',
+  subtitle: '从不可变性、函数式思维到范畴论、单子与马尔可夫采样算法',
+  badge: '精品专栏 · 全景实战',
+  status: 'completed',
+  titlePrefix: '数据结构与算法的奇妙冒险',
+  tags: ['算法', '数据结构', '函数式编程', '不可变性', '范畴论', '概率单子'],
+  focus: '算法与数据结构',
+  description:
+    '基于 Eric Lippert 经典著作全书深度翻译。跳脱常规教材的死记硬背，从不可变单链表与双向队列的结构共享开始，层层递进解构 Hashlife 康威生命游戏四叉树记忆化、DAWG 紧凑有向无环单词图、Pandita 与 Even 组合全排列、范畴论函子与协变/逆变代数本质，直至反统一算法、概率单子与 Metropolis-Hastings 马尔可夫采样算法。',
+  highlights: [
+    {
+      title: '不可变性与结构共享',
+      desc: '不可变栈、双栈队列均摊陷阱、手指树（Finger Tree）与四叉树 Memoizer 记忆化。',
+    },
+    {
+      title: '紧凑结构与组合生成',
+      desc: 'DAWG 有向无环单词图流式极小化、Pandita 字典序全排列与 Macaulay 组合数系统。',
+    },
+    {
+      title: '代数本质与程序推演',
+      desc: '从程序员视角理解范畴论、函子、自函子与协变/逆变，剖析统一与反统一模式推演。',
+    },
+    {
+      title: '随机性与概率单子',
+      desc: '贝叶斯条件概率推导、概率单子（Probability Monad）、连续分布采样与 Metropolis-Hastings MCMC。',
+    },
+  ],
+  phases: [
+    {
+      name: '阶段一：不可变数据结构与范畴基石',
+      description: '掌握不可变性、结构共享、均摊分析陷阱及范畴论代数本质。',
+      chapters: [
+        {
+          order: 0,
+          slug: '2026-10-31-fabulous-algorithms-00-preface',
+        },
+        {
+          order: 1,
+          slug: '2026-10-31-fabulous-algorithms-01-starting-adventure',
+        },
+        {
+          order: 2,
+          slug: '2026-10-31-fabulous-algorithms-02-immutable-stacks-and-queues',
+        },
+        {
+          order: 3,
+          slug: '2026-10-31-fabulous-algorithms-03-an-immutable-deque',
+        },
+        {
+          order: 4,
+          slug: '2026-10-31-fabulous-algorithms-04-memoizing-immutable-quadtrees',
+        },
+        {
+          order: 5,
+          slug: '2026-10-31-fabulous-algorithms-05-directed-acyclic-word-graph',
+        },
+        {
+          order: 6,
+          slug: '2026-10-31-fabulous-algorithms-06-combinatorial-algorithms',
+        },
+        {
+          order: 7,
+          slug: '2026-10-31-fabulous-algorithms-07-category-theory',
+        },
+      ],
+    },
+    {
+      name: '阶段二：搜索、求解与合一推演',
+      description: '攻克约束满足图染色回溯、贪心代码格式化排版、单子与合一抽象算法。',
+      chapters: [
+        {
+          order: 8,
+          slug: '2026-10-31-fabulous-algorithms-08-graph-coloring-backtracking',
+        },
+        {
+          order: 9,
+          slug: '2026-10-31-fabulous-algorithms-09-greedy-pretty-printing',
+        },
+        {
+          order: 10,
+          slug: '2026-10-31-fabulous-algorithms-10-unification-and-anti-unification',
+        },
+        {
+          order: 11,
+          slug: '2026-10-31-fabulous-algorithms-11-monads',
+        },
+      ],
+    },
+    {
+      name: '阶段三：随机抽象、概率单子与马尔可夫采样',
+      description: '抽象离散与连续概率分布、贝叶斯定理、概率单子与 MCMC 马尔可夫链采样。',
+      chapters: [
+        {
+          order: 12,
+          slug: '2026-10-31-fabulous-algorithms-12-better-abstraction-for-randomness',
+        },
+        {
+          order: 13,
+          slug: '2026-10-31-fabulous-algorithms-13-conditional-probability-bayes',
+        },
+        {
+          order: 14,
+          slug: '2026-10-31-fabulous-algorithms-14-probability-monad',
+        },
+        {
+          order: 15,
+          slug: '2026-10-31-fabulous-algorithms-15-sampling-continuous-distributions',
+        },
+        {
+          order: 16,
+          slug: '2026-10-31-fabulous-algorithms-16-markov-processes-metropolis',
+        },
+      ],
+    },
+  ],
+}
+
+export const RUST_OBSERVABILITY_COLUMN: ColumnSource = {
+  id: 'rust-observability',
+  title: '《Rust 分布式可观测性实战》',
+  subtitle: '从内核追踪、异步运行时诊断到 SLO 预算治理与 GenAI 语义观测',
+  badge: '精品专栏 · 全景实战',
+  status: 'completed',
+  titlePrefix: 'Rust 分布式可观测性实战',
+  tags: ['Rust', '可观测性', 'OpenTelemetry', '分布式追踪', '性能剖析', 'Tokio'],
+  focus: '系统可观测性',
+  description:
+    '深入解构在高性能 Rust 分布式微服务架构中建立全链路可观测性的最佳工程实践。基于 OpenTel 电商真实系统，覆盖链路上下文传递、数据访问层与连接池双阶段插桩、RED/USE 指标设计、结构化日志与 Trace 关联，进阶攻克 CPU/内存火焰图持续性能剖析、Tokio 异步任务饥饿排查、线上大促数据库雪崩故障复盘、基于追踪特征拦截安全攻击，直至生成式 AI 语义可观测性与 Token 成本管控。',
+  highlights: [
+    {
+      title: '插桩基石与上下文传播',
+      desc: 'OpenTelemetry 标准在 Rust 中的落地、Span 生命周期、内存布局与跨服务链路追踪。',
+    },
+    {
+      title: '指标设计与日志无痛关联',
+      desc: 'RED + USE 黄金指标、PromQL 形式化、结构化日志与 TraceID 强关联避免日志地狱。',
+    },
+    {
+      title: '性能剖析与运行时排障',
+      desc: 'flamegraph/jemalloc 剖析、Tokio 异步调度阻塞诊断与数据库连接池耗尽排查。',
+    },
+    {
+      title: '安全防御与 GenAI 语义观测',
+      desc: '越权攻击拓扑检测、尾部采样策略、LLM 语义约定打点与 Token 经济学成本管控。',
+    },
+  ],
+  phases: [
+    {
+      name: '阶段一：可观测性基石与全链路插桩',
+      description: '搭建 OpenTel 电商观测基座，攻克 Rust 内存状态追踪、请求链路传播与数据访问层插桩。',
+      chapters: [
+        {
+          order: 0,
+          slug: '2026-10-31-rust-observability-00-preface',
+        },
+        {
+          order: 1,
+          slug: '2026-10-31-rust-observability-01-introduction-to-observability',
+        },
+        {
+          order: 2,
+          slug: '2026-10-31-rust-observability-02-reading-rust-memory-from-traces',
+        },
+        {
+          order: 3,
+          slug: '2026-10-31-rust-observability-03-opentel-ecommerce-system',
+        },
+        {
+          order: 4,
+          slug: '2026-10-31-rust-observability-04-instrumenting-the-request-journey',
+        },
+        {
+          order: 5,
+          slug: '2026-10-31-rust-observability-05-data-layer-instrumentation',
+        },
+      ],
+    },
+    {
+      name: '阶段二：指标体系、日志关联与业务智能',
+      description: '构建 RED/USE 关键指标、消除日志地狱、推导 PromQL 与 30 天滑动窗口 SLO 预算管理。',
+      chapters: [
+        {
+          order: 6,
+          slug: '2026-10-31-rust-observability-06-metrics-that-matter',
+        },
+        {
+          order: 7,
+          slug: '2026-10-31-rust-observability-07-log-strategy-without-log-hell',
+        },
+        {
+          order: 8,
+          slug: '2026-10-31-rust-observability-08-business-intelligence-from-telemetry',
+        },
+      ],
+    },
+    {
+      name: '阶段三：性能剖析、故障复盘与前沿防御',
+      description: '利用火焰图定位瓶颈、排查 Tokio 异步阻塞与数据库连接池危机、追踪识别网络攻击与 GenAI 语义可观测。',
+      chapters: [
+        {
+          order: 9,
+          slug: '2026-10-31-rust-observability-09-finding-bottlenecks-with-flamegraphs',
+        },
+        {
+          order: 10,
+          slug: '2026-10-31-rust-observability-10-async-bottlenecks-and-saturation',
+        },
+        {
+          order: 11,
+          slug: '2026-10-31-rust-observability-11-database-bottlenecks',
+        },
+        {
+          order: 12,
+          slug: '2026-10-31-rust-observability-12-debugging-production-incidents',
+        },
+        {
+          order: 13,
+          slug: '2026-10-31-rust-observability-13-detecting-attacks-in-traces',
+        },
+        {
+          order: 14,
+          slug: '2026-10-31-rust-observability-14-observability-for-ai-augmented-services',
+        },
+      ],
+    },
+  ],
+}
+
+export const SYSTEM_DESIGN_BEHAVIOR_COLUMN: ColumnSource = {
+  id: 'system-design-behavior',
+  title: '《系统设计与行为智能全景实战》',
+  subtitle: '从千亿级高并发系统架构推演，到硅谷大厂高管行为智能与领导力原则',
+  badge: '精品专栏 · 全景实战',
+  status: 'completed',
+  titlePrefix: '系统设计与行为智能全景实战',
+  tags: ['系统设计', '分布式系统', '高并发', '行为智能', '架构师', '领导力'],
+  focus: '系统架构',
+  description:
+    '融合高阶分布式系统硬核架构与大厂考官级行为智能的权威全景指南。系统性剖析 CAP 权衡、一致性哈希、对等 Leaderless 架构、LSM 存储引擎、Temporal 长事务编排与企业级可观测安全基座；通过类 Slack 实时通信、分布式 KV 存储、RTB 实时竞价、Instagram 社交扩散及面向投研的 Agent AI 五大实战案例建立严密推演范式；更深入破译硅谷大厂招聘委员会考核机制、CAR/CARL 高分表达框架与领导力终身资本积累。',
+  highlights: [
+    {
+      title: '系统设计科学与核心基石',
+      desc: 'CAP 定理权衡、一致性哈希、Gossip 协议、单机 LSM 引擎与安全/可观测横切关注点。',
+    },
+    {
+      title: '推演方法论与 60 分钟时间分配',
+      desc: '需求澄清、粗略容量估算、API/数据模型设计、高层与细节设计及生产级瓶颈消减。',
+    },
+    {
+      title: '工业级端到端架构案例推演',
+      desc: '类 Slack 即时通信、无中心 KV 存储、100ms 极速 RTB 竞价、Instagram 混合扩散与投研 AI Agent。',
+    },
+    {
+      title: '行为智能解码与领导力进阶',
+      desc: '解码/展现/适应三元模型、4-D 冲突应对、CARL 回答框架、大厂领导力原则与终身职业资本。',
+    },
+  ],
+  phases: [
+    {
+      name: '阶段一：系统设计基石与横切关注点',
+      description: '重温分布式算法、网络协议、核心积木组件及安全/可观测企业级横切关注点。',
+      chapters: [
+        {
+          order: 0,
+          slug: '2026-10-31-system-design-00-preface',
+        },
+        {
+          order: 1,
+          slug: '2026-10-31-system-design-01-art-and-science-of-system-design',
+        },
+        {
+          order: 2,
+          slug: '2026-10-31-system-design-02-concepts-refresher-knowledge-bites',
+        },
+        {
+          order: 3,
+          slug: '2026-10-31-system-design-03-distributed-systems-algorithms-patterns',
+        },
+        {
+          order: 4,
+          slug: '2026-10-31-system-design-04-building-blocks-of-system-design',
+        },
+        {
+          order: 5,
+          slug: '2026-10-31-system-design-05-security-and-observability',
+        },
+      ],
+    },
+    {
+      name: '阶段二：推演方法论与大厂实战案例',
+      description: '掌握结构化系统设计方法论，端到端推演即时通信、分布式存储、实时竞价、社交平台与投研 Agent 系统。',
+      chapters: [
+        {
+          order: 6,
+          slug: '2026-10-31-system-design-06-system-design-methodology',
+        },
+        {
+          order: 7,
+          slug: '2026-10-31-system-design-07-designing-slack-messaging-system',
+        },
+        {
+          order: 8,
+          slug: '2026-10-31-system-design-08-designing-distributed-kv-store',
+        },
+        {
+          order: 9,
+          slug: '2026-10-31-system-design-09-designing-real-time-bidding-system',
+        },
+        {
+          order: 10,
+          slug: '2026-10-31-system-design-10-designing-instagram-social-media',
+        },
+        {
+          order: 11,
+          slug: '2026-10-31-system-design-11-designing-agentic-ai-investment-system',
+        },
+      ],
+    },
+    {
+      name: '阶段三：技术影响力与职场行为智能',
+      description: '解构行为智能本质、职场冲突与无职权领导力、高分回答框架、大厂核心价值观与终身职业资本积累。',
+      chapters: [
+        {
+          order: 12,
+          slug: '2026-10-31-system-design-12-what-behavioral-intelligence-is',
+        },
+        {
+          order: 13,
+          slug: '2026-10-31-system-design-13-behavioral-intelligence-at-work',
+        },
+        {
+          order: 14,
+          slug: '2026-10-31-system-design-14-answer-frameworks-and-story-bank',
+        },
+        {
+          order: 15,
+          slug: '2026-10-31-system-design-15-core-values-and-leadership-principles',
+        },
+        {
+          order: 16,
+          slug: '2026-10-31-system-design-16-demonstration-and-evaluation',
+        },
+      ],
+    },
+  ],
+}
+
 export const ALL_COLUMNS: ColumnSource[] = [
   DISTRIBUTED_GO_COLUMN,
   AI_DDD_COLUMN,
   SPRING_BOOT_ANGULAR_COLUMN,
   RUST_SYSTEMS_COLUMN,
   DATA_INTENSIVE_COLUMN,
+  FABULOUS_ALGORITHMS_COLUMN,
+  RUST_OBSERVABILITY_COLUMN,
+  SYSTEM_DESIGN_BEHAVIOR_COLUMN,
 ]
 
 export const PLANNED_COLUMNS: PlannedColumn[] = [

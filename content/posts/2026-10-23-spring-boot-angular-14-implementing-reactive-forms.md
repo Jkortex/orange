@@ -297,9 +297,9 @@ describe('AuthorForm (Dialog Form)', () => {
 
 - **必填与可选对齐**：后端使用了 `@NotBlank`、`@NotNull` 的属性，在 TypeScript 中定义为必选字段；后端未标注强制校验的可空字段，统一使用可选操作符 `?`。
 - **类型系统映射**：
-  - Java `String` $\rightarrow$ TypeScript `string`
-  - Java `BigDecimal` / `Integer` / `Long` $\rightarrow$ TypeScript `number`
-  - Java `LocalDate` $\rightarrow$ TypeScript `string`（以 ISO 8601 标准日期字符串传输，如 `YYYY-MM-DD`）
+  - Java `String` → TypeScript `string`
+  - Java `BigDecimal` / `Integer` / `Long` → TypeScript `number`
+  - Java `LocalDate` → TypeScript `string`（以 ISO 8601 标准日期字符串传输，如 `YYYY-MM-DD`）
 - **校验对齐**：后端基于 `@Pattern`、`@PositiveOrZero` 的约束，前端应配置等价的正则校验与 `Validators.min()`，实现前端即时拦截、后端兜底的双层防护。
 
 ### 1.2 领域实体模型（Author 与 Book）

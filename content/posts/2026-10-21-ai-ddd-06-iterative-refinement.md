@@ -52,8 +52,8 @@ flowchart TD
 
 ### 规则晋升机制 (Rule Promotion)
 每次审查发现的归属权越界，必须晋升为规则手册中的硬性条款：
-- 否决 `AuthorizePayment` $\rightarrow$ 晋升规则：`支付命令不属于 Order Management。`
-- 移动 `PaymentAuthorized` $\rightarrow$ 晋升规则：`外部事实绝不能建模为 Order 聚合抛出的内部事件。`
+- 否决 `AuthorizePayment` → 晋升规则：`支付命令不属于 Order Management。`
+- 移动 `PaymentAuthorized` → 晋升规则：`外部事实绝不能建模为 Order 聚合抛出的内部事件。`
 
 ## 4. CQRS 角色分离透镜
 

@@ -278,7 +278,7 @@ output:
 > **Original**: The loop begins with human intent: a specific modeling goal, such as identifying the core events of the Order bounded context in BrewUp. The architect translates that intent into a structured prompt that encodes context, rules, and the expected output format. The model simulates reasoning within that structure and produces output. The architect validates the output against domain knowledge and semantic accuracy, not just surface coherence. Corrections and refinements are reintroduced in the next prompt cycle. The value of the loop lies in what carries forward between its steps. Each iteration carries forward the vocabulary, the rules, and the corrections established in the previous one, so ambiguity narrows across the session instead of resetting at every prompt.
 
 **📌 核心术语与语境解析**：
-- **AI Reasoning Loop**：*AI 推理闭环*。意图 $\to$ 结构化提示 $\to$ 概率模拟 $\to$ 人类验证 $\to$ 注入修正的自适应循环。
+- **AI Reasoning Loop**：*AI 推理闭环*。意图 → 结构化提示 → 概率模拟 → 人类验证 → 注入修正的自适应循环。
 - **Surface Coherence**：*表面连贯性*。语言流畅自然但缺乏真实业务事实与不变量支撑的虚假正确表象。
 :::
 

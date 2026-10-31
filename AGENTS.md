@@ -27,6 +27,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 - New routed types must be registered in `TAGGED_TYPES` (`src/app/tags/[tag]/page.tsx`) or their tags have no landing page
 - **New content type SOP** (zero changes to pipeline/theme/components): `content/<type>/` → zod schema → `src/app/<type>/[slug]/page.tsx` → if routed: `TAGGED_TYPES` + `TypeBadge` label. posts/life detail pages reuse `readEntry`/`entryMetadata`/`EntryView`; 新详情页还要渲染 `PagefindFilters`、把额外路由登记进 `sitemap.ts`
 - **No JSX/HTML in content files**: custom blocks via remark-directive (`:::note`, `:::demo`) + components mapping; mermaid renders to SVG at build
+- **代码块嵌套纪律**: 若在 Markdown 中展示包含代码块的内容（如 Prompt 模版、Agent 指令），外层定界符必须使用至少 4 个反引号（````markdown ... ````），严禁内外同为 3 反引号导致内层提前截断外层、后续章节被吞入代码块；内容层在构建/加载期强校验（`assertMarkdownFences`），违规直接阻断构建
 - Binaries in `public/media/<type>/`, md holds references only; **one music md = one album**, `tracks` order = play queue, `file`/`cover` allow full `https://` URLs
 - Slugs must match `[\w-]+` (path-traversal guard), else 404
 

@@ -15,6 +15,7 @@ import { HeaderNav } from '@/components/chrome/header-nav'
 import { MobileNavDrawer } from '@/components/chrome/mobile-nav-drawer'
 import { getCollection, isColumnEntry } from '@/lib/content'
 import { BrandMark } from '@/components/chrome/brand-mark'
+import 'katex/dist/katex.min.css'
 import './globals.css'
 
 export const metadata: Metadata = {

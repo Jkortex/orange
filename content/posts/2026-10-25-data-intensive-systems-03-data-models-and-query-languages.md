@@ -288,7 +288,7 @@ MATCH (person:Person) -[:BORN_IN]-> () -[:WITHIN*0..]-> (us:Location {name: 'Uni
 RETURN person.name
 ```
 
-语法中的箭头 `-[:BORN_IN]->` 直观模拟了图遍历的路径，`[:WITHIN*0..]` 则以简洁的星号表达了**任意深度的递归跨级归属**（例如：市 $\rightarrow$ 州 $\rightarrow$ 国家 $\rightarrow$ 大洲）。
+语法中的箭头 `-[:BORN_IN]->` 直观模拟了图遍历的路径，`[:WITHIN*0..]` 则以简洁的星号表达了**任意深度的递归跨级归属**（例如：市 → 州 → 国家 → 大洲）。
 
 相比之下，若在传统关系数据库中实现相同的不定跳数多级层级检索，开发者必须编写极其冗长晦涩的 **SQL 递归公共表表达式（`WITH RECURSIVE`）**，且性能极度依赖优化器能否有效剪枝。
 

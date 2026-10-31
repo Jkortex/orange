@@ -1075,11 +1075,11 @@ public class BookControllerContentNegotiation {
 ![API 参数校验与异常治理流向图](/media/posts/spring-boot-angular/img-08963.png)
 
 请求异常在各层之间的拦截与转化流：
-1. **Web 入口层校验失败**（如标题为空、ISBN 格式错误）$\rightarrow$ 触发 `MethodArgumentNotValidException` $\rightarrow$ 映射为 `400 Bad Request`；
-2. **领域业务规则受损**（如价格为负、ISBN 冲突）$\rightarrow$ 抛出 `DomainRuleViolationException` $\rightarrow$ 映射为 `422 Unprocessable Entity`；
-3. **主键检索落空** $\rightarrow$ 抛出 `ResourceNotFoundException` $\rightarrow$ 映射为 `404 Not Found`；
-4. **数据库底层索引冲突** $\rightarrow$ 抛出 `DataIntegrityViolationException` $\rightarrow$ 映射为 `409 Conflict`；
-5. **未知系统崩溃** $\rightarrow$ 兜底捕获 `Exception` $\rightarrow$ 映射为 `500 Internal Server Error` 并记录日志。
+1. **Web 入口层校验失败**（如标题为空、ISBN 格式错误）→ 触发 `MethodArgumentNotValidException` → 映射为 `400 Bad Request`；
+2. **领域业务规则受损**（如价格为负、ISBN 冲突）→ 抛出 `DomainRuleViolationException` → 映射为 `422 Unprocessable Entity`；
+3. **主键检索落空** → 抛出 `ResourceNotFoundException` → 映射为 `404 Not Found`；
+4. **数据库底层索引冲突** → 抛出 `DataIntegrityViolationException` → 映射为 `409 Conflict`；
+5. **未知系统崩溃** → 兜底捕获 `Exception` → 映射为 `500 Internal Server Error` 并记录日志。
 
 ### 6.2 领域特定异常定义
 
