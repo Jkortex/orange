@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { Toc } from '@/components/reading/toc'
 import type { TocHeading } from '@/lib/toc'
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
 })
 
 const headings: TocHeading[] = [
@@ -81,5 +82,114 @@ describe('Toc 长目录内滚契约', () => {
     expect(list.className).toContain('overflow-x-hidden')
     // 滚动条与文字之间留出右侧内边距
     expect(list.className).toContain('pr-2')
+  })
+})
+
+describe('Toc 选中小节并转到 Gemini 解释', () => {
+  beforeEach(() => {
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
+    vi.stubGlobal('open', vi.fn())
+  })
+
+  it('支持复选框选中一个或多个标题，并显示操作面板', () => {
+    render(<Toc headings={headings} articleTitle="测试文章" />)
+
+    expect(screen.queryByText(/已选/)).toBeNull()
+
+    const check1 = screen.getByRole('checkbox', { name: '选择章节：结论' })
+    const check2 = screen.getByRole('checkbox', { name: '选择章节：方法' })
+
+    // 选中第一个
+    fireEvent.click(check1)
+    expect(check1.getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByText(/已选/)).toBeDefined()
+    expect(screen.getByText('1')).toBeDefined()
+
+    // 选中第二个（复数个标题）
+    fireEvent.click(check2)
+    expect(check2.getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByText('2')).toBeDefined()
+
+    // 点击取消选中第一个
+    fireEvent.click(check1)
+    expect(check1.getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByText('1')).toBeDefined()
+  })
+
+  it('支持全选与清空选择', () => {
+    render(<Toc headings={headings} articleTitle="测试文章" />)
+
+    const check1 = screen.getByRole('checkbox', { name: '选择章节：结论' })
+    fireEvent.click(check1)
+
+    // 点击全选
+    const selectAllBtn = screen.getByRole('button', { name: '全选' })
+    fireEvent.click(selectAllBtn)
+    expect(screen.getByText('3')).toBeDefined()
+
+    // 点击清空
+    const clearBtn = screen.getByRole('button', { name: '清空' })
+    fireEvent.click(clearBtn)
+    expect(screen.queryByText(/已选/)).toBeNull()
+  })
+
+  it('点击 Gemini 解释按钮，复制 prompt 到剪贴板并打开 Gemini', async () => {
+    render(<Toc headings={headings} articleTitle="测试文章" />)
+
+    const check1 = screen.getByRole('checkbox', { name: '选择章节：结论' })
+    const check2 = screen.getByRole('checkbox', { name: '选择章节：细节' })
+    fireEvent.click(check1)
+    fireEvent.click(check2)
+
+    const explainBtn = screen.getByRole('button', { name: '转到 Gemini 解释选中小节' })
+    await act(async () => {
+      fireEvent.click(explainBtn)
+    })
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1)
+    const promptArg = (navigator.clipboard.writeText as unknown as { mock: { calls: [string][] } }).mock.calls[0][0]
+    expect(promptArg).toContain('测试文章')
+    expect(promptArg).toContain('1. 结论')
+    expect(promptArg).toContain('2. 细节')
+
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('https://gemini.google.com/app?prompt='),
+      '_blank',
+      'noopener,noreferrer',
+    )
+  })
+
+  it('支持单节快捷解释按钮一键直达', async () => {
+    render(<Toc headings={headings} articleTitle="测试文章" />)
+
+    const singleBtn = screen.getByRole('button', { name: 'Gemini 解释「细节」' })
+    await act(async () => {
+      fireEvent.click(singleBtn)
+    })
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1)
+    const promptArg = (navigator.clipboard.writeText as unknown as { mock: { calls: [string][] } }).mock.calls[0][0]
+    expect(promptArg).toContain('关于「细节」的内容')
+    expect(window.open).toHaveBeenCalledTimes(1)
+  })
+
+  it('快捷键 G 触发解释选中小节', async () => {
+    render(<Toc headings={headings} articleTitle="测试文章" />)
+
+    const check1 = screen.getByRole('checkbox', { name: '选择章节：方法' })
+    fireEvent.click(check1)
+
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'g' })
+    })
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1)
+    const promptArg = (navigator.clipboard.writeText as unknown as { mock: { calls: [string][] } }).mock.calls[0][0]
+    expect(promptArg).toContain('方法')
+    expect(window.open).toHaveBeenCalledTimes(1)
   })
 })

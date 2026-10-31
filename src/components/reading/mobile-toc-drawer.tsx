@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { List, X } from 'lucide-react'
+import { List, Sparkles, X } from 'lucide-react'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
+import { buildGeminiExplainPrompt, explainWithGemini } from '@/lib/gemini-explain'
 import {
   useFloatingStackOffset,
   FLOATING_STACK_ANCHOR,
@@ -22,19 +23,24 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/com
  * - 抽屉本体交给 ui/sheet（Radix）：焦点陷阱、Esc、遮罩点击关闭、滚动锁、关闭后焦点还给触发按钮
  *   全部由它接管。此前是手写的 fixed 遮罩 + div[role=dialog]，Esc 与滚动锁都没有，
  *   关掉后焦点也回不到那颗悬浮按钮上。
+ * - 支持选中小节并转到 Gemini 解释功能。
  */
 
 export function MobileTocDrawer({
   headings,
+  articleTitle,
   className = '',
   desktop = false,
 }: {
   headings: TocHeading[]
+  articleTitle?: string
   className?: string
   /** 分栏文章在桌面端也没有侧栏目录，需把浮动目录扩展到所有断点 */
   desktop?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [feedback, setFeedback] = useState<string>('')
   const bottomClass = useFloatingStackOffset()
 
   if (headings.length === 0) return null
@@ -43,6 +49,56 @@ export function MobileTocDrawer({
     e.preventDefault()
     scrollToHeading(id)
     setIsOpen(false)
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function selectAll() {
+    if (selectedIds.size === headings.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(headings.map((h) => h.id)))
+    }
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set())
+  }
+
+  async function triggerExplain(targetHeadings?: string[]) {
+    let titlesToExplain = targetHeadings
+
+    if (!titlesToExplain || titlesToExplain.length === 0) {
+      titlesToExplain = headings
+        .filter((h) => selectedIds.has(h.id))
+        .map((h) => h.text)
+    }
+
+    if (titlesToExplain.length === 0) {
+      titlesToExplain = [headings[0].text]
+    }
+
+    const prompt = buildGeminiExplainPrompt({
+      articleTitle,
+      headings: titlesToExplain,
+    })
+
+    const copied = await explainWithGemini(prompt)
+    setFeedback(copied ? '已复制提示词并前往 Gemini' : '正在前往 Gemini…')
+    window.setTimeout(() => {
+      setFeedback('')
+      setIsOpen(false)
+    }, 1500)
   }
 
   return (
@@ -78,12 +134,12 @@ export function MobileTocDrawer({
              抽屉开着时把视口拉宽到 xl，得让抽屉自己也退场 */
           className={
             desktop
-              ? 'max-h-[75vh] mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
-              : 'xl:hidden max-h-[75vh] mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
+              ? 'max-h-[75vh] flex flex-col mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
+              : 'xl:hidden max-h-[75vh] flex flex-col mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
           }
         >
           {/* 顶栏 */}
-          <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-3">
+          <div className="mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle pb-3">
             <div className="flex items-center gap-2">
               <List className="h-4 w-4 text-primary" aria-hidden="true" />
               <SheetTitle className="type-section text-foreground">文章目录</SheetTitle>
@@ -103,21 +159,100 @@ export function MobileTocDrawer({
           </div>
 
           {/* 目录列表 */}
-          <nav className="overflow-y-auto pr-1 py-1 space-y-1">
-            {headings.map((heading) => (
-              <SheetClose asChild key={heading.id}>
-                <a
-                  href={`#${heading.id}`}
-                  onClick={(e) => handleHeadingClick(e, heading.id)}
-                  className={`type-meta block rounded-lg px-3 py-2 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:bg-primary/10 ${
-                    heading.depth === 3 ? 'pl-7 type-caption' : 'font-medium'
+          <nav className="overflow-y-auto pr-1 py-1 space-y-1 flex-1 min-h-0">
+            {headings.map((heading) => {
+              const isSelected = selectedIds.has(heading.id)
+
+              return (
+                <div
+                  key={heading.id}
+                  className={`group/item flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-muted ${
+                    heading.depth === 3 ? 'pl-6' : ''
                   }`}
                 >
-                  {heading.text}
-                </a>
-              </SheetClose>
-            ))}
+                  {/* 复选框：原生 input checkbox */}
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    aria-label={`选择章节：${heading.text}`}
+                    onChange={() => toggleSelect(heading.id)}
+                    className="size-4 shrink-0 rounded border-border-subtle text-primary focus:ring-primary/20 cursor-pointer accent-primary"
+                  />
+
+                  <a
+                    href={`#${heading.id}`}
+                    onClick={(e) => handleHeadingClick(e, heading.id)}
+                    className={`type-meta block flex-1 truncate text-muted-foreground transition-colors hover:text-foreground active:text-primary ${
+                      heading.depth === 3 ? 'type-caption' : 'font-medium'
+                    }`}
+                  >
+                    {heading.text}
+                  </a>
+
+                  {/* 单节快捷解释入口 */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Gemini 解释「${heading.text}」`}
+                    onClick={() => triggerExplain([heading.text])}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        triggerExplain([heading.text])
+                      }
+                    }}
+                    className="size-7 shrink-0 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-all flex items-center justify-center cursor-pointer"
+                  >
+                    <Sparkles className="size-3.5" aria-hidden="true" />
+                  </span>
+                </div>
+              )
+            })}
           </nav>
+
+          {/* 底部操作条 */}
+          {selectedIds.size > 0 && (
+            <div className="shrink-0 pt-3 mt-3 border-t border-border-subtle space-y-2 animate-in fade-in-50 duration-200">
+              <div className="flex items-center justify-between type-caption text-muted-foreground px-1">
+                <span>
+                  已选 <strong className="font-mono text-foreground">{selectedIds.size}</strong> 节
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAll}
+                    className="text-xs hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    {selectedIds.size === headings.length ? '取消全选' : '全选'}
+                  </button>
+                  <span aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="text-xs hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    清空
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                aria-label="转到 Gemini 解释选中小节"
+                onClick={() => triggerExplain()}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 type-meta font-medium transition-all shadow-xs active:scale-[0.98] cursor-pointer"
+              >
+                <Sparkles className="size-3.5" aria-hidden="true" />
+                <span>Gemini 解释 ({selectedIds.size})</span>
+              </button>
+
+              {feedback && (
+                <p className="type-caption text-center text-primary animate-in fade-in duration-150">
+                  {feedback}
+                </p>
+              )}
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>

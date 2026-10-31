@@ -153,3 +153,38 @@ describe('MobileTocDrawer 抽屉语义（Radix Sheet）', () => {
     expect(buttons[0].className).toContain('size-9')
   })
 })
+
+describe('MobileTocDrawer 选中小节并转到 Gemini 解释', () => {
+  it('支持复选框勾选并在底部触发解释', async () => {
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
+    vi.stubGlobal('open', vi.fn())
+
+    render(<MobileTocDrawer headings={mockHeadings} articleTitle="测试文章" />)
+    fireEvent.click(screen.getByRole('button', { name: '文章目录' }))
+
+    const check1 = screen.getByRole('checkbox', { name: '选择章节：引言' })
+    const check2 = screen.getByRole('checkbox', { name: '选择章节：系统设计' })
+
+    fireEvent.click(check1)
+    fireEvent.click(check2)
+
+    expect(screen.getByText(/已选/)).toBeDefined()
+    expect(screen.getByText('2')).toBeDefined()
+
+    const explainBtn = screen.getByRole('button', { name: '转到 Gemini 解释选中小节' })
+    await act(async () => {
+      fireEvent.click(explainBtn)
+    })
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1)
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('https://gemini.google.com/app?prompt='),
+      '_blank',
+      'noopener,noreferrer',
+    )
+  })
+})

@@ -27,6 +27,7 @@ afterEach(() => {
 const IMPLEMENTED_KEYS = [
   'Ctrl/⌘ + K  或  /',
   '[  /  ]',
+  'g',
   '1 / 2 / 3',
   'w  /  l',
   '0',

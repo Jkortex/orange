@@ -25,6 +25,7 @@ export interface ShortcutItem {
 export const SHORTCUTS: ShortcutItem[] = [
   { keys: 'Ctrl/⌘ + K  或  /', desc: '打开站内搜索' },
   { keys: '[  /  ]', desc: '上一篇 / 下一篇（仅文章详情）' },
+  { keys: 'g', desc: '转到 Gemini 解释章节（仅文章详情）' },
   { keys: '1 / 2 / 3', desc: '分栏文章：仅看精炼 / 双栏 / 仅看原著' },
   { keys: 'w  /  l', desc: '分栏文章：宽屏模式 / 长文模式' },
   { keys: '0', desc: '分栏文章：重置分栏设置' },

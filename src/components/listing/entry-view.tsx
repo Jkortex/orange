@@ -152,7 +152,7 @@ export function EntryView({
               </span>
             </summary>
             <div className="border-t border-border-subtle px-2 pb-2 pt-2">
-              <Toc headings={headings} className="border-0 bg-transparent shadow-none" />
+              <Toc headings={headings} articleTitle={entry.data.title} className="border-0 bg-transparent shadow-none" />
             </div>
           </details>
         )}
@@ -176,7 +176,7 @@ export function EntryView({
           <div className="mt-8">
             <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
           </div>
-          {hasToc && <MobileTocDrawer headings={headings} desktop />}
+          {hasToc && <MobileTocDrawer headings={headings} articleTitle={entry.data.title} desktop />}
         </div>
       ) : hasToc ? (
         <div className="mx-auto w-full max-w-7xl">
@@ -199,13 +199,13 @@ export function EntryView({
                 高度上限经 className 交给 Toc 自己（滚动发生在卡片内部），外层只负责 sticky 定位 */}
             <aside className="hidden xl:block">
               <div className="sticky top-[calc(var(--header-height)+1.5rem)]">
-                <Toc headings={headings} className="max-h-[calc(100vh-var(--header-height)-3rem)]" />
+                <Toc headings={headings} articleTitle={entry.data.title} className="max-h-[calc(100vh-var(--header-height)-3rem)]" />
               </div>
             </aside>
           </div>
 
           {/* 移动端目录抽屉（脱离 grid 容器，避免干扰正文网格流） */}
-          <MobileTocDrawer headings={headings} />
+          <MobileTocDrawer headings={headings} articleTitle={entry.data.title} />
         </div>
       ) : (
         <article className={`mx-auto w-full ${contentWidth}`}>
