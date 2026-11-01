@@ -1,10 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { List, Sparkles, X } from 'lucide-react'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
-import { buildGeminiExplainPrompt, explainWithGemini } from '@/lib/gemini-explain'
+import {
+  AI_PROVIDER_EVENT,
+  AI_PROVIDERS,
+  buildAiExplainPrompt,
+  explainWithAi,
+  getAiProvider,
+  setAiProvider,
+  type AiProvider,
+  type AiProviderEventDetail,
+} from '@/lib/ai-explain'
 import {
   useFloatingStackOffset,
   FLOATING_STACK_ANCHOR,
@@ -18,12 +27,8 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/com
 /*
  * 移动端/窄屏目录抽屉与悬浮入口（< xl）：
  * - 与 BackToTop 共享同一垂直基准轴线（right-4 sm:right-6 md:right-8）与同一档位（IconButton 的 size-9）
- * - 档位由 useFloatingStackOffset 统一裁决：BackToTop 出现时平滑上浮腾出位置，
- *   形成视觉协调的双钮操作栈；播放条出现时再抬一层，严防层叠遮挡
- * - 抽屉本体交给 ui/sheet（Radix）：焦点陷阱、Esc、遮罩点击关闭、滚动锁、关闭后焦点还给触发按钮
- *   全部由它接管。此前是手写的 fixed 遮罩 + div[role=dialog]，Esc 与滚动锁都没有，
- *   关掉后焦点也回不到那颗悬浮按钮上。
- * - 支持选中小节并转到 Gemini 解释功能。
+ * - 档位由 useFloatingStackOffset 统一裁决
+ * - 支持选中小节并转到 AI（DeepSeek / Gemini）解释功能
  */
 
 export function MobileTocDrawer({
@@ -41,7 +46,22 @@ export function MobileTocDrawer({
   const [isOpen, setIsOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [feedback, setFeedback] = useState<string>('')
+  const [aiProvider, setAiProviderState] = useState<AiProvider>('deepseek')
   const bottomClass = useFloatingStackOffset()
+
+  useEffect(() => {
+    setAiProviderState(getAiProvider())
+
+    function onProviderChange(e: Event) {
+      const detail = (e as CustomEvent<AiProviderEventDetail>).detail
+      if (detail?.provider) {
+        setAiProviderState(detail.provider)
+      }
+    }
+
+    window.addEventListener(AI_PROVIDER_EVENT, onProviderChange)
+    return () => window.removeEventListener(AI_PROVIDER_EVENT, onProviderChange)
+  }, [])
 
   if (headings.length === 0) return null
 
@@ -75,6 +95,11 @@ export function MobileTocDrawer({
     setSelectedIds(new Set())
   }
 
+  function switchProvider(next: AiProvider) {
+    setAiProvider(next)
+    setAiProviderState(next)
+  }
+
   async function triggerExplain(targetHeadings?: string[]) {
     let titlesToExplain = targetHeadings
 
@@ -88,30 +113,26 @@ export function MobileTocDrawer({
       titlesToExplain = [headings[0].text]
     }
 
-    const prompt = buildGeminiExplainPrompt({
+    const prompt = buildAiExplainPrompt({
       articleTitle,
       headings: titlesToExplain,
     })
 
-    const copied = await explainWithGemini(prompt)
-    setFeedback(copied ? '已复制提示词并前往 Gemini' : '正在前往 Gemini…')
+    const provider = getAiProvider()
+    const providerName = AI_PROVIDERS[provider].name
+    const copied = await explainWithAi(prompt, provider)
+    setFeedback(copied ? `已复制提示词并前往 ${providerName}` : `正在前往 ${providerName}…`)
     window.setTimeout(() => {
       setFeedback('')
       setIsOpen(false)
     }, 1500)
   }
 
+  const currentProviderName = AI_PROVIDERS[aiProvider]?.name || 'DeepSeek'
+
   return (
     <div className={desktop ? className : `xl:hidden ${className}`}>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        {/*
-         * 悬浮目录触发按钮：统一的尺寸、对齐线、磨砂质感与提示气泡。
-         * 这里不能直接用 IconButton —— SheetTrigger asChild 要求子元素本身是 <button>
-         * （Slot 会把 props 直接合并到子元素上，套一层 span 就挂错元素了）。
-         * 故外层 span 保留定位与上浮过渡（transition-[bottom,…]），
-         * 按钮只负责外观与变色过渡（transition-colors）；两组 transition 落在不同元素上，
-         * 合到一个元素会互相顶掉，上浮动画就没了。
-         */}
         <span
           className={`${FLOATING_STACK_ANCHOR} ${bottomClass} inline-flex animate-in fade-in-0 zoom-in-90`}
         >
@@ -128,30 +149,19 @@ export function MobileTocDrawer({
         </span>
 
         <SheetContent
-          side="bottom"
+          side="right"
           showCloseButton={false}
-          /* 内容被 Portal 送到 body，外层 div 的 xl:hidden 管不到它：
-             抽屉开着时把视口拉宽到 xl，得让抽屉自己也退场 */
-          className={
-            desktop
-              ? 'max-h-[75vh] flex flex-col mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
-              : 'xl:hidden max-h-[75vh] flex flex-col mx-auto max-w-lg overflow-hidden rounded-t-2xl border-t border-border-subtle p-5'
-          }
+          className="w-[22rem] max-w-[85vw] flex flex-col p-5 gap-0"
         >
-          {/* 顶栏 */}
-          <div className="mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle pb-3">
-            <div className="flex items-center gap-2">
-              <List className="h-4 w-4 text-primary" aria-hidden="true" />
-              <SheetTitle className="type-section text-foreground">文章目录</SheetTitle>
-              <span className="type-caption font-mono text-muted-foreground">
-                ({headings.length} 节)
-              </span>
-            </div>
+          {/* 抽屉头部 */}
+          <div className="flex items-center justify-between pb-4 border-b border-border-subtle shrink-0">
+            <SheetTitle className="type-section text-foreground">文章目录</SheetTitle>
+
             <SheetClose asChild>
               <button
                 type="button"
                 aria-label="关闭目录"
-                className={iconButtonClass('md', 'shrink-0')}
+                className={iconButtonClass('md', 'absolute top-3 right-3 z-10 shrink-0 text-muted-foreground hover:text-foreground')}
               >
                 <X className="size-4" aria-hidden="true" />
               </button>
@@ -159,15 +169,15 @@ export function MobileTocDrawer({
           </div>
 
           {/* 目录列表 */}
-          <nav className="overflow-y-auto pr-1 py-1 space-y-1 flex-1 min-h-0">
+          <nav aria-label="文章目录列表" className="flex-1 overflow-y-auto py-4 space-y-1">
             {headings.map((heading) => {
               const isSelected = selectedIds.has(heading.id)
 
               return (
                 <div
                   key={heading.id}
-                  className={`group/item flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-muted ${
-                    heading.depth === 3 ? 'pl-6' : ''
+                  className={`flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-muted/50 transition-colors ${
+                    heading.depth === 3 ? 'ml-4' : ''
                   }`}
                 >
                   {/* 复选框：原生 input checkbox */}
@@ -193,7 +203,7 @@ export function MobileTocDrawer({
                   <span
                     role="button"
                     tabIndex={0}
-                    aria-label={`Gemini 解释「${heading.text}」`}
+                    aria-label={`${currentProviderName} 解释「${heading.text}」`}
                     onClick={() => triggerExplain([heading.text])}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -236,14 +246,45 @@ export function MobileTocDrawer({
                 </div>
               </div>
 
+              {/* AI 引擎选择切换 */}
+              <div className="flex items-center justify-between type-caption text-muted-foreground px-1">
+                <span>AI 引擎</span>
+                <div className="inline-flex rounded-md border border-border-subtle bg-muted/60 p-0.5 text-xs">
+                  <button
+                    type="button"
+                    aria-label="切换至 DeepSeek"
+                    onClick={() => switchProvider('deepseek')}
+                    className={`rounded px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
+                      aiProvider === 'deepseek'
+                        ? 'bg-surface text-primary shadow-xs font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    DeepSeek
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="切换至 Gemini"
+                    onClick={() => switchProvider('gemini')}
+                    className={`rounded px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
+                      aiProvider === 'gemini'
+                        ? 'bg-surface text-primary shadow-xs font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Gemini
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="button"
-                aria-label="转到 Gemini 解释选中小节"
+                aria-label={`转到 ${currentProviderName} 解释选中小节`}
                 onClick={() => triggerExplain()}
                 className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 type-meta font-medium transition-all shadow-xs active:scale-[0.98] cursor-pointer"
               >
                 <Sparkles className="size-3.5" aria-hidden="true" />
-                <span>Gemini 解释 ({selectedIds.size})</span>
+                <span>{currentProviderName} 解释 ({selectedIds.size})</span>
               </button>
 
               {feedback && (

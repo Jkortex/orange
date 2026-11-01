@@ -7,7 +7,7 @@ column: data-intensive-systems
 tags: [数据编码, 模式演进, Protobuf, Avro, RPC, Durable-Execution]
 ---
 
-# 核心实战精炼：契约演化、序列化底层与持久化执行架构
+## 核心架构决策速查：契约演化、序列化底层与持久化执行架构
 
 古希腊哲学家赫拉克利特曾断言：“**万物皆变，无物常驻**”。在现代分布式系统工程中，变化同样是永恒的：业务需求持续狂奔，数据模式（Schema）必然持续蜕变。
 
@@ -190,7 +190,9 @@ class PaymentDurableWorkflow:
 | **Durable Execution 纯洁性** | 在工作流（Workflow）函数体内直接调用 `datetime.now()`、`random.randint()` 或发起裸 HTTP 请求。 | 所有非确定性操作与外部 I/O 必须严格隔离在活动（Activity）中，或使用框架的确定性 API。 |
 | **分布式状态机版本升级** | 直接重构重排现有工作流函数的代码调用次序，导致存量未结单实例重放时遭遇非确定性断言失败。 | 严格使用 `workflow.patched("patch_id")` 进行平滑分支过渡，或直接发布全新版本的 Workflow 名称。 |
 
-<!-- split -->
+---
+
+## 原著核心解析与系统推演
 
 > “万物皆变，无物常驻。”  
 > —— **Heraclitus of Ephesus**，引自柏拉图《克拉底鲁篇》（*Cratylus*，公元前 360 年）

@@ -4,8 +4,13 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { Toc } from '@/components/reading/toc'
 import type { TocHeading } from '@/lib/toc'
 
+beforeEach(() => {
+  localStorage.clear()
+})
+
 afterEach(() => {
   cleanup()
+  localStorage.clear()
   vi.restoreAllMocks()
 })
 
@@ -137,7 +142,7 @@ describe('Toc 选中小节并转到 Gemini 解释', () => {
     expect(screen.queryByText(/已选/)).toBeNull()
   })
 
-  it('点击 Gemini 解释按钮，复制 prompt 到剪贴板并打开 Gemini', async () => {
+  it('默认点击 DeepSeek 解释按钮，复制 prompt 到剪贴板并打开 DeepSeek', async () => {
     render(<Toc headings={headings} articleTitle="测试文章" />)
 
     const check1 = screen.getByRole('checkbox', { name: '选择章节：结论' })
@@ -145,7 +150,7 @@ describe('Toc 选中小节并转到 Gemini 解释', () => {
     fireEvent.click(check1)
     fireEvent.click(check2)
 
-    const explainBtn = screen.getByRole('button', { name: '转到 Gemini 解释选中小节' })
+    const explainBtn = screen.getByRole('button', { name: '转到 DeepSeek 解释选中小节' })
     await act(async () => {
       fireEvent.click(explainBtn)
     })
@@ -157,6 +162,27 @@ describe('Toc 选中小节并转到 Gemini 解释', () => {
     expect(promptArg).toContain('2. 细节')
 
     expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('https://chat.deepseek.com/?q='),
+      '_blank',
+      'noopener,noreferrer',
+    )
+  })
+
+  it('支持切换 AI 引擎至 Gemini 并打开对应链接', async () => {
+    render(<Toc headings={headings} articleTitle="测试文章" />)
+
+    const check1 = screen.getByRole('checkbox', { name: '选择章节：结论' })
+    fireEvent.click(check1)
+
+    const geminiSwitchBtn = screen.getByRole('button', { name: '切换至 Gemini' })
+    fireEvent.click(geminiSwitchBtn)
+
+    const explainBtn = screen.getByRole('button', { name: '转到 Gemini 解释选中小节' })
+    await act(async () => {
+      fireEvent.click(explainBtn)
+    })
+
+    expect(window.open).toHaveBeenCalledWith(
       expect.stringContaining('https://gemini.google.com/app?prompt='),
       '_blank',
       'noopener,noreferrer',
@@ -166,7 +192,7 @@ describe('Toc 选中小节并转到 Gemini 解释', () => {
   it('支持单节快捷解释按钮一键直达', async () => {
     render(<Toc headings={headings} articleTitle="测试文章" />)
 
-    const singleBtn = screen.getByRole('button', { name: 'Gemini 解释「细节」' })
+    const singleBtn = screen.getByRole('button', { name: 'DeepSeek 解释「细节」' })
     await act(async () => {
       fireEvent.click(singleBtn)
     })
@@ -174,7 +200,11 @@ describe('Toc 选中小节并转到 Gemini 解释', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1)
     const promptArg = (navigator.clipboard.writeText as unknown as { mock: { calls: [string][] } }).mock.calls[0][0]
     expect(promptArg).toContain('关于「细节」的内容')
-    expect(window.open).toHaveBeenCalledTimes(1)
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('https://chat.deepseek.com/?q='),
+      '_blank',
+      'noopener,noreferrer',
+    )
   })
 
   it('快捷键 G 触发解释选中小节', async () => {

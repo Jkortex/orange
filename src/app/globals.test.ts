@@ -133,6 +133,25 @@ describe('.list-row 契约', () => {
 })
 
 /*
+ * 正文字号档位契约（真实反馈：切到「中大/特大」时正文变大，代码块纹丝不动）：
+ * 代码块里的 text-sm 是固定 0.875rem，不跟 --content-font-size 走；
+ * 必须在 .prose 作用域内按正文档位重算，且规则位于 utilities 层之外才能压过 text-sm。
+ */
+describe('正文字号档位契约', () => {
+  it('代码块字号随正文档位缩放，不再固定在 14px', () => {
+    const body = css.match(/\.prose pre\.font-mono\s*\{([^}]*)\}/)?.[1]
+    expect(body, '缺少 .prose pre.font-mono 字号规则').toBeDefined()
+    expect(body).toContain('font-size: calc(var(--content-font-size')
+  })
+
+  it('四档字号变量齐全（sm / base / lg / xl）', () => {
+    for (const size of ['0.9375rem', '1rem', '1.125rem', '1.25rem']) {
+      expect(css).toContain(`--content-font-size: ${size};`)
+    }
+  })
+})
+
+/*
  * 移动端 chrome 契约（真实反馈：顶栏文字挤在一行、分类条把整页撑出横向滚动）：
  * 1. 顶栏高度只有一个来源 --header-height（移动端两行导航，sm 起一行）；
  *    sticky 偏移与锚点避让都必须跟着它走，写死 top-14 / top-20 会随布局漂移。

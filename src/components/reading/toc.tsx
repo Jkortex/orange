@@ -5,25 +5,27 @@ import { Check, Sparkles } from 'lucide-react'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
-import { buildGeminiExplainPrompt, explainWithGemini } from '@/lib/gemini-explain'
+import {
+  AI_PROVIDER_EVENT,
+  AI_PROVIDERS,
+  buildAiExplainPrompt,
+  explainWithAi,
+  getAiProvider,
+  setAiProvider,
+  type AiProvider,
+  type AiProviderEventDetail,
+} from '@/lib/ai-explain'
 
 /*
  * 文内目录：
  * - 纯客户端响应式高亮当前阅读位置（IntersectionObserver）
  * - 桌面端可在右侧 sticky 悬浮，移动端可嵌入在正文前
  * - 激活项胶囊微底色 + 悬浮位移微动效，提升长文导航沉浸感
- * - AI 解释支持：可单选或复选多个小节，一键生成提示词并转到 Gemini 解释；
- *   支持键盘快捷键 G 快速唤起解释。
+ * - AI 解释支持：可单选或复选多个小节，一键生成提示词并转到 DeepSeek（默认）或 Gemini 解释；
+ *   支持用户自由切换 AI 引擎，支持键盘快捷键 G 快速唤起解释。
  *
- * 滚动契约（长目录，如 35 节）：滚动发生在卡片**内部**，只有列表滚动，
- * 卡片头部（「目录 · N 节」）与圆角/描边固定不动。故卡片是 flex 纵向：
- * 头部 shrink-0，列表 min-h-0 + flex-1 + overflow-y-auto；高度上限由调用方经
- * className 传入（如 max-h-[calc(100vh-var(--header-height)-3rem)]）。
- * 调用方不要再在外层容器上加 overflow-y-auto —— 那会让整张卡片（含头部与边框）一起滚走。
- *
- * 列表只允许纵向滚动：overflow-y-auto 会把 overflow-x 一并算成 auto，稍有溢出（如激活项
- * hover 的 translate-x-0.5）就冒出横向滚动条，故显式 overflow-x-hidden。pr-2 把滚动条
- * 从文字旁推开一点，避免贴着标题文字。
+ * 滚动契约（长目录，如 35 节）：滚动发生在卡片内部，只有列表滚动，
+ * 卡片头部（「目录 · N 节」）与圆角/描边固定不动。
  */
 
 export function Toc({
@@ -38,6 +40,21 @@ export function Toc({
   const [activeId, setActiveId] = useState<string>('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [feedback, setFeedback] = useState<string>('')
+  const [aiProvider, setAiProviderState] = useState<AiProvider>('deepseek')
+
+  useEffect(() => {
+    setAiProviderState(getAiProvider())
+
+    function onProviderChange(e: Event) {
+      const detail = (e as CustomEvent<AiProviderEventDetail>).detail
+      if (detail?.provider) {
+        setAiProviderState(detail.provider)
+      }
+    }
+
+    window.addEventListener(AI_PROVIDER_EVENT, onProviderChange)
+    return () => window.removeEventListener(AI_PROVIDER_EVENT, onProviderChange)
+  }, [])
 
   useEffect(() => {
     if (typeof IntersectionObserver === 'undefined' || headings.length === 0) return
@@ -63,7 +80,7 @@ export function Toc({
     return () => observer.disconnect()
   }, [headings])
 
-  // 快捷键 G：将选中章节（或当前激活章节）转到 Gemini 解释
+  // 快捷键 G：将选中章节（或当前激活章节）转到当前 AI 引擎解释
   useHotkey('G', () => {
     if (document.querySelector('[role="dialog"]') !== null) return
     triggerExplain()
@@ -101,6 +118,11 @@ export function Toc({
     setSelectedIds(new Set())
   }
 
+  function switchProvider(next: AiProvider) {
+    setAiProvider(next)
+    setAiProviderState(next)
+  }
+
   async function triggerExplain(targetHeadings?: string[]) {
     let titlesToExplain = targetHeadings
 
@@ -117,15 +139,19 @@ export function Toc({
       }
     }
 
-    const prompt = buildGeminiExplainPrompt({
+    const prompt = buildAiExplainPrompt({
       articleTitle,
       headings: titlesToExplain,
     })
 
-    const copied = await explainWithGemini(prompt)
-    setFeedback(copied ? '已复制提示词并前往 Gemini' : '正在前往 Gemini…')
+    const provider = getAiProvider()
+    const providerName = AI_PROVIDERS[provider].name
+    const copied = await explainWithAi(prompt, provider)
+    setFeedback(copied ? `已复制提示词并前往 ${providerName}` : `正在前往 ${providerName}…`)
     window.setTimeout(() => setFeedback(''), 2500)
   }
+
+  const currentProviderName = AI_PROVIDERS[aiProvider]?.name || 'DeepSeek'
 
   return (
     <nav
@@ -164,35 +190,29 @@ export function Toc({
                 onClick={() => toggleSelect(heading.id)}
                 className={`size-4 shrink-0 rounded flex items-center justify-center border transition-colors cursor-pointer ${
                   isSelected
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border-subtle hover:border-primary/60 text-transparent'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border-strong hover:border-primary/70 bg-surface'
                 }`}
               >
-                <Check
-                  className={`size-3 stroke-[3] transition-opacity ${
-                    isSelected ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  aria-hidden="true"
-                />
+                {isSelected && <Check className="size-3 stroke-[3]" aria-hidden="true" />}
               </button>
 
-              {/* 标题链接 */}
               <a
                 href={`#${heading.id}`}
                 onClick={(e) => handleHeadingClick(e, heading.id)}
-                className={`group flex min-w-0 flex-1 items-center rounded-md px-1.5 py-1.5 type-meta transition-all duration-150 ${
+                className={`type-meta block truncate rounded px-1.5 py-1 text-left flex-1 transition-all ${
                   isActive
-                    ? 'bg-primary/10 font-medium text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-0.5'
+                    ? 'font-medium text-primary bg-primary/10 translate-x-0.5'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:translate-x-0.5'
                 }`}
               >
-                <span className="truncate">{heading.text}</span>
+                {heading.text}
               </a>
 
-              {/* 单节快捷解释入口（悬停/聚焦时可见） */}
+              {/* 单标题快捷解释图标：悬浮时浮现，一键呼出当前所选 AI 解释 */}
               <button
                 type="button"
-                aria-label={`Gemini 解释「${heading.text}」`}
+                aria-label={`${currentProviderName} 解释「${heading.text}」`}
                 onClick={() => triggerExplain([heading.text])}
                 className="size-6 shrink-0 rounded opacity-0 group-hover/item:opacity-100 focus:opacity-100 hover:bg-muted text-muted-foreground hover:text-primary transition-all flex items-center justify-center cursor-pointer"
               >
@@ -203,7 +223,7 @@ export function Toc({
         })}
       </ol>
 
-      {/* 底部操作面板：有勾选标题时展示，支持一键 Gemini 解释与清空 */}
+      {/* 底部操作面板：有勾选标题时展示，支持切换 AI 与一键解释 */}
       {selectedIds.size > 0 && (
         <div className="shrink-0 pt-2.5 mt-2 border-t border-border-subtle space-y-2 animate-in fade-in-50 duration-200">
           <div className="flex items-center justify-between type-caption text-muted-foreground px-1">
@@ -229,14 +249,45 @@ export function Toc({
             </div>
           </div>
 
+          {/* AI 引擎选择切换 */}
+          <div className="flex items-center justify-between type-caption text-muted-foreground px-1">
+            <span>AI 引擎</span>
+            <div className="inline-flex rounded-md border border-border-subtle bg-muted/60 p-0.5 text-xs">
+              <button
+                type="button"
+                aria-label="切换至 DeepSeek"
+                onClick={() => switchProvider('deepseek')}
+                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
+                  aiProvider === 'deepseek'
+                    ? 'bg-surface text-primary shadow-xs font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                DeepSeek
+              </button>
+              <button
+                type="button"
+                aria-label="切换至 Gemini"
+                onClick={() => switchProvider('gemini')}
+                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
+                  aiProvider === 'gemini'
+                    ? 'bg-surface text-primary shadow-xs font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Gemini
+              </button>
+            </div>
+          </div>
+
           <button
             type="button"
-            aria-label="转到 Gemini 解释选中小节"
+            aria-label={`转到 ${currentProviderName} 解释选中小节`}
             onClick={() => triggerExplain()}
             className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 type-meta font-medium transition-all shadow-xs active:scale-[0.98] cursor-pointer"
           >
             <Sparkles className="size-3.5" aria-hidden="true" />
-            <span>Gemini 解释</span>
+            <span>{currentProviderName} 解释</span>
             <kbd className="ml-1 rounded bg-primary-foreground/20 px-1 py-0.5 font-mono text-[10px] uppercase">
               G
             </kbd>

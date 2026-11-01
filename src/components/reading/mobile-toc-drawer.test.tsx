@@ -175,14 +175,14 @@ describe('MobileTocDrawer 选中小节并转到 Gemini 解释', () => {
     expect(screen.getByText(/已选/)).toBeDefined()
     expect(screen.getByText('2')).toBeDefined()
 
-    const explainBtn = screen.getByRole('button', { name: '转到 Gemini 解释选中小节' })
+    const explainBtn = screen.getByRole('button', { name: '转到 DeepSeek 解释选中小节' })
     await act(async () => {
       fireEvent.click(explainBtn)
     })
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1)
     expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining('https://gemini.google.com/app?prompt='),
+      expect.stringContaining('https://chat.deepseek.com/?q='),
       '_blank',
       'noopener,noreferrer',
     )

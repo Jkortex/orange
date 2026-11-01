@@ -455,6 +455,16 @@ html.dark code[data-theme] span[style*='--shiki'] {
   text-indent: 2em;
 }
 
+/*
+ * 代码块字号跟随正文字号档位：CodeBlock 上的 text-sm 是固定 0.875rem，
+ * 切到「中大/特大」时正文变大、代码块纹丝不动。这里按当前档位重算，
+ * 并限定 font-mono 的 pre —— demo 预览等其它 pre 有自己的字号，不能被一并改掉。
+ * 规则位于 utilities 层之外，按 Cascade 压过 text-sm。
+ */
+.prose pre.font-mono {
+  font-size: calc(var(--content-font-size, 1rem) * 0.875);
+}
+
 /* 媒体、引用块、提示卡片、列表项、表格及交互组件段落取消首行缩进 */
 .prose p:has(img),
 .prose p:has(button),
