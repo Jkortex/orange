@@ -5,9 +5,12 @@ import {
   getAllTags,
   getSkillPackage,
   listSkillSlugs,
+  getSystemPackage,
+  listSystemSlugs,
   TAGGED_TYPES,
 } from '@/lib/content'
 import { listSkillAttachments, skillFileHref } from '@/lib/skill-routes'
+import { listSystemAttachments, systemFileHref } from '@/lib/system-routes'
 import { getSiteUrl, joinSiteUrl } from '@/lib/site-url'
 import { ALL_COLUMNS } from '@/lib/column-data'
 
@@ -44,6 +47,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: joinSiteUrl(siteUrl, '/skills'),
+      lastModified: generatedAt,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: joinSiteUrl(siteUrl, '/systems'),
       lastModified: generatedAt,
       changeFrequency: 'weekly',
       priority: 0.8,
@@ -96,6 +105,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const file of listSkillAttachments(pkg)) {
       routes.push({
         url: joinSiteUrl(siteUrl, skillFileHref(slug, file.path)),
+        lastModified: pkg.data.date,
+        changeFrequency: 'monthly',
+        priority: 0.4,
+      })
+    }
+  }
+
+  // 系统工程内的文件页（包页本身已由 getAllEntries 收录）
+  for (const slug of listSystemSlugs()) {
+    const pkg = getSystemPackage(slug)
+    for (const file of listSystemAttachments(pkg)) {
+      routes.push({
+        url: joinSiteUrl(siteUrl, systemFileHref(slug, file.path)),
         lastModified: pkg.data.date,
         changeFrequency: 'monthly',
         priority: 0.4,

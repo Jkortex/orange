@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: orderflow-infra-pod
+  labels:
+    app: orderflow-infra
+spec:
+  containers:
+  - name: postgres
+    image: docker.m.daocloud.io/postgres:17-alpine
+    env:
+    - name: POSTGRES_USER
+      value: dev
+    - name: POSTGRES_PASSWORD
+      value: dev
+    - name: POSTGRES_DB
+      value: orderflow
+    ports:
+    - containerPort: 5432
+      hostPort: 5432
+
+  - name: nats
+    image: docker.m.daocloud.io/library/nats:latest
+    ports:
+    - containerPort: 4222
+      hostPort: 4222
+
+  - name: kafka
+    image: docker.m.daocloud.io/apache/kafka:4.1.0
+    command:
+    - /etc/kafka/docker/run
+    env:
+    - name: KAFKA_NODE_ID
+      value: "1"
+    - name: KAFKA_PROCESS_ROLES
+      value: "broker,controller"
+    - name: KAFKA_LISTENERS
+      value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+    - name: KAFKA_ADVERTISED_LISTENERS
+      value: "PLAINTEXT://localhost:9092"
+    - name: KAFKA_CONTROLLER_LISTENER_NAMES
+      value: "CONTROLLER"
+    - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+      value: "1@localhost:9093"
+    - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+      value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+    - name: CLUSTER_ID
+      value: "MkU3OEVBNTcwNTJENDM2Qk"
+    - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+      value: "true"
+    - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+      value: "1"
+    - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+      value: "1"
+    - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+      value: "1"
+    ports:
+    - containerPort: 9092
+      hostPort: 9092
+  restartPolicy: Never

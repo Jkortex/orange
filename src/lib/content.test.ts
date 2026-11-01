@@ -592,7 +592,7 @@ describe('标签聚合：指定集合（有详情路由的类型）去重聚合'
 
     const manifest = buildContentManifest({ contentDir })
 
-    expect(manifest.allTags['life,music,posts,skills']).toEqual(['only-life'])
+    expect(manifest.allTags['life,music,posts,skills,systems']).toEqual(['only-life'])
   })
 })
 

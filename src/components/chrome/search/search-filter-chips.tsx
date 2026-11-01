@@ -10,6 +10,7 @@ const SCOPE_CHIPS: ScopeChip[] = [
   { id: 'all', label: '全部' },
   { id: 'posts', label: '文章' },
   { id: 'skills', label: '技能' },
+  { id: 'systems', label: '系统' },
   { id: 'life', label: '生活' },
   { id: 'music', label: '音乐' },
 ]

@@ -30,5 +30,5 @@ try {
 const duration = (performance.now() - startTime).toFixed(2)
 console.log(`[prebuild] 成功生成清单: ${targetFile} (耗时 ${duration}ms)`)
 console.log(
-  `[prebuild] 统计: ${manifest.allEntries.length} 篇条目, ${manifest.categories.length} 个分类, ${manifest.skills.slugs.length} 个技能包`,
+  `[prebuild] 统计: ${manifest.allEntries.length} 篇条目, ${manifest.categories.length} 个分类, ${manifest.skills.slugs.length} 个技能包, ${manifest.systems?.slugs.length ?? 0} 个系统工程`,
 )

@@ -10,6 +10,7 @@ export const LABELS: Record<CollectionType, string> = {
   life: '生活',
   music: '音乐',
   skills: '技能',
+  systems: '系统',
 }
 
 export function TypeBadge({ type }: { type: CollectionType }) {

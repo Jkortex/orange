@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Home, Menu, Music, Newspaper, NotebookPen, Wrench, X, type LucideIcon } from 'lucide-react'
+import { BookOpen, Cpu, Home, Menu, Music, Newspaper, NotebookPen, Wrench, X, type LucideIcon } from 'lucide-react'
 import { defaultNavItems, type NavItem } from '@/components/chrome/header-nav'
 import { iconButtonClass } from '@/components/primitives/icon-button'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -24,6 +24,7 @@ const SECTION_ICONS: Record<string, LucideIcon> = {
   '/life': NotebookPen,
   '/music': Music,
   '/skills': Wrench,
+  '/systems': Cpu,
 }
 
 export function MobileNavDrawer({

@@ -60,17 +60,28 @@ export const skillSchema = baseSchema.extend({
   author: z.string().optional(),
 })
 
+export const systemSchema = baseSchema.extend({
+  name: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'name 须为 kebab-case（小写字母/数字/连字符），如 mini-raft'),
+  architecture: z.string().optional(),
+  language: z.string().optional(),
+  repoUrl: z.string().url().optional(),
+  version: z.string().optional(),
+})
+
 export const collectionSchemas = {
   posts: postSchema,
   life: lifeSchema,
   music: musicSchema,
   skills: skillSchema,
+  systems: systemSchema,
 } as const
 
 export type CollectionType = keyof typeof collectionSchemas
 
 /** 拥有标签落地页的内容类型；路由页、sitemap 与 manifest 共用此注册表。 */
-export const TAGGED_TYPES: CollectionType[] = ['posts', 'music', 'skills', 'life']
+export const TAGGED_TYPES: CollectionType[] = ['posts', 'music', 'skills', 'systems', 'life']
 
 export type CollectionEntry<T extends CollectionType> = {
   /** 所属集合，跨集合页（标签/归档）据此生成路由 */
@@ -109,6 +120,11 @@ export type ContentManifest = {
     packages: Record<string, SkillPackage>
     entries: CollectionEntry<'skills'>[]
   }
+  systems: {
+    slugs: string[]
+    packages: Record<string, SystemPackage>
+    entries: CollectionEntry<'systems'>[]
+  }
   allEntries: CollectionEntry<CollectionType>[]
   categories: CategorySummary[]
   entriesByCategory: Record<string, CollectionEntry<CollectionType>[]>
@@ -117,7 +133,7 @@ export type ContentManifest = {
 }
 
 const MANIFEST_PATH = path.join(process.cwd(), '.generated', 'content-manifest.json')
-const MANIFEST_VERSION = 4
+const MANIFEST_VERSION = 5
 let loadedManifest: ContentManifest | null = null
 
 function loadManifestFromDisk(): ContentManifest | null {
@@ -257,11 +273,13 @@ function parseEntry<T extends CollectionType>(
 
 const collectionCache = new Map<string, CollectionEntry<any>[]>()
 const skillPackageCache = new Map<string, SkillPackage>()
+const systemPackageCache = new Map<string, SystemPackage>()
 
 /** 清除内容缓存（用于测试动态重载） */
 export function clearContentCache(): void {
   collectionCache.clear()
   skillPackageCache.clear()
+  systemPackageCache.clear()
   loadedManifest = null
 }
 
@@ -418,10 +436,22 @@ export function getAllEntries(options?: GetOptions): CollectionEntry<CollectionT
   }
 
   const fileEntries = (Object.keys(collectionSchemas) as CollectionType[])
-    // skills 是包目录形态，不走单文件集合（见 getSkillEntries）；其余跳过未启用目录
-    .filter((type) => type !== 'skills' && fs.existsSync(resolveContentDir(type, options)))
-    .flatMap((type) => getCollection(type as Exclude<CollectionType, 'skills'>, options))
-  return [...fileEntries, ...getSkillEntries(options)].sort(compareEntries)
+    // skills 与 systems 是包目录形态，不走单文件集合；其余跳过未启用目录
+    .filter(
+      (type) =>
+        type !== 'skills' &&
+        type !== 'systems' &&
+        fs.existsSync(resolveContentDir(type, options)),
+    )
+    .flatMap(
+      (type) =>
+        getCollection(type as Exclude<CollectionType, 'skills' | 'systems'>, options),
+    )
+  return [
+    ...fileEntries,
+    ...getSkillEntries(options),
+    ...getSystemEntries(options),
+  ].sort(compareEntries)
 }
 
 export type CategorySummary = { name: string; count: number }
@@ -501,15 +531,23 @@ export function getEntriesByTag(
     .sort(compareEntries)
 }
 
-/** 标签聚合的数据源：单文件集合 + skills 包条目（包形态不走 getCollection） */
+/** 标签聚合的数据源：单文件集合 + skills/systems 包条目（包形态不走 getCollection） */
 function getTaggedEntries(
   types: CollectionType[],
   options?: GetOptions,
 ): CollectionEntry<CollectionType>[] {
   const fileEntries = types
-    .filter((type) => type !== 'skills' && fs.existsSync(resolveContentDir(type, options)))
+    .filter(
+      (type) =>
+        type !== 'skills' &&
+        type !== 'systems' &&
+        fs.existsSync(resolveContentDir(type, options)),
+    )
     .flatMap((type) => getCollection(type, options))
-  return types.includes('skills') ? [...fileEntries, ...getSkillEntries(options)] : fileEntries
+  const extra: CollectionEntry<CollectionType>[] = []
+  if (types.includes('skills')) extra.push(...getSkillEntries(options))
+  if (types.includes('systems')) extra.push(...getSystemEntries(options))
+  return [...fileEntries, ...extra]
 }
 
 export type SkillFile = {
@@ -632,6 +670,262 @@ export function getSkillEntries(options?: GetOptions): CollectionEntry<'skills'>
     .sort(compareEntries)
 }
 
+export type SystemFile = {
+  /** 包内相对路径（如 internal/raft/state.go），稳定排序 */
+  path: string
+  /** 文本内容；不可读或二进制为 null */
+  content: string | null
+  /** 字节数 */
+  size: number
+  /** 代码行数（文本文件） */
+  lineCount?: number
+}
+
+export type FileTreeNode = {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  children?: FileTreeNode[]
+  size?: number
+}
+
+export type SystemPackage = {
+  slug: string
+  data: z.infer<typeof systemSchema>
+  /** SYSTEM.md 正文（架构与设计说明） */
+  body: string
+  /** 嵌套目录树，供左侧文件树导航直接使用 */
+  tree: FileTreeNode[]
+  /** 包内全部文件列表，包含 SYSTEM.md */
+  files: SystemFile[]
+}
+
+const IGNORED_NAMES = new Set([
+  '.git',
+  'node_modules',
+  'dist',
+  '.next',
+  'target',
+  'vendor',
+  '.DS_Store',
+  '.turbo',
+])
+
+function shouldIgnore(name: string): boolean {
+  return IGNORED_NAMES.has(name)
+}
+
+const MAX_TEXT_FILE_SIZE = 1024 * 1024 // 1MB
+
+function listSystemFiles(pkgDir: string): SystemFile[] {
+  const out: SystemFile[] = []
+  const walk = (dir: string, base: string) => {
+    for (const name of fs.readdirSync(dir)) {
+      if (shouldIgnore(name)) continue
+      const full = path.join(dir, name)
+      const rel = base ? `${base}/${name}` : name
+      const stat = fs.statSync(full)
+      if (stat.isDirectory()) {
+        walk(full, rel)
+      } else {
+        let content: string | null = null
+        let lineCount: number | undefined
+        if (stat.size <= MAX_TEXT_FILE_SIZE) {
+          try {
+            content = fs.readFileSync(full, 'utf8')
+            lineCount = content.split('\n').length
+          } catch {
+            content = null
+          }
+        }
+        out.push({
+          path: rel,
+          content,
+          size: stat.size,
+          lineCount,
+        })
+      }
+    }
+  }
+  walk(pkgDir, '')
+  return out.sort((a, b) => compareText(a.path, b.path))
+}
+
+export function buildFileTree(files: Array<{ path: string; size?: number }>): FileTreeNode[] {
+  type TempNode = {
+    name: string
+    path: string
+    type: 'file' | 'directory'
+    children?: Map<string, TempNode>
+    size?: number
+  }
+
+  const rootDirectories = new Map<string, TempNode>()
+  const rootFiles: FileTreeNode[] = []
+
+  for (const file of files) {
+    const parts = file.path.split('/')
+    if (parts.length === 1) {
+      rootFiles.push({
+        name: file.path,
+        path: file.path,
+        type: 'file',
+        size: file.size,
+      })
+      continue
+    }
+
+    let currentMap = rootDirectories
+    let curPath = ''
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i]
+      curPath = curPath ? `${curPath}/${part}` : part
+      let dirNode = currentMap.get(part)
+      if (!dirNode) {
+        dirNode = {
+          name: part,
+          path: curPath,
+          type: 'directory',
+          children: new Map(),
+        }
+        currentMap.set(part, dirNode)
+      }
+      currentMap = dirNode.children!
+    }
+
+    const fileName = parts[parts.length - 1]
+    currentMap.set(fileName, {
+      name: fileName,
+      path: file.path,
+      type: 'file',
+      size: file.size,
+    })
+  }
+
+  function convertMap(map: Map<string, TempNode>): FileTreeNode[] {
+    const dirs: FileTreeNode[] = []
+    const fls: FileTreeNode[] = []
+
+    for (const node of map.values()) {
+      if (node.type === 'directory') {
+        dirs.push({
+          name: node.name,
+          path: node.path,
+          type: 'directory',
+          children: convertMap(node.children!),
+        })
+      } else {
+        fls.push({
+          name: node.name,
+          path: node.path,
+          type: 'file',
+          size: node.size,
+        })
+      }
+    }
+
+    dirs.sort((a, b) => compareText(a.name, b.name))
+    fls.sort((a, b) => compareText(a.name, b.name))
+    return [...dirs, ...fls]
+  }
+
+  const rootDirs = convertMap(rootDirectories)
+
+  const systemMd = rootFiles.find((f) => f.name === 'SYSTEM.md')
+  const otherFiles = rootFiles
+    .filter((f) => f.name !== 'SYSTEM.md')
+    .sort((a, b) => compareText(a.name, b.name))
+
+  const result: FileTreeNode[] = []
+  if (systemMd) result.push(systemMd)
+  result.push(...rootDirs)
+  result.push(...otherFiles)
+  return result
+}
+
+/** 列出 system 包目录 */
+export function listSystemSlugs(options?: GetOptions): string[] {
+  if (!options?.contentDir && !options?.skipManifest) {
+    const manifest = loadManifestFromDisk()
+    if (manifest) {
+      return manifest.systems?.slugs ?? []
+    }
+  }
+
+  const dir = resolveContentDir('systems', options)
+  if (!fs.existsSync(dir)) return []
+  return fs
+    .readdirSync(dir)
+    .filter((name) => fs.statSync(path.join(dir, name)).isDirectory())
+    .sort()
+}
+
+/** 读取单个 system 包：SYSTEM.md 解析 + 递归目录树生成 */
+export function getSystemPackage(slug: string, options?: GetOptions): SystemPackage {
+  assertSafeSlug(slug)
+  if (!options?.contentDir && !options?.skipManifest) {
+    const manifest = loadManifestFromDisk()
+    if (manifest) {
+      const pkg = manifest.systems?.packages[slug]
+      if (pkg) return pkg
+      const pkgDir = path.join(resolveContentDir('systems', options), slug)
+      const systemFile = path.join(pkgDir, 'SYSTEM.md')
+      throw new ContentNotFoundError(`system 包缺入口：${systemFile}`)
+    }
+  }
+
+  const pkgDir = path.join(resolveContentDir('systems', options), slug)
+  const cacheKey = `${pkgDir}`
+  const cached = systemPackageCache.get(cacheKey)
+  if (cached) return cached
+
+  const systemFile = path.join(pkgDir, 'SYSTEM.md')
+  if (!fs.existsSync(systemFile)) {
+    throw new ContentNotFoundError(`system 包缺入口：${systemFile}`)
+  }
+  const { data, content } = matter(fs.readFileSync(systemFile, 'utf8'))
+  assertMarkdownFences(systemFile, content)
+  const result = systemSchema.safeParse(data)
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('; ')
+    throw new Error(`frontmatter 校验失败 ${systemFile}\n${issues}`)
+  }
+  const files = listSystemFiles(pkgDir)
+  const pkg: SystemPackage = {
+    slug,
+    data: result.data,
+    body: content.trim(),
+    tree: buildFileTree(files),
+    files,
+  }
+  systemPackageCache.set(cacheKey, pkg)
+  return pkg
+}
+
+/** system 包转为条目（供标签/分类等聚合） */
+export function getSystemEntries(options?: GetOptions): CollectionEntry<'systems'>[] {
+  if (!options?.contentDir && !options?.skipManifest) {
+    const manifest = loadManifestFromDisk()
+    if (manifest) {
+      return manifest.systems?.entries ?? []
+    }
+  }
+
+  return listSystemSlugs(options)
+    .map((slug) => {
+      const pkg = getSystemPackage(slug, options)
+      return {
+        collection: 'systems',
+        slug,
+        data: pkg.data,
+        body: pkg.body,
+      } as CollectionEntry<'systems'>
+    })
+    .sort(compareEntries)
+}
+
 /** 构建全量内容清单（供 prebuild 生成静态 manifest.json） */
 export function buildContentManifest(options?: GetOptions): ContentManifest {
   const opts: GetOptions = { ...options, skipManifest: true }
@@ -641,6 +935,7 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
     life: [],
     music: [],
     skills: [],
+    systems: [],
   } as ContentManifest['collections']
 
   collections.posts = fs.existsSync(resolveContentDir('posts', opts))
@@ -660,6 +955,14 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
   }
   const skillEntries = getSkillEntries(opts)
   collections.skills = skillEntries
+
+  const systemSlugs = listSystemSlugs(opts)
+  const systemPackages: Record<string, SystemPackage> = {}
+  for (const slug of systemSlugs) {
+    systemPackages[slug] = getSystemPackage(slug, opts)
+  }
+  const systemEntries = getSystemEntries(opts)
+  collections.systems = systemEntries
 
   const allEntries = getAllEntries(opts)
 
@@ -696,6 +999,11 @@ export function buildContentManifest(options?: GetOptions): ContentManifest {
       slugs,
       packages,
       entries: skillEntries,
+    },
+    systems: {
+      slugs: systemSlugs,
+      packages: systemPackages,
+      entries: systemEntries,
     },
     allEntries,
     categories,

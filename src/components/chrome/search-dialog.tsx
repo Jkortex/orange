@@ -35,6 +35,7 @@ const tooltipPosition = 'left-1/2 top-full mt-1.5 -translate-x-1/2'
 const SCOPE_BADGES: Partial<Record<SearchScope, string>> = {
   posts: TYPE_LABELS.posts,
   skills: TYPE_LABELS.skills,
+  systems: TYPE_LABELS.systems,
   life: TYPE_LABELS.life,
   music: TYPE_LABELS.music,
 }

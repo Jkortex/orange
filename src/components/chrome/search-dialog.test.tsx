@@ -182,10 +182,10 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     const group = screen.getByRole('group', { name: '搜索范围过滤' })
     const stops = () => within(group).getAllByRole('button').map((b) => b.tabIndex)
 
-    expect(stops()).toEqual([0, -1, -1, -1, -1])
+    expect(stops()).toEqual([0, -1, -1, -1, -1, -1])
 
     fireEvent.click(within(group).getByRole('button', { name: '生活' }))
-    expect(stops()).toEqual([-1, -1, -1, 0, -1])
+    expect(stops()).toEqual([-1, -1, -1, -1, 0, -1])
   })
 
   it('组内 ←/→/Home/End 移动焦点并直接切换范围，首尾回绕', () => {
@@ -225,7 +225,7 @@ describe('SearchDialog 统一智能搜索正常渲染', () => {
     fireEvent.keyDown(input, { key: 'ArrowRight', shiftKey: true })
     expect(pressed('文章')).toBe('true')
 
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       fireEvent.keyDown(input, { key: 'ArrowRight', shiftKey: true })
     }
     expect(pressed('全部')).toBe('true')

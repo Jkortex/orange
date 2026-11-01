@@ -17,7 +17,9 @@ vi.mock('@/lib/content', () => ({
   getCollection: vi.fn(() => []),
   getSkillPackage: vi.fn(),
   listSkillSlugs: vi.fn(() => []),
-  TAGGED_TYPES: ['posts', 'life', 'music', 'skills'],
+  getSystemPackage: vi.fn(),
+  listSystemSlugs: vi.fn(() => []),
+  TAGGED_TYPES: ['posts', 'life', 'music', 'skills', 'systems'],
 }))
 
 const mockedGet = vi.mocked(getSkillPackage)
@@ -54,6 +56,7 @@ describe('sitemap 技能包文件页', () => {
       'https://orange-cnc.pages.dev/life',
       'https://orange-cnc.pages.dev/music',
       'https://orange-cnc.pages.dev/skills',
+      'https://orange-cnc.pages.dev/systems',
       'https://orange-cnc.pages.dev/columns/distributed-go',
       'https://orange-cnc.pages.dev/columns/ai-ddd',
       'https://orange-cnc.pages.dev/columns/spring-boot-angular',

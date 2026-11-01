@@ -42,22 +42,25 @@ function renderChips(initial: SearchScope = 'all') {
 }
 
 describe('stepScope 范围顺序', () => {
-  it('按 全部 → 文章 → 技能 → 生活 → 音乐 前进，末尾回绕到开头', () => {
+  it('按 全部 → 文章 → 技能 → 系统 → 生活 → 音乐 前进，末尾回绕到开头', () => {
     expect(stepScope('all', 1)).toBe('posts')
+    expect(stepScope('skills', 1)).toBe('systems')
+    expect(stepScope('systems', 1)).toBe('life')
     expect(stepScope('music', 1)).toBe('all')
   })
 
   it('后退顺序相反，开头回绕到末尾', () => {
     expect(stepScope('posts', -1)).toBe('all')
+    expect(stepScope('systems', -1)).toBe('skills')
     expect(stepScope('all', -1)).toBe('music')
   })
 })
 
 describe('SearchFilterChips 渲染', () => {
-  it('渲染五个范围，当前范围 aria-pressed=true', () => {
+  it('渲染六个范围，当前范围 aria-pressed=true', () => {
     const { pressed } = renderChips('life')
 
-    for (const name of ['全部', '文章', '技能', '生活', '音乐']) {
+    for (const name of ['全部', '文章', '技能', '系统', '生活', '音乐']) {
       expect(pressed(name)).toBe(name === '生活' ? 'true' : 'false')
     }
   })
@@ -84,10 +87,10 @@ describe('SearchFilterChips 键盘操作', () => {
   it('整组只占一个 Tab 停靠点，停靠点跟着当前范围走', () => {
     const { stops, chip } = renderChips()
 
-    expect(stops()).toEqual([0, -1, -1, -1, -1])
+    expect(stops()).toEqual([0, -1, -1, -1, -1, -1])
 
     fireEvent.click(chip('生活'))
-    expect(stops()).toEqual([-1, -1, -1, 0, -1])
+    expect(stops()).toEqual([-1, -1, -1, -1, 0, -1])
   })
 
   /*
@@ -112,6 +115,7 @@ describe('SearchFilterChips 键盘操作', () => {
     // 走到末尾后继续 →：回绕到「全部」
     fireEvent.keyDown(chip('文章'), { key: 'ArrowRight' })
     fireEvent.keyDown(chip('技能'), { key: 'ArrowRight' })
+    fireEvent.keyDown(chip('系统'), { key: 'ArrowRight' })
     fireEvent.keyDown(chip('生活'), { key: 'ArrowRight' })
     expect(pressed('音乐')).toBe('true')
 

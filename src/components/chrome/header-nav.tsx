@@ -14,6 +14,7 @@ export const defaultNavItems: NavItem[] = [
   { href: '/life', label: '生活' },
   { href: '/music', label: '音乐' },
   { href: '/skills', label: '技能' },
+  { href: '/systems', label: '系统' },
 ]
 
 /*

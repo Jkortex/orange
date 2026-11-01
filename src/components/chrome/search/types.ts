@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type SearchScope = 'all' | 'posts' | 'skills' | 'life' | 'music'
+export type SearchScope = 'all' | 'posts' | 'skills' | 'systems' | 'life' | 'music'
 
 /*
  * combobox ↔ listbox 的 DOM 契约：输入框用 aria-controls 指向列表容器，
