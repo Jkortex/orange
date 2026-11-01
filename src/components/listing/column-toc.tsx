@@ -13,6 +13,14 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { iconButtonClass } from '@/components/primitives/icon-button'
+import { Tip } from '@/components/primitives/tip'
+import {
+  useFloatingStackOffset,
+  FLOATING_STACK_ANCHOR,
+  FLOATING_STACK_BUTTON,
+  FLOATING_STACK_TIP,
+} from '@/lib/floating-stack'
+import { scrollToHeading } from '@/lib/scroll'
 
 /*
  * 专栏目录浮动入口：
@@ -28,6 +36,17 @@ export type ColumnTocPhase = {
 
 export function ColumnToc({ phases }: { phases: ColumnTocPhase[] }) {
   const [open, setOpen] = useState(false)
+  // 与回到顶部 / 移动端目录共用右下角浮动栈档位：回到顶部出现时上抬让位，
+  // 播放条出现时整栈再抬一层；自己硬编码 bottom-* 会被回到顶部按钮盖住
+  const bottomClass = useFloatingStackOffset()
+
+  // 阶段锚点必须手动滚动：Sheet 关闭会立即卸载触发元素，浏览器默认的 hash 跳转
+  // 因此不生效（地址栏与视口都不动）。先滚动再关闭，与文章目录抽屉保持一致。
+  function handlePhaseClick(event: React.MouseEvent<HTMLAnchorElement>, id: string) {
+    event.preventDefault()
+    scrollToHeading(id)
+    setOpen(false)
+  }
 
   // c 打开专栏目录：单键，输入框内由 hotkeys 默认忽略；浮层开着时不抢
   useHotkey('C', () => {
@@ -43,10 +62,11 @@ export function ColumnToc({ phases }: { phases: ColumnTocPhase[] }) {
           aria-label="打开专栏目录"
           className={iconButtonClass(
             'md',
-            'fixed right-4 bottom-20 z-40 border border-border-strong bg-surface/85 backdrop-blur-md transition-colors duration-150 hover:border-primary/50 hover:bg-surface hover:text-primary active:scale-95',
+            `${FLOATING_STACK_ANCHOR} ${bottomClass} ${FLOATING_STACK_BUTTON} active:scale-95`,
           )}
         >
           <List className="size-4" aria-hidden />
+          <Tip className={FLOATING_STACK_TIP}>专栏目录</Tip>
         </button>
       </SheetTrigger>
 
@@ -72,6 +92,7 @@ export function ColumnToc({ phases }: { phases: ColumnTocPhase[] }) {
                 <SheetClose asChild>
                   <a
                     href={`#phase-${index}`}
+                    onClick={(event) => handlePhaseClick(event, `phase-${index}`)}
                     className="type-item flex items-center gap-2 font-semibold text-foreground transition-colors hover:text-primary"
                   >
                     <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">
