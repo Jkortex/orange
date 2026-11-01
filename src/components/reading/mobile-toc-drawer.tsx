@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { List, Sparkles, X } from 'lucide-react'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import type { TocHeading } from '@/lib/toc'
 import { scrollToHeading } from '@/lib/scroll'
 import {
@@ -127,6 +128,12 @@ export function MobileTocDrawer({
       setIsOpen(false)
     }, 1500)
   }
+
+  useHotkey('G', () => {
+    // 若有弹窗开着（搜索、帮助）则不抢
+    if (document.querySelector('[role="dialog"]') !== null) return
+    triggerExplain()
+  })
 
   const currentProviderName = AI_PROVIDERS[aiProvider]?.name || 'DeepSeek'
 

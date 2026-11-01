@@ -187,4 +187,25 @@ describe('MobileTocDrawer 选中小节并转到 Gemini 解释', () => {
       'noopener,noreferrer',
     )
   })
+
+  it('支持按键 g 快捷触发 AI 解释', async () => {
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
+    vi.stubGlobal('open', vi.fn())
+
+    render(<MobileTocDrawer headings={mockHeadings} articleTitle="快捷键测试文章" />)
+
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'g' })
+    })
+
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('https://chat.deepseek.com/?q='),
+      '_blank',
+      'noopener,noreferrer',
+    )
+  })
 })

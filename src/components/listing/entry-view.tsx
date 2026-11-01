@@ -176,36 +176,6 @@ export function EntryView({
           <div className="mt-8">
             <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
           </div>
-          {hasToc && <MobileTocDrawer headings={headings} articleTitle={entry.data.title} desktop />}
-        </div>
-      ) : hasToc ? (
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="grid grid-cols-1 xl:grid-cols-[14rem_minmax(0,48rem)_14rem] justify-center gap-8">
-            {/* 左侧等宽空白列：在 xl 屏幕下占据 14rem，保证中间 48rem 正文物理绝对居中 */}
-            <div className="hidden xl:block" aria-hidden="true" />
-
-            {/* 中间正文列：48rem (max-w-3xl)，阅读空间舒展，与上方的 Header 严丝合缝对齐 */}
-            <article className="min-w-0 w-full max-w-3xl mx-auto">
-              <MarkdownRenderer>{entry.body}</MarkdownRenderer>
-              {photos && photos.length > 0 && (
-                <PhotoGallery photos={photos} alt={entry.data.title} />
-              )}
-              <A11yScrollable />
-
-              <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
-            </article>
-
-            {/* 右侧 TOC 列：顶端与正文第一行完美平齐！高度被 grid stretch 自动拉伸，sticky 滚动常驻。
-                高度上限经 className 交给 Toc 自己（滚动发生在卡片内部），外层只负责 sticky 定位 */}
-            <aside className="hidden xl:block">
-              <div className="sticky top-[calc(var(--header-height)+1.5rem)]">
-                <Toc headings={headings} articleTitle={entry.data.title} className="max-h-[calc(100vh-var(--header-height)-3rem)]" />
-              </div>
-            </aside>
-          </div>
-
-          {/* 移动端目录抽屉（脱离 grid 容器，避免干扰正文网格流） */}
-          <MobileTocDrawer headings={headings} articleTitle={entry.data.title} />
         </div>
       ) : (
         <article className={`mx-auto w-full ${contentWidth}`}>
@@ -218,6 +188,9 @@ export function EntryView({
           <AdjacentNav collection={entry.collection} prev={adjacent.prev} next={adjacent.next} />
         </article>
       )}
+
+      {/* 浮动目录抽屉：统一全端交互（移动端与桌面端均采用右下角浮动胶囊入口，正文始终保持纯净居中） */}
+      {hasToc && <MobileTocDrawer headings={headings} articleTitle={entry.data.title} desktop />}
 
       <ReadingControls />
     </div>
