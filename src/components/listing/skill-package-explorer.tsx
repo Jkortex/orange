@@ -10,6 +10,7 @@ import { Toc } from '@/components/reading/toc'
 import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
 import { ReadingProgress } from '@/components/reading/reading-progress'
 import { DetailHeader } from '@/components/listing/detail-header'
+import { ReadingControls } from '@/components/reading/reading-controls'
 import { useCopyText } from '@/components/primitives/use-copy-text'
 import { scrollToHeading } from '@/lib/scroll'
 import { skillFileHref } from '@/lib/skill-routes'
@@ -267,6 +268,8 @@ export function SkillPackageExplorer({
         {/* 移动端目录抽屉 */}
         <MobileTocDrawer headings={headings} />
       </div>
+
+      <ReadingControls />
     </article>
   )
 }

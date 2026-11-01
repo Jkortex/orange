@@ -169,3 +169,13 @@ describe('EntryView 双栏独立滚动对照模式', () => {
     expect(html).toContain('max-w-7xl')
   })
 })
+
+describe('EntryView 阅读选项控件', () => {
+  it('渲染包含字号调节与全屏阅读的 ReadingControls 胶囊', async () => {
+    const html = await renderToHtml(makeEntry('这是正文'))
+
+    expect(html).toContain('aria-label="阅读选项"')
+    expect(html).toContain('调整正文字号')
+    expect(html).toContain('进入 Zen 全屏阅读')
+  })
+})

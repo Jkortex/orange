@@ -95,11 +95,25 @@
      分类条吸顶、侧栏吸顶与锚点避让全部读这个变量——顶栏一改，别处不会跟着漂 */
   :root {
     --header-height: 3.5rem;
+    --content-font-size: 1rem;
   }
   @media (min-width: 40rem) {
     :root {
       --header-height: 4rem;
     }
+  }
+
+  html[data-font-size='sm'] {
+    --content-font-size: 0.9375rem;
+  }
+  html[data-font-size='base'] {
+    --content-font-size: 1rem;
+  }
+  html[data-font-size='lg'] {
+    --content-font-size: 1.125rem;
+  }
+  html[data-font-size='xl'] {
+    --content-font-size: 1.25rem;
   }
 
   html {
@@ -412,6 +426,7 @@ html.dark code[data-theme] span[style*='--shiki'] {
 /* 正文排版精细化增强：呼吸感节奏、高质感行内代码与引用块 */
 .prose {
   max-width: none;
+  font-size: var(--content-font-size, 1rem);
   /* 正文与 UI 统一使用 HarmonyOS Sans，保持全站字形和节奏一致 */
   font-family: var(--font-sans);
   text-wrap: pretty;
@@ -666,7 +681,7 @@ html.dark code[data-theme] span[style*='--shiki'] {
 html.zen header,
 html.zen footer,
 html.zen [data-bar],
-html.zen .fixed:not(.zen-toggle) {
+html.zen .fixed:not(.zen-toggle):not(.reading-controls) {
   display: none !important;
 }
 
@@ -675,6 +690,7 @@ html.zen main {
   padding-bottom: 1.5rem;
 }
 
-html.zen .zen-toggle {
+html.zen .zen-toggle,
+html.zen .reading-controls {
   display: inline-flex !important;
 }

@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   description: '个人博客：文章、生活、摄影与音乐',
 }
 
-// 首帧前读取持久化的主题偏好（主题名 + 深浅色），防止闪烁；未设置时跟随系统
-const themeInitScript = `(function(){try{var t=localStorage.getItem('theme-name');if(t)document.documentElement.dataset.theme=t;var m=localStorage.getItem('theme-mode');var d=m?m==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})()`
+// 首帧前读取持久化的主题偏好（主题名 + 深浅色）与正文字号偏好，防止闪烁；未设置时跟随系统/默认
+const themeInitScript = `(function(){try{var t=localStorage.getItem('theme-name');if(t)document.documentElement.dataset.theme=t;var m=localStorage.getItem('theme-mode');var d=m?m==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.documentElement.style.colorScheme=d?'dark':'light';var f=localStorage.getItem('content-font-size');if(f)document.documentElement.dataset.fontSize=f;}catch(e){}})()`
 
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
