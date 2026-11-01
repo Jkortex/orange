@@ -205,8 +205,6 @@ stateDiagram-v2
 
 <!-- split -->
 
-# 原著完整参考：第 15 章 迭代器模式与高阶管道（Iterators）
-
 > 那是非常漫长一天的终点。
 >
 > —— **Phil Connors**（电影《土拨鼠之日》主角）

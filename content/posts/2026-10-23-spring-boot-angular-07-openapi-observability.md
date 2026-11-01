@@ -213,8 +213,6 @@ sequenceDiagram
 
 <!-- split -->
 
-# 原著完整参考：第 7 章 使用 OpenAPI 编写 API 文档并启用应用可观测性（Documenting APIs with OpenAPI and Enabling Application Observability）
-
 在上一章中，我们通过引入 Netflix Eureka 服务发现机制与 Spring Cloud Gateway 网关路由，为在线书店（Bookstore）构建了一套弹性高可用的通信基础设施。微服务之间得以动态寻址感知与协同交互，外部客户端也能通过统一规范的网关入口平滑消费后端微服务。
 
 当服务具备了动态发现与外部可达能力之后，架构演进的下一个关键闭环便是让微服务变得**清晰可懂（Understandable）**与**全面可观测（Observable）**。在分布式团队协作、故障深度排查、新员工快速入职以及生产高可靠保障中，完善的 API 文档契约与立体化的可观测性体系是无可替代的核心生命线。

@@ -156,8 +156,6 @@ flowchart TD
 | 在 SSR 渲染引擎中完全不校验 `allowedHosts` 允许任意主机头。 | 严格显式配置 `['localhost', '127.0.0.1']` 白名单，从根源规避 Host 头投毒与 SSRF 风险。 |
 
 <!-- split -->
-# 原著完整参考：第 20 章 构建与部署 Angular 前端（Building and Deploying the Angular Frontend）
-
 在上一章中，我们使用服务端发送事件（Server-Sent Events, SSE）为书店系统注入了实时推送能力，至此完整覆盖了现代全栈系统的数据交互形态：用于增删改查的请求-响应模式、用于提升 SEO 和首屏性能的服务端渲染（SSR）模式，以及用于感知近实时变动的服务端推送模式。我们的应用在功能层面上已彻底完备。
 
 在本章中，我们将把重心从“业务特性开发”转移到“面向生产环境的工程交付”上，利用在第 10 章容器化 Spring Boot 后端时采用的标准化容器工作流，将 Angular 前端应用打包为一个工业级的 Docker 镜像。

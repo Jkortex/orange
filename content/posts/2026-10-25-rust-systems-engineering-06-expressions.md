@@ -216,8 +216,6 @@ const _: () = {
 
 <!-- split -->
 
-# 原著完整参考：表达式导向与控制流：模式匹配（Pattern Matching）与 let-else 范式
-
 在表面看来，Rust 的基本控制流结构与 C、C++ 或 Java 颇为相似：有 `if` 分支、有 `while` 循环、有函数调用、也有类似 switch 的 `match`。
 
 然而，在这种熟悉的表象之下，潜藏着一个极其深刻的范式分野：

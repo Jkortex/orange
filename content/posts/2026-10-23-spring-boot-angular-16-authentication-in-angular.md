@@ -208,8 +208,6 @@ sequenceDiagram
 | 仅在前端清除 LocalStorage 即视同完成用户退出。 | 派发注销请求通知后端/Keycloak 销毁服务端 Session，并在失败时实施前端保底注销。 |
 
 <!-- split -->
-# 原著完整参考：第 16 章 在 Angular 中添加认证机制（Adding Authentication in Angular）
-
 在上一章中，我们使用 NgRx Events Plugin 和 Mock 数据构建了一个完整的认证状态管理仓库（AuthStore）。我们按事件来源划分定义了各个事件，实现了用于状态迁移的 Reducer，编写了处理异步操作的事件处理器（Event Handlers），并将整套状态逻辑与登录（Sign-in）及注册（Sign-up）页面进行了联动。虽然当时的 Store 架构已经非常健壮，但其底层仍然依赖一个返回硬编码 Token 和模拟网络延迟的伪服务。
 
 在本章中，我们将用针对 Spring Boot 后端的真实 HTTP 调用替换这一 Mock 层。我们将配置基于环境的 API 基础 URL，使用 Angular 的 `HttpClient` 重写 `AuthService`，添加一个为每个外部请求自动附加 JWT 令牌的 HTTP 拦截器，在访问令牌过期时透明地处理 Token 静默刷新，利用函数式路由守卫（Functional Route Guards）保护系统路由，并构建一个用于查看和编辑账户详情的用户个人资料页面。由于 `AuthStore` 的事件处理器通过我们在第 15 章建立的统一方法签名来调用服务，因此 Store 本身无需做任何破坏性变动。这就是“面向接口而非实现编程”带来的巨大回报。

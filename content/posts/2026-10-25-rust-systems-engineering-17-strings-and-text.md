@@ -188,8 +188,6 @@ stateDiagram-v2
 
 <!-- split -->
 
-# 原著完整参考：第 17 章 字符串与文本处理（Strings and Text）
-
 > 语言是思想的外衣。
 >
 > —— **塞缪尔·约翰逊**（Samuel Johnson）

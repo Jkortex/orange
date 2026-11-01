@@ -198,8 +198,6 @@ public interface UserRepository extends MongoRepository<User, String> {
 
 <!-- split -->
 
-# 原著完整参考：第 4 章 使用 Spring Data 配置数据库与仓储（Setting Up Databases and Repositories Using Spring Data）
-
 在上一章中，我们探索了现代软件开发者如何利用类似 GitHub Copilot 这样的生成式 AI 工具实现研发效能跃升。你已经看到这些工具如何协助快速生成 Spring 控制器骨架、智能推导仓储查询方法以及编写单元测试切片，从而显著加快微服务开发节奏。
 
 而在本章中，我们将为你全面夯实使用 Spring Data 实现数据持久化所需的一切技能基石。我们将分别搭建用于处理结构化关系数据的 **PostgreSQL**，以及用于存储非结构化文档型用户档案的 **MongoDB**。你将系统掌握如何将 Java 类映射为关系数据表与文档集合、深度运用 Spring Data 仓储体系，并严格遵循工程最佳实践打造干净、可维护的持久化分层架构。

@@ -178,8 +178,6 @@ func (s *AccountService) SafeDeductBalance(ctx context.Context, accountID string
 
 <!-- split -->
 
-# 原著完整参考：事务与隔离级别（Transactions）
-
 > “**一些学者曾断言：通用两阶段提交（2PC）由于其带来的巨大性能损耗和可用性瓶颈，根本无法在生产系统中大规模落地。然而我们坚信：宁可让应用层工程师在业务出现性能瓶颈时再去排查因过度滥用事务导致的局部问题，也绝不能让他们在底层缺乏事务保护的环境下，日复一日地在业务代码里痛苦修补各种数据并发漏洞。**”
 > 
 > —— James Corbett 等人，《Spanner: Google 的全球级分布式数据库》（2012）

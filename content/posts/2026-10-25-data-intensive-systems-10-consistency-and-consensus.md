@@ -144,8 +144,6 @@ func (m *DistributedLockManager) ExecuteWithLock(ctx context.Context, lockKey st
 
 <!-- split -->
 
-# 原著完整参考：一致性与共识算法（Consistency and Consensus）
-
 > “**一句古老的格言告诫我们：‘出海航行切莫携带两块航海天文钟；要么带上一块，要么带上三块。’**”
 > 
 > —— Frederick P. Brooks Jr.，《人月神话》（The Mythical Man-Month, 1995）

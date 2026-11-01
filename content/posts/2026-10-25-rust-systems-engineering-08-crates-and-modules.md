@@ -316,8 +316,6 @@ flowchart LR
 
 <!-- split -->
 
-# 原著完整参考：第 8 章 Crates 与 Modules（Crates and Modules）
-
 > 这正是 Rust 核心旋律中的一个强音：系统程序员终于能够拥有称心如意的美好事物了。
 >
 > —— **罗伯特·奥卡拉汉**（Robert O'Callahan），知名浏览器引擎架构师

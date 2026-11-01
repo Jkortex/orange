@@ -168,8 +168,6 @@ func (s *ProtectedStorage) WriteWithFencing(ctx context.Context, resourceID stri
 
 <!-- split -->
 
-# 原著完整参考：不可靠分布式现实（The Trouble with Distributed Systems）
-
 > “**事故真是些奇奇怪怪的玩意儿——在它们真正发生之前，你永远觉得它们绝不可能发生。**”
 > 
 > —— A.A. Milne，《小熊维尼的房子》（The House at Pooh Corner, 1928）

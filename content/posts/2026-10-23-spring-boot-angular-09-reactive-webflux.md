@@ -213,8 +213,6 @@ sequenceDiagram
 
 <!-- split -->
 
-# 原著完整参考：第 9 章 使用 Spring WebFlux 进行响应式编程（Reactive Programming Using Spring WebFlux）
-
 在上一章中，我们将重心聚焦于微服务架构的纵深安全防护。通过引入基于 JWT 的轻量无状态认证、在 API 网关统一编排 Spring Security 路由规则，以及向下游微服务安全透传用户身份上下文，我们的微服务建立起了清晰可信的安全边界。然而，系统在逻辑上的安全合规并不自动等价于具备高并发下的弹性吞吐能力。
 
 本章将推动在线书店（Bookstore）的库存微服务（Inventory Service）发生质的飞跃——将其从一个被动等待请求的传统 CRUD 组件，升级为能够以极低服务器资源开销、向成千上万客户端实时流式推送（Real-Time Streaming）业务事件的高性能系统。要实现这一架构跨越，我们必须重新审视多年来在企业级开发中视作理所当然的一项核心假设：**每个请求占用一个线程的阻塞式模型（Thread-per-Request Model）**。

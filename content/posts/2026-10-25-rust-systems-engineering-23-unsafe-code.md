@@ -281,8 +281,6 @@ impl<T> Drop for GapBuffer<T> {
 
 <!-- split -->
 
-# 原著完整参考：Unsafe Rust 与底层契约（Chapter 23: Unsafe Code）
-
 > “愿无人视我为卑微、懦弱或顺从；  
 > 愿世人明晓我乃另类灵魂：  
 > 于敌凶险凌厉，于友忠贞不渝。  

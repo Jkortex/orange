@@ -359,8 +359,6 @@ sequenceDiagram
 
 <!-- split -->
 
-# 原著完整参考：第 1 章 系统程序员的福音（Systems Programmers Can Have Nice Things）
-
 > 在特定的工程语境中——例如 Rust 所锁定的系统级应用场景——比竞争对手快上 10 倍甚至是 2 倍，都往往具有一锤定音的决定性意义。它决定了一个系统在工业市场中的终极命运，其残酷程度丝毫不亚于硬件市场的生死抉择。
 >
 > —— **Graydon Hoare**（Rust 语言奠基者）

@@ -247,8 +247,6 @@ flowchart TD
 
 <!-- split -->
 
-# 原著完整参考：第 10 章 构建与打包 Spring Boot 后端应用（Building and Packaging the Spring Boot Backend）
-
 在前面的章节中，我们依托 Spring Boot、Spring Data、Spring Security 与 Spring WebFlux 等现代 Java 全栈技术，逐步构建起了在线书店（Bookstore）完整的后端微服务体系。我们不仅实现了库存微服务（Inventory Service）与用户微服务（User Service）的核心业务，还搭建了 Eureka 注册中心、Spring Cloud Gateway 统一网关、Zipkin 全链路分布式追踪与 Keycloak 身份认证中心等一系列支撑组件。
 
 然而，截至目前，我们的关注点主要聚焦在“本地编码实现”与“内部领域架构”上。迈向真实生产世界的必由之路，是对这些微服务进行标准化的构建、打包与工业级容器化部署。

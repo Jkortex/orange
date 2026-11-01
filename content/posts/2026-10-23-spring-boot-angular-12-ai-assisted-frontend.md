@@ -124,8 +124,6 @@ describe('BookList Component - Integration Tests', () => {
 
 <!-- split -->
 
-# 原著完整参考：第 12 章 准备 AI 辅助前端开发（Preparing for AI-Assisted Frontend Development）
-
 在上一章中，我们为 Angular 应用程序搭建了具备高可扩展性的项目结构，利用 Angular Material 和基于 Signal 的响应式机制实现了核心组件，并使用 Vitest 配置了测试基础底座。现在，我们准备为应用程序引入更高级的特性和面向真实场景的功能。
 
 在*第 3 章*中，我们全面探索了 AI 开发助手，对比了 Cursor、Claude 和 GitHub Copilot 等工具，并确立了跨越后端与前端语境的 AI 辅助开发最佳实践。我们在 VS Code 中配置了 GitHub Copilot，学习了提示词工程（Prompt Engineering）基础，并探讨了何时该信任 AI 生成的代码，何时又该进行批判性审查。现在，我们将在该基础之上，专门将这些原则应用到我们的 Angular 前端开发工作流中。

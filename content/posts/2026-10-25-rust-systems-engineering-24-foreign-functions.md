@@ -297,8 +297,6 @@ impl Drop for SafeCommit<'_> {
 
 <!-- split -->
 
-# 原著完整参考：FFI 跨语言互操作（Chapter 24: Foreign Functions）
-
 > “赛博空间。难以想象的复杂性。意识的非物理空间中排列的道道光流，数据的簇群与星座。宛如城池夜景，渐渐远逝……”
 > 
 > —— 威廉·吉布森，《神经漫游者》（Neuromancer）

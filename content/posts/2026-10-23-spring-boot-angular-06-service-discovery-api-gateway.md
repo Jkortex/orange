@@ -220,8 +220,6 @@ flowchart TD
 <!-- split -->
 
 
-# 原著完整参考：第 6 章 使用 Spring Cloud 开发服务发现与 API 网关（Developing Service Discovery and an API Gateway Using Spring Cloud）
-
 在上一章中，我们设计并实现了业务服务层与 REST API，为在线书店（Bookstore）应用程序公开了核心业务功能。尽管我们的服务现在已经具备模块化和可测试性，但它们在分布式系统中的通信与伸缩扩展方面仍存在局限性。在生产级微服务架构中，服务必须能够动态定位彼此、从容优雅地应对故障，并以安全受控的方式路由客户端流量。这正是**服务发现（Service Discovery）**与 **API 网关（API Gateway）**模式发挥关键作用的地方。这些基础构件在微服务与客户端之间搭建起了灵活通信的桥梁。
 
 在本章中，我们将首先深入探讨服务发现的核心概念，并基于 Spring Cloud Eureka 实现一个专用的服务发现中心（Eureka Discovery Server）。在将库存服务（inventory-ms）与用户服务（user-ms）注册到 Eureka 之后，我们将构建一个 Spring Cloud Gateway 统一网关，将外部客户端请求动态路由至正确的微服务。

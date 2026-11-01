@@ -310,8 +310,6 @@ sequenceDiagram
 
 <!-- split -->
 
-# 原著完整参考：第 7 章 错误处理（Error Handling）
-
 > 我早就知道，只要我活得足够久，这种事情终究是会发生的。
 >
 > —— **乔治·伯纳德·萧**（George Bernard Shaw，谈及死亡）

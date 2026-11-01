@@ -247,8 +247,6 @@ describe('BookList Component (Dumb)', () => {
 
 <!-- split -->
 
-# 原著完整参考：第 11 章 搭建 Angular 项目与架构体系（Setting Up Our Angular Project and Architecture）
-
 在上一章中，我们对 Spring Boot 后端进行了打包以用于生产部署。你了解了可执行 JAR 与容器镜像之间的区别、如何为微服务构建镜像，以及如何将它们推送到镜像仓库以便在各环境中保持一致运行。现在，是时候将注意力转向前端了。
 
 在本章中，我们将使用 Angular 22 开始构建前端应用程序。我们将逐步完成项目创建、目录结构组织，并构建一个兼具可伸缩性与可维护性的架构体系。你还将亲自动手实践组件和路由等核心 Angular 概念，并充分利用 Angular 22 提供的现代增强特性，包括基于信号（Signals）的响应式体系，以及使用 `@if` 和 `@for` 的模板控制流语法。

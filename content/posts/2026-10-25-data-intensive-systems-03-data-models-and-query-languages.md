@@ -148,8 +148,6 @@ LIMIT 20;
 
 <!-- split -->
 
-# 原著中文精译：数据模型与查询语言（第二版精译与语境解析）
-
 > “我的语言的边界，意味着我的世界的边界。”  
 > —— **Ludwig Wittgenstein**，《逻辑哲学论》（*Tractatus Logico-Philosophicus*，1922）
 

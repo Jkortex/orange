@@ -205,8 +205,6 @@ export class SigninPage implements OnInit {
 
 <!-- split -->
 
-# 原著完整参考：第 15 章 使用 Signals 与 Store 管理状态（Managing State with Signals and Stores）
-
 在上一章中，我们重点构建了用于支持认证和图书管理业务流程的高级响应式表单。我们建立了可复用的表单模式，实现了高级校验，集成了 Angular Material 以打造精致的 UI，甚至借助 AI 辅助开发简化了重复的表单创建任务。
 
 在本章中，我们将把注意力转向一个全新的挑战：随着书店应用复杂度的攀升，如何高效管理应用程序状态。我们将从 Angular 的信号原语（Signal primitives）讲起，接着探讨当状态规模超出组件间直接传递的承载能力时，为什么引入 Store（状态仓库）会成为必然选择。

@@ -192,8 +192,6 @@ class PaymentDurableWorkflow:
 
 <!-- split -->
 
-# 原著中文精译：数据编码与模式演化（第二版精译与语境解析）
-
 > “万物皆变，无物常驻。”  
 > —— **Heraclitus of Ephesus**，引自柏拉图《克拉底鲁篇》（*Cratylus*，公元前 360 年）
 

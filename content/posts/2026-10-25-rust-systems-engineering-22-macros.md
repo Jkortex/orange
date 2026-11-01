@@ -289,8 +289,6 @@ pub fn derive_custom_builder(input: TokenStream) -> TokenStream {
 
 <!-- split -->
 
-# 原著完整参考：元编程与宏体系（Chapter 22: Macros）
-
 > “集句诗（Cento，源自拉丁语‘拼凑物’）是一种完全由引用另一位诗人的诗句拼接而成的诗篇。”
 > 
 > —— 马特·马登（Matt Madden）

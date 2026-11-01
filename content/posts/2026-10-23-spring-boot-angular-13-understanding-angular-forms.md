@@ -205,8 +205,6 @@ export function uniqueUsernameValidator(): AsyncValidatorFn {
 
 <!-- split -->
 
-# 原著完整参考：第 13 章 理解 Angular 表单（Understanding Angular Forms）
-
 在上一章中，我们建立了基于 AI 辅助的 Angular 开发综合框架。我们探讨了 GitHub Copilot 的三种工作模式，创建了用于为 AI 工具注入项目特定上下文的指令文件，并深入梳理了在自动化生成与深思熟虑的架构决策之间保持平衡的最佳实践。随着 AI 辅助研发工作流的就绪并为加速开发奠定基础，现在我们准备好攻克用户输入处理的核心基石。
 
 在本章中，我们将探索 Angular 表单系统的理论基石，深入理解在现代 Web 应用程序中实现健壮表单处理的核心概念、设计模式以及校验策略。学完本章后，你将透彻理解模板驱动表单与响应式表单之间的本质差异，精通 `FormGroup` 与 `FormControl` 的核心机制，掌握各类校验模式，并学会利用 `FormBuilder` 服务极简化表单构建。

@@ -184,8 +184,6 @@ flowchart TD
 
 <!-- split -->
 
-# 原著完整参考：第 14 章 闭包系统（Closures）
-
 > 拯救生态环境！从今天起创建一个闭包！
 >
 > —— **Cormac Flanagan**（著名计算机科学家）

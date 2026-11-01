@@ -248,8 +248,6 @@ sequenceDiagram
 
 <!-- split -->
 
-# 原著完整参考：第 8 章 使用 Spring Security 和 JWT 保护微服务安全（Securing Microservices with Spring Security and JWT）
-
 在前面的章节中，我们已经构建了现代化微服务架构的核心基石：将单体业务解耦为独立的微服务、实现了动态服务发现，并引入了 API 网关作为外部客户端的统一接入入口。这些基础设施让我们的服务能够可靠交互、独立水平伸缩，并向外部展现整洁一致的调用界面。然而，一旦服务面向网络暴露，**安全便成为了最高优先级的头等架构关注点（First-Class Architectural Concern）**。在分布式系统中，每一次跨网络跳转都是潜在的受攻击面，所有跨进程调用在默认情况下都必须被视作不可信。缺乏健壮的安全防御体系，微服务架构将极其脆弱、混乱并漏洞百出。
 
 本章专注于为在线书店（Bookstore）系统建立一个集中化、标准化的安全防御架构。我们将引入现代身份管理理念，将认证职责全权委托给专用的身份提供商（Identity Provider, IdP），并依托 **Spring Boot Security** 与 **JSON Web Token（JWT）** 统一步骤地实施细粒度访问控制。通过将外部身份提供商与 Spring Security 深度整合，并在 API 网关层筑起第一道安全防线，我们确保进入系统的每一个 HTTP 请求都经过了严格的认证（Authentication）、授权（Authorization）与链路审计追踪。

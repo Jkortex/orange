@@ -217,8 +217,6 @@ flowchart TD
 
 <!-- split -->
 
-# 原著完整参考：第 14 章 做正确的事（Doing the Right Thing）
-
 > “**用这世间的一切美好、丑陋与残酷去喂养人工智能系统，却妄想让它仅仅倒映出美好，这纯粹是一场脱离现实的幻想。**”
 > 
 > —— Vinay Uday Prabhu 与 Abeba Birhane，《大型数据集：计算机视觉的一场惨胜？》（Large Datasets: A Pyrrhic Win for Computer Vision?, 2020）

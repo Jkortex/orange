@@ -105,8 +105,6 @@ flowchart TD
 
 <!-- split -->
 
-# 原著完整参考：现代微服务与响应式前端全景路线图
-
 在现代化企业级 Web 应用的架构选型中，Java（Spring Boot）与 TypeScript（Angular）长期以来都是工业界生产力最高、工程严谨度最强的全栈黄金搭档之一。
 
 Spring Boot 提供了稳健、高内聚且“约定优于配置（Convention over Configuration）”的后端开发体系，帮助团队快速落地高并发微服务；而 Angular 则以其高度结构化的工程标准、开箱即用的响应式体系和强类型约束，成为构建大型复杂前端应用的首选平台。

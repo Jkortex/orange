@@ -142,8 +142,6 @@ export class BookCartComponent {
 
 <!-- split -->
 
-# 原著完整参考：第 1 章 Spring Boot 与 Angular 技术全景（Spring Boot and Angular – The Big Picture）
-
 欢迎阅读《Spring Boot and Angular, Second Edition》！本书专为渴望使用两大成熟流行框架——**Spring Boot** 与 **Angular** 来精通现代全栈 Web 开发的开发者打造。结合工业界生产环境实战经验以及技术工作坊总结，本书将带你从零开始亲手构建一套健壮、高可伸缩且现代化的企业级应用。无论你是希望拓展前端技能的后端开发者，还是渴望深入微服务架构的前端工程师，本书都将为你提供一次扎实系统、代码驱动的全栈之旅。
 
 在第 1 章中，我们将首先建立全栈工程认知基准。我们将系统盘点 **Java 26**、**Spring Boot 4.1.0** 以及 **Angular 22** 的关键版本演进，探讨如何引入诸如 GitHub Copilot 等生成式 AI 工具来加速日常研发。此外，我们还将搭建开发环境，并完整介绍贯穿全书的核心实战案例：**由 Spring Boot 微服务集群驱动、依托响应式 Angular 前端呈现的现代化在线书店系统（Bookstore Application）**。读完本章后，你将对支撑全书的技术栈、核心工具链以及系统架构拥有全局清晰的把控，为后续亲手实现全栈业务功能打下坚实基础。

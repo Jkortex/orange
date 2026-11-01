@@ -177,8 +177,6 @@ flowchart TD
 
 <!-- split -->
 
-# 原著完整参考：数据系统架构中的权衡取舍
-
 > “**世上没有完美的解决方案；有的只是权衡取舍（There are no solutions; there are only trade-offs）。你所能期盼的最好结果，不过是在特定约束下争取到最合理的权衡罢了。**”
 > 
 > —— Thomas Sowell，2005 年访谈

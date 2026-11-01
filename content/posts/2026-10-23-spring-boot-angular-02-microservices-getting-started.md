@@ -190,8 +190,6 @@ public class BookController {
 
 <!-- split -->
 
-# 原著完整参考：第 2 章 使用 Spring Boot 入门微服务（Getting Started with Microservices Using Spring Boot）
-
 在上一章中，我们对 Spring Boot 与 Angular 生态系统建立了高层次的全局认知，为构建现代化、可伸缩的应用程序奠定了基石。在基础架构搭建完毕后，现在我们准备深入后端微服务开发的核心地带。
 
 现代软件系统正在快速演进，业务对系统伸缩性（Scalability）、敏捷性（Agility）和高容错弹性（Resilience）的要求日益严苛。传统的单体架构在面对这些挑战时往往力不从心，这也促成了微服务架构（Microservices Architecture）的广泛采用。在本章中，我们将探索如何使用 Spring 生态系统（特别是 Java 26 与 Spring Boot 4.1.x，后序章节还将引入 Spring Cloud）来设计并实现一个微服务。我们的旅程将从理解微服务的本质及其重要性启程，随后深入探讨服务拆分模式、集成模式、分层技术架构以及核心最佳实践。

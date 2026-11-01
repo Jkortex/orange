@@ -143,8 +143,6 @@ flowchart TD
 | 容器镜像长期依赖 `:latest` 动态浮动指针进行发布。 | 遵循语义化版本控制（Semantic Versioning），为每一次构建产物标注确定性版本号。 |
 
 <!-- split -->
-# 原著完整参考：第 21 章 在生产环境中连接前后端（Connecting Frontend and Backend in Production）
-
 在上一章中，我们完成了 Angular 前端的生产级构建，在 SSR 服务中增加了用于 API 内部路由的 Express 代理中间件，编写了多阶段 Dockerfile，并成功将容器镜像发布到了 Docker Hub。前端现在已经成为一个便携、自包含的标准容器单元，但它仍处于单兵孤立运行状态。在上一章的测试中，`/books` 路由因缺少后端支持而渲染出了一张空表格。现在，是时候将容器化的 Angular 前端与 Spring Boot 后端微服务集群统一整合为单一的生产级部署体系，并引入 Nginx 作为边缘接入层将全栈系统严密串联起来。为此，我们将利用 Docker Compose 来编排整个平台：将 Angular SSR 容器、Nginx 反向代理、Spring Boot 业务微服务集群、API 网关以及多范式数据库作为声明式的统一软件栈加以管理，全面扩展我们在第 10 章为后端编写的 `docker-compose.yml`。
 
 在本章结束时，整个全栈书店系统平台仅需一条 `docker compose up` 命令即可一键全部拉起，并统一通过单一外部入口——运行在 80 端口上的 Nginx 进行访问。无论是服务端直出渲染的页面、客户端接管的动态路由，还是来自第 19 章的实时 SSE 事件推送，都将顺畅无阻地穿透这套反向代理流水线。

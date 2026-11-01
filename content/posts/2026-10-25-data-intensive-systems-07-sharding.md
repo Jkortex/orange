@@ -170,8 +170,6 @@ func queryFromCluster(ctx context.Context, key string) ([]string, error) {
 
 <!-- split -->
 
-# 原著完整参考：数据分片（Sharding）
-
 > “**显然，我们必须打破顺序执行的思维桎梏，不再给计算机设限。我们必须确立数据的定义、优先级与属性描述；我们必须陈述关系的本质，而非纠缠于过程细节。**”
 > 
 > —— Grace Murray Hopper，1962 年访谈
