@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import JSZip from 'jszip'
 import { buildContentManifest } from '../src/lib/content.ts'
 import { assertColumnsConsistent } from '../src/lib/column-data.ts'
 
@@ -25,6 +26,24 @@ try {
   fs.renameSync(tempFile, targetFile)
 } finally {
   if (fs.existsSync(tempFile)) fs.rmSync(tempFile, { force: true })
+}
+
+/*
+ * 系统工程源码包：构建期打成 zip 放进 public/downloads/systems/。
+ * 页面上的「下载源码」因此只是一个普通静态链接——客户端不再需要整包正文，
+ * 每个文件页也就不会重下整包。
+ */
+const zipDir = path.join(process.cwd(), 'public', 'downloads', 'systems')
+fs.mkdirSync(zipDir, { recursive: true })
+
+for (const [slug, pkg] of Object.entries(manifest.systems?.packages ?? {})) {
+  const zip = new JSZip()
+  const root = zip.folder(pkg.data.name) ?? zip
+  for (const file of pkg.files) {
+    if (file.content !== null) root.file(file.path, file.content)
+  }
+  const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
+  fs.writeFileSync(path.join(zipDir, `${slug}.zip`), buffer)
 }
 
 const duration = (performance.now() - startTime).toFixed(2)

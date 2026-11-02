@@ -9,6 +9,7 @@ import {
   getSystemPackage,
   listSystemSlugs,
   systemSchema,
+  toSystemOutline,
 } from './content'
 
 describe('系统工程内容层 (systems)', () => {
@@ -178,6 +179,34 @@ describe('系统工程内容层 (systems)', () => {
       expect(entries[0].collection).toBe('systems')
       expect(entries[0].slug).toBe('mini-kv')
       expect(entries[0].data.title).toBe('Mini KV')
+    })
+  })
+
+  describe('toSystemOutline', () => {
+    it('只保留目录树与元信息，不携带任何文件正文', () => {
+      createSystemDir(
+        'mini-kv',
+        {
+          title: 'Mini KV',
+          description: '轻量键值存储',
+          date: new Date('2026-11-02'),
+          category: 'systems',
+          tags: ['kv'],
+          name: 'mini-kv',
+        },
+        'KV 正文',
+        { 'cmd/main.go': 'package main\n\nfunc main() {}\n' },
+      )
+
+      const outline = toSystemOutline(getSystemPackage('mini-kv', { contentDir: tempDir }))
+
+      expect(outline.slug).toBe('mini-kv')
+      expect(outline.filePaths).toEqual(['SYSTEM.md', 'cmd/main.go'])
+      expect(outline.fileCount).toBe(2)
+      expect(outline.lineCount).toBeGreaterThan(0)
+      // 客户端载荷里绝不能出现正文（否则每个文件页都要重下整包）
+      expect(JSON.stringify(outline)).not.toContain('package main')
+      expect(JSON.stringify(outline)).not.toContain('KV 正文')
     })
   })
 })

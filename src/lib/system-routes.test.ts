@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   SYSTEM_ENTRY_FILE,
+  activeSystemPath,
   findSystemFileByRoute,
   listSystemAttachments,
+  systemDownloadHref,
   systemFileHref,
   systemRouteParams,
+  systemSlugFromPathname,
 } from './system-routes'
 import type { SystemPackage } from './content'
 
@@ -46,6 +49,37 @@ describe('system-routes', () => {
     it('将文件路径切分为 catch-all 参数段', () => {
       expect(systemRouteParams('cmd/main.go')).toEqual(['cmd', 'main.go'])
       expect(systemRouteParams('internal/raft/state.go')).toEqual(['internal', 'raft', 'state.go'])
+    })
+  })
+
+  describe('activeSystemPath', () => {
+    it('系统根路由对应入口文件', () => {
+      expect(activeSystemPath('/systems/mini-raft', 'mini-raft')).toBe(SYSTEM_ENTRY_FILE)
+      expect(activeSystemPath('/systems/mini-raft/', 'mini-raft')).toBe(SYSTEM_ENTRY_FILE)
+    })
+
+    it('由地址还原当前文件路径（含 URL 编码）', () => {
+      expect(activeSystemPath('/systems/mini-raft/cmd/main.go', 'mini-raft')).toBe('cmd/main.go')
+      expect(activeSystemPath('/systems/mini-raft/a%20b.go', 'mini-raft')).toBe('a b.go')
+    })
+
+    it('地址不属于该工程时回退到入口', () => {
+      expect(activeSystemPath('/systems/other/cmd/main.go', 'mini-raft')).toBe(SYSTEM_ENTRY_FILE)
+    })
+  })
+
+  describe('systemSlugFromPathname', () => {
+    it('识别工程根与文件页，非系统路由返回 null', () => {
+      expect(systemSlugFromPathname('/systems/mini-raft')).toBe('mini-raft')
+      expect(systemSlugFromPathname('/systems/mini-raft/cmd/main.go')).toBe('mini-raft')
+      expect(systemSlugFromPathname('/systems')).toBeNull()
+      expect(systemSlugFromPathname('/posts/hello')).toBeNull()
+    })
+  })
+
+  describe('systemDownloadHref', () => {
+    it('指向构建期生成的静态压缩包', () => {
+      expect(systemDownloadHref('mini-raft')).toBe('/downloads/systems/mini-raft.zip')
     })
   })
 

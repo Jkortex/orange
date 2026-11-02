@@ -11,7 +11,7 @@ import { SystemPackageView } from '@/components/listing/system-package-view'
 /*
  * 系统工程内的单个文件页：`/systems/<slug>/internal/raft/state.go`
  * 每个代码/配置文件都是独立静态页：
- * - 页面只编译一个文件
+ * - 页面只编译当前文件，整包正文不进客户端（外壳见 `../layout.tsx`）
  * - 静态 HTML 被 Pagefind 逐页精准全文索引
  * - 可作为深层链接直接分享
  */
@@ -64,9 +64,5 @@ export default async function SystemFileDetailPage({ params }: Params) {
   const target = findSystemFileByRoute(pkg.files, file)
   if (!target) notFound()
 
-  return (
-    <div className="mx-auto w-full max-w-7xl">
-      <SystemPackageView pkg={pkg} activePath={target.path} />
-    </div>
-  )
+  return <SystemPackageView pkg={pkg} activePath={target.path} />
 }

@@ -700,6 +700,32 @@ export type SystemPackage = {
   files: SystemFile[]
 }
 
+/**
+ * 客户端可见的轻量包视图：只有目录树与文件元信息，**不含任何文件正文**。
+ * 工程详情页按文件分页，每页只需当前文件的内容；把整包正文传给客户端
+ * 会让每次切文件都重下整包（数十万字），表现为"像刷新了整页"。
+ */
+export type SystemPackageOutline = {
+  slug: string
+  data: SystemPackage['data']
+  tree: FileTreeNode[]
+  /** 包内全部文件路径（移动端横滑文件栏用） */
+  filePaths: string[]
+  fileCount: number
+  lineCount: number
+}
+
+export function toSystemOutline(pkg: SystemPackage): SystemPackageOutline {
+  return {
+    slug: pkg.slug,
+    data: pkg.data,
+    tree: pkg.tree,
+    filePaths: pkg.files.map((file) => file.path),
+    fileCount: pkg.files.length,
+    lineCount: pkg.files.reduce((acc, file) => acc + (file.lineCount ?? 0), 0),
+  }
+}
+
 const IGNORED_NAMES = new Set([
   '.git',
   'node_modules',

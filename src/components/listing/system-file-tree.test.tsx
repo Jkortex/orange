@@ -61,4 +61,22 @@ describe('SystemFileTree 树形文件导航', () => {
     fireEvent.click(folderBtn)
     expect(screen.getByText('raft')).toBeTruthy()
   })
+
+  it('切换到被折叠目录内的文件时自动补开祖先目录', () => {
+    const { rerender } = render(
+      <SystemFileTree tree={mockTree} slug="mini-raft" activePath="SYSTEM.md" />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /internal/ }))
+    expect(screen.queryByText('raft')).toBeNull()
+
+    rerender(
+      <SystemFileTree tree={mockTree} slug="mini-raft" activePath="internal/raft/state.go" />,
+    )
+
+    expect(screen.getByText('raft')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /state\.go/ }).getAttribute('aria-current')).toBe(
+      'page',
+    )
+  })
 })

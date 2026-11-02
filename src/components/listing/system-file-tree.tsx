@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   ChevronDown,
@@ -48,17 +48,21 @@ function getFileIcon(name: string) {
   return <File className="size-4 shrink-0 text-muted-foreground" aria-hidden />
 }
 
+function ancestorPaths(filePath: string): string[] {
+  const parts = filePath.split('/')
+  const ancestors: string[] = []
+  let current = ''
+  for (let i = 0; i < parts.length - 1; i++) {
+    current = current ? `${current}/${parts[i]}` : parts[i]
+    ancestors.push(current)
+  }
+  return ancestors
+}
+
 export function SystemFileTree({ tree, slug, activePath }: SystemFileTreeProps) {
-  // 计算需要初始展开的目录路径（默认全开或包含 activePath 的各级祖先）
+  // 初始展开：activePath 的各级祖先 + 第一层所有文件夹（方便一览全貌）
   const initialOpenPaths = useMemo(() => {
-    const set = new Set<string>()
-    const parts = activePath.split('/')
-    let current = ''
-    for (let i = 0; i < parts.length - 1; i++) {
-      current = current ? `${current}/${parts[i]}` : parts[i]
-      set.add(current)
-    }
-    // 同时把第一层的所有文件夹默认展开，方便读者一览全貌
+    const set = new Set<string>(ancestorPaths(activePath))
     for (const node of tree) {
       if (node.type === 'directory') {
         set.add(node.path)
@@ -68,6 +72,17 @@ export function SystemFileTree({ tree, slug, activePath }: SystemFileTreeProps) 
   }, [activePath, tree])
 
   const [openPaths, setOpenPaths] = useState<Set<string>>(initialOpenPaths)
+
+  // 外壳常驻后展开状态不再随导航重置：切到被折叠目录里的文件时补开其祖先
+  useEffect(() => {
+    setOpenPaths((prev) => {
+      const missing = ancestorPaths(activePath).filter((path) => !prev.has(path))
+      if (missing.length === 0) return prev
+      const next = new Set(prev)
+      for (const path of missing) next.add(path)
+      return next
+    })
+  }, [activePath])
 
   function toggleDirectory(dirPath: string) {
     setOpenPaths((prev) => {
@@ -120,6 +135,7 @@ export function SystemFileTree({ tree, slug, activePath }: SystemFileTreeProps) 
       <li key={node.path}>
         <Link
           href={systemFileHref(slug, node.path)}
+          scroll={false}
           aria-current={isActive ? 'page' : undefined}
           style={{ paddingLeft }}
           className={`type-meta flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left font-mono transition-colors ${

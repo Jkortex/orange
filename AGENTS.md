@@ -19,6 +19,7 @@ Static-export personal blog: Next.js 16 (`output: 'export'`) + React 19 + Tailwi
 ## Content pipeline (main footgun zone)
 
 - One md = one entry, **filename is the slug** (`YYYY-MM-DD-<slug>.md`). **Exception: skills** = directory with required `SKILL.md` (`content/skills/<slug>/`), siblings shown as-is
+- **系统工程** = 目录（`content/systems/<slug>/`，`SYSTEM.md` 为入口），每个文件一个静态页（`/systems/<slug>/<path>`）。外壳（页眉/文件树/三栏网格）必须待在 `src/app/systems/[slug]/layout.tsx`：同 layout 切文件不重挂载，树展开与滚动位置才不丢；**客户端只收 `toSystemOutline()` 的轻量视图，整包正文绝不进客户端**（否则每次切文件都重下整包），源码 zip 由 `scripts/build-content.ts` 生成到 `public/downloads/systems/`（gitignored）
 - **Zod schemas in `src/lib/content.ts` are frontmatter's single source of truth**: invalid/missing fields fail the build naming the file; no schema-less field access in pages
 - **Manifest cache**: `predev`/`prebuild` write `.generated/content-manifest.json` (gitignored); content APIs prefer it with a module cache — **editing `content/` while dev runs has no effect; restart `pnpm dev`**; 改清单结构要把 `MANIFEST_VERSION` +1
 - Enabled collection with bad content must never be swallowed (missing dir = not-yet-enabled type, that's different)

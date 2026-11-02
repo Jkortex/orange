@@ -5,6 +5,7 @@
 /.next/
 /out/
 /.generated/
+/public/downloads/
 next-env.d.ts
 *.tsbuildinfo
 

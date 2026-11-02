@@ -1,18 +1,17 @@
 import type { SystemPackage } from '@/lib/content'
 import { MarkdownRenderer } from '@/lib/markdown'
 import { extractToc, type TocHeading } from '@/lib/toc'
-import { PagefindFilters } from '@/components/listing/pagefind-filters'
 import {
-  SystemPackageExplorer,
+  SystemFilePane,
   type RenderedSystemFile,
-} from '@/components/listing/system-package-explorer'
+} from '@/components/listing/system-file-pane'
 import { SYSTEM_ENTRY_FILE } from '@/lib/system-routes'
 
 /*
  * system 包详情视图（每个文件一个静态页，`activePath` 决定本页渲染哪个文件）：
- * - 服务端只编译当前文件的 Markdown 与高亮，其余文件各自成页
- * - 客户端提供左侧递归目录树 + 中间代码/正文 + 右侧当前文件动态 TOC 的三栏布局
- * - 产物全量在静态 HTML 中，Pagefind 逐页可检索
+ * - 外壳（页眉 + 文件树 + 三栏网格）由 `systems/[slug]/layout.tsx` 常驻，切文件不重挂载
+ * - 本组件只把「当前文件」的内容交给客户端，整包正文留在构建期
+ * - 每个文件各自成页，静态 HTML 仍可被 Pagefind 逐页检索
  */
 
 export async function SystemPackageView({
@@ -40,14 +39,16 @@ export async function SystemPackageView({
   }
 
   return (
-    <>
-      {/* 搜索过滤元数据：按类型/分类下推给 Pagefind 索引 */}
-      <PagefindFilters type="systems" category={pkg.data.category} />
-      <SystemPackageExplorer
-        pkg={pkg}
-        renderedFile={renderedFile}
-        activePath={file.path}
-      />
-    </>
+    <SystemFilePane
+      slug={pkg.slug}
+      file={renderedFile}
+      filePaths={pkg.files.map((f) => f.path)}
+      title={pkg.data.title}
+      metrics={{
+        language: pkg.data.language,
+        fileCount: pkg.files.length,
+        lineCount: pkg.files.reduce((acc, f) => acc + (f.lineCount ?? 0), 0),
+      }}
+    />
   )
 }

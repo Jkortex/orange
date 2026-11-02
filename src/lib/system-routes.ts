@@ -14,6 +14,28 @@ export function systemRouteParams(filePath: string): string[] {
   return filePath.split('/').filter(Boolean)
 }
 
+/** 工程源码压缩包（构建期生成到 public/downloads/systems/<slug>.zip） */
+export function systemDownloadHref(slug: string): string {
+  return `/downloads/systems/${slug}.zip`
+}
+
+/** 地址属于哪个系统工程（`/systems/<slug>/...`）；不是系统路由返回 null */
+export function systemSlugFromPathname(pathname: string): string | null {
+  const match = /^\/systems\/([^/]+)/.exec(pathname)
+  return match ? match[1] : null
+}
+
+/**
+ * 由当前 pathname 反推正在阅读的文件路径（左侧树高亮用）。
+ * 布局层常驻、拿不到子路由的 params，只能从地址推导。
+ */
+export function activeSystemPath(pathname: string, slug: string): string {
+  const base = `/systems/${slug}`
+  if (pathname === base || pathname === `${base}/`) return SYSTEM_ENTRY_FILE
+  if (!pathname.startsWith(`${base}/`)) return SYSTEM_ENTRY_FILE
+  return decodeURIComponent(pathname.slice(base.length + 1))
+}
+
 /** 工程内文件的可分享完整地址 */
 export function systemFileHref(slug: string, filePath: string): string {
   if (filePath === SYSTEM_ENTRY_FILE) return `/systems/${slug}`

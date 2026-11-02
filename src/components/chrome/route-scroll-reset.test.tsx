@@ -69,6 +69,35 @@ describe('RouteScrollReset 路由滚动复位组件', () => {
     expect(window.scrollTo).toHaveBeenCalledTimes(1)
   })
 
+  it('同一系统工程内切换文件不强制回顶，位置交给内容面板', () => {
+    mockPathname = '/systems/mini-raft'
+    const { rerender } = render(<RouteScrollReset />)
+    expect(window.scrollTo).toHaveBeenCalledTimes(1)
+
+    mockPathname = '/systems/mini-raft/internal/raft/state.go'
+    rerender(<RouteScrollReset />)
+    expect(window.scrollTo).toHaveBeenCalledTimes(1)
+
+    // 继续在同一工程里切文件，仍不回顶
+    mockPathname = '/systems/mini-raft/cmd/main.go'
+    rerender(<RouteScrollReset />)
+    expect(window.scrollTo).toHaveBeenCalledTimes(1)
+  })
+
+  it('从系统列表进入工程、或在两个工程之间跳转，仍强制回顶', () => {
+    mockPathname = '/systems'
+    const { rerender } = render(<RouteScrollReset />)
+    expect(window.scrollTo).toHaveBeenCalledTimes(1)
+
+    mockPathname = '/systems/mini-raft'
+    rerender(<RouteScrollReset />)
+    expect(window.scrollTo).toHaveBeenCalledTimes(2)
+
+    mockPathname = '/systems/distributed-systems-in-go'
+    rerender(<RouteScrollReset />)
+    expect(window.scrollTo).toHaveBeenCalledTimes(3)
+  })
+
   it('守卫时间窗过后，前进式导航仍然强制回顶（原「标题被顶栏遮住」的修复不回归）', () => {
     const clock = freezeClock()
     const { rerender } = render(<RouteScrollReset />)

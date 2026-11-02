@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
+import { systemSlugFromPathname } from '@/lib/system-routes'
 
 /*
  * 路由滚动复位组件：
@@ -9,6 +10,8 @@ import { usePathname } from 'next/navigation'
  *   标题被 sticky 顶栏遮住」——软导航自身的滚动不够可靠，这里兜底。
  * - 后退/前进（浏览器返回键触发 popstate）：必须让位。浏览器会恢复离开时的滚动位置，
  *   再强制回顶等于把「从文章返回列表回到原位置」这个原生行为抹掉。
+ * - 同一个系统工程内切换文件：也必须让位。文件树是阅读器式的原地换内容，
+ *   回顶会把读者从代码里甩回页首（内容面板自己负责把新文件顶对齐）。
  *
  * 为什么用时间窗而不是布尔标志：popstate 监听器与 Next router 的注册顺序无法保证，
  * 靠顺序读标志会在「router 先更新、effect 先跑」的时序下读到旧值而误判。
@@ -20,6 +23,7 @@ export function RouteScrollReset() {
   const pathname = usePathname()
   // -Infinity：保证首次挂载时（Date.now() 很小）不会落进守卫窗口而漏掉初始复位
   const lastPopAtRef = useRef(-Infinity)
+  const prevPathnameRef = useRef<string | null>(null)
 
   useEffect(() => {
     function onPopState() {
@@ -30,8 +34,16 @@ export function RouteScrollReset() {
   }, [])
 
   useEffect(() => {
+    const prevPathname = prevPathnameRef.current
+    prevPathnameRef.current = pathname
+
     // 刚发生过后退/前进：滚动位置交还给浏览器恢复
     if (Date.now() - lastPopAtRef.current < POP_GUARD_MS) return
+
+    // 同一工程内切文件：位置由内容面板接管，全局回顶会抹掉阅读位置
+    const systemSlug = systemSlugFromPathname(pathname)
+    if (prevPathname && systemSlug && systemSlug === systemSlugFromPathname(prevPathname)) return
+
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [pathname])
 

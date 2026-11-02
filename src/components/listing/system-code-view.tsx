@@ -1,16 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Check, Copy, WrapText } from 'lucide-react'
 import { useCopyText } from '@/components/primitives/use-copy-text'
 
 export type SystemCodeViewProps = {
   content: string
   path: string
+  /** 折行偏好由外壳持有，切文件时不丢失 */
+  wrapLines: boolean
+  onToggleWrap: () => void
 }
 
-export function SystemCodeView({ content, path }: SystemCodeViewProps) {
-  const [wrapLines, setWrapLines] = useState(false)
+export function SystemCodeView({ content, path, wrapLines, onToggleWrap }: SystemCodeViewProps) {
   const { copied, copyText } = useCopyText(2000)
 
   const lines = useMemo(() => {
@@ -26,7 +28,7 @@ export function SystemCodeView({ content, path }: SystemCodeViewProps) {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setWrapLines(!wrapLines)}
+            onClick={onToggleWrap}
             aria-pressed={wrapLines}
             aria-label="自动折行"
             className={`type-caption flex items-center gap-1 rounded-md px-2 py-1 font-mono transition-colors ${

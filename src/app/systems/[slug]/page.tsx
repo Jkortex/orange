@@ -34,9 +34,5 @@ export default async function SystemDetailPage({ params }: Params) {
     throw error
   }
 
-  return (
-    <div className="mx-auto w-full max-w-7xl">
-      <SystemPackageView pkg={pkg} />
-    </div>
-  )
+  return <SystemPackageView pkg={pkg} />
 }
