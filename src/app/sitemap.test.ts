@@ -57,6 +57,7 @@ describe('sitemap 技能包文件页', () => {
       'https://orange-cnc.pages.dev/music',
       'https://orange-cnc.pages.dev/skills',
       'https://orange-cnc.pages.dev/systems',
+      'https://orange-cnc.pages.dev/columns/think-distributed-systems',
       'https://orange-cnc.pages.dev/columns/distributed-go',
       'https://orange-cnc.pages.dev/columns/ai-ddd',
       'https://orange-cnc.pages.dev/columns/spring-boot-angular',

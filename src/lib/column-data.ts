@@ -1076,7 +1076,79 @@ export const SYSTEM_DESIGN_BEHAVIOR_COLUMN: ColumnSource = {
   ],
 }
 
+const THINK_DISTRIBUTED_COLUMN: ColumnSource = {
+  id: 'think-distributed-systems',
+  title: '《Think Distributed Systems》',
+  subtitle: '用系统模型、失败语义与共识机制，重建可推演的分布式思维',
+  badge: '精品专栏 · 模型驱动',
+  status: 'completed',
+  titlePrefix: 'Think Distributed Systems',
+  tags: ['分布式系统', '系统模型', '一致性', '共识算法', 'Raft', '云原生'],
+  focus: '分布式系统理论',
+  description:
+    '基于 Manning《Think Distributed Systems》全 12 章的双语精读。从心智模型与状态机出发，依次收紧系统模型假设、拆解失败容忍与消息交付的不确定性原理，推导事务与两阶段提交的阻塞本质，再进入分区、复制、一致性模型与 CAP 的边界，最终以 Raft 共识、持久执行与云原生服务收束，形成一套可推演、可验证的分布式系统心智模型。',
+  highlights: [
+    {
+      title: '模型与时间的地基',
+      desc: '心智模型的正误与完整、状态与步骤的原子假设、同步/异步/部分同步模型，以及 happened-before 与逻辑时钟。',
+    },
+    {
+      title: '失败、消息与事务',
+      desc: '屏蔽型/非屏蔽型/故障安全型容忍、消息交付的不确定性原理与幂等性、可串行化与 2PC 的阻塞代价。',
+    },
+    {
+      title: '扩展、复制与共识',
+      desc: '范围/哈希/一致性哈希的方差与搬迁权衡、复制滞后与 quorum、线性一致性与 CAP 的真相、Raft 的任期与日志复制。',
+    },
+    {
+      title: '执行模型与云原生',
+      desc: '部分执行为何不可原子组合、Saga 与持久执行的取舍，以及云原生 by construction、无服务器冷热路径与服务即契约。',
+    },
+  ],
+  phases: [
+    {
+      name: '阶段一：建模、时间与失败',
+      description: '先建立可推演的语言：心智模型、状态机、系统模型与失败分类。',
+      chapters: [
+        { order: 0, slug: '2026-11-03-think-distributed-systems-00-guide' },
+        { order: 1, slug: '2026-11-03-think-distributed-systems-01-thinking-in-distributed-systems' },
+        { order: 2, slug: '2026-11-03-think-distributed-systems-02-system-models-order-and-time' },
+        { order: 3, slug: '2026-11-03-think-distributed-systems-03-failure-tolerance' },
+      ],
+    },
+    {
+      name: '阶段二：消息、事务与一致性',
+      description: '在不可靠网络上讨论交付与处理语义，并推导事务抽象的边界。',
+      chapters: [
+        { order: 4, slug: '2026-11-03-think-distributed-systems-04-message-delivery-and-processing' },
+        { order: 5, slug: '2026-11-03-think-distributed-systems-05-transactions' },
+        { order: 6, slug: '2026-11-03-think-distributed-systems-06-distributed-transactions' },
+      ],
+    },
+    {
+      name: '阶段三：扩展、复制与共识',
+      description: '用分区换可扩展、用复制换可靠，并在一致性谱系中定位每个系统的取舍。',
+      chapters: [
+        { order: 7, slug: '2026-11-03-think-distributed-systems-07-partitioning' },
+        { order: 8, slug: '2026-11-03-think-distributed-systems-08-replication' },
+        { order: 9, slug: '2026-11-03-think-distributed-systems-09-consistency' },
+        { order: 10, slug: '2026-11-03-think-distributed-systems-10-distributed-consensus' },
+      ],
+    },
+    {
+      name: '阶段四：执行模型与云原生',
+      description: '把前面的模型落到执行与部署形态：持久执行、云原生与服务的契约观。',
+      chapters: [
+        { order: 11, slug: '2026-11-03-think-distributed-systems-11-durable-executions' },
+        { order: 12, slug: '2026-11-03-think-distributed-systems-12-cloud-and-services' },
+      ],
+    },
+  ],
+}
+
+
 export const ALL_COLUMNS: ColumnSource[] = [
+  THINK_DISTRIBUTED_COLUMN,
   DISTRIBUTED_GO_COLUMN,
   AI_DDD_COLUMN,
   SPRING_BOOT_ANGULAR_COLUMN,
