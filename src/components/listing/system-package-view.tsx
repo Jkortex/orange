@@ -1,5 +1,6 @@
 import type { SystemPackage } from '@/lib/content'
 import { MarkdownRenderer } from '@/lib/markdown'
+import { detectCodeLanguage, highlightCode } from '@/lib/highlight'
 import { extractToc, type TocHeading } from '@/lib/toc'
 import {
   SystemFilePane,
@@ -36,6 +37,7 @@ export async function SystemPackageView({
     content: text,
     headings,
     node,
+    tokens: text === null ? null : await highlightCode(text, detectCodeLanguage(file.path)),
   }
 
   return (

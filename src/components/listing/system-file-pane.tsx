@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, Code2, Copy, FileCode, FileText } from 'lucide-react'
+import type { CodeLine } from '@/lib/highlight'
 import type { TocHeading } from '@/lib/toc'
 import { Toc } from '@/components/reading/toc'
 import { MobileTocDrawer } from '@/components/reading/mobile-toc-drawer'
@@ -23,6 +24,8 @@ export type RenderedSystemFile = {
   content: string | null
   headings: TocHeading[]
   node: React.ReactNode
+  /** 构建期高亮结果（超大文件为 null，退回纯文本） */
+  tokens: CodeLine[] | null
 }
 
 export type SystemFilePaneProps = {
@@ -144,6 +147,7 @@ export function SystemFilePane({ slug, file, filePaths, title, metrics }: System
           <SystemCodeView
             content={file.content}
             path={file.path}
+            tokens={file.tokens}
             wrapLines={wrapLines}
             onToggleWrap={toggleWrapLines}
           />

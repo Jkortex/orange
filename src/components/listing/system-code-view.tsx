@@ -2,23 +2,36 @@
 
 import { useMemo } from 'react'
 import { Check, Copy, WrapText } from 'lucide-react'
+import type { CodeLine } from '@/lib/highlight'
 import { useCopyText } from '@/components/primitives/use-copy-text'
 
 export type SystemCodeViewProps = {
   content: string
   path: string
+  /** 构建期高亮结果；null（超大文件/二进制）时按纯文本逐行渲染 */
+  tokens: CodeLine[] | null
   /** 折行偏好由外壳持有，切文件时不丢失 */
   wrapLines: boolean
   onToggleWrap: () => void
 }
 
-export function SystemCodeView({ content, path, wrapLines, onToggleWrap }: SystemCodeViewProps) {
+export function SystemCodeView({
+  content,
+  path,
+  tokens,
+  wrapLines,
+  onToggleWrap,
+}: SystemCodeViewProps) {
   const { copied, copyText } = useCopyText(2000)
 
-  const lines = useMemo(() => {
-    // 统一处理回车符
-    return content.replace(/\r\n/g, '\n').split('\n')
-  }, [content])
+  const lines = useMemo<CodeLine[]>(() => {
+    if (tokens) return tokens
+    // 统一处理回车符；无高亮时每行退化为单个无样式 token
+    return content
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((line) => (line ? [{ content: line }] : []))
+  }, [content, tokens])
 
   return (
     <div className="surface-card overflow-hidden rounded-xl border border-border-subtle">
@@ -61,8 +74,8 @@ export function SystemCodeView({ content, path, wrapLines, onToggleWrap }: Syste
         </div>
       </div>
 
-      {/* 代码与行号视口 */}
-      <div className="overflow-x-auto text-sm font-mono leading-relaxed">
+      {/* 代码与行号视口：token 颜色由 globals.css 按 --shiki-* 变量切换 */}
+      <div className="code-tokens overflow-x-auto text-sm font-mono leading-relaxed">
         <table className="w-full border-collapse">
           <tbody>
             {lines.map((line, idx) => {
@@ -80,7 +93,13 @@ export function SystemCodeView({ content, path, wrapLines, onToggleWrap }: Syste
                       wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'
                     }`}
                   >
-                    {line || '\n'}
+                    {line.length === 0
+                      ? '\n'
+                      : line.map((token, tokenIdx) => (
+                          <span key={tokenIdx} style={token.style}>
+                            {token.content}
+                          </span>
+                        ))}
                   </td>
                 </tr>
               )

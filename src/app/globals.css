@@ -423,6 +423,15 @@ html.dark code[data-theme] span[style*='--shiki'] {
   color: var(--shiki-dark) !important;
 }
 
+/* 系统工程文件查看器：token 与正文代码块共用同一对 Shiki 主题变量 */
+.code-tokens span[style*='--shiki'] {
+  color: var(--shiki-light) !important;
+}
+
+html.dark .code-tokens span[style*='--shiki'] {
+  color: var(--shiki-dark) !important;
+}
+
 /* 正文排版精细化增强：呼吸感节奏、高质感行内代码与引用块 */
 .prose {
   max-width: none;

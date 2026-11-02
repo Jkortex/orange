@@ -16,6 +16,7 @@ import { remarkSystemFlow } from '@/lib/remark-system-flow'
 import { remarkDirectiveFallback } from '@/lib/remark-directive-fallback'
 import { rehypeKeepCssVars } from '@/lib/rehype-css-vars'
 import { rehypeHeadingIds } from '@/lib/rehype-heading-ids'
+import { SHIKI_THEMES } from '@/lib/highlight'
 import { cn } from '@/lib/utils'
 import { CodeBlock } from '@/components/reading/code-block'
 import { CodeDemo, type CodeDemoProps } from '@/components/reading/code-demo'
@@ -36,7 +37,8 @@ import { EnDisclosure } from '@/components/reading/en-disclosure'
  */
 
 const rehypePrettyCodeOptions = {
-  theme: { light: 'github-light', dark: 'github-dark' },
+  // 与系统工程文件查看器共用同一对主题（见 lib/highlight.ts）
+  theme: SHIKI_THEMES,
   defaultColor: false,
   keepBackground: false,
 }

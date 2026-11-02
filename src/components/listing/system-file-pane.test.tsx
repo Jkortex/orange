@@ -52,7 +52,13 @@ function renderPane(file: RenderedSystemFile) {
 
 describe('SystemFilePane 文件内容面板', () => {
   it('代码文件走代码视图，折行偏好由外壳持有', () => {
-    renderPane({ path: 'cmd/main.go', content: 'package main', headings: [], node: null })
+    renderPane({
+      path: 'cmd/main.go',
+      content: 'package main',
+      headings: [],
+      node: null,
+      tokens: null,
+    })
 
     expect(screen.getByText('package main')).toBeTruthy()
 
@@ -67,6 +73,7 @@ describe('SystemFilePane 文件内容面板', () => {
       content: '# 标题',
       headings: [],
       node: <div data-testid="markdown-rendered">正文</div>,
+      tokens: null,
     })
 
     expect(screen.getByTestId('markdown-rendered')).toBeTruthy()
@@ -77,7 +84,7 @@ describe('SystemFilePane 文件内容面板', () => {
   })
 
   it('二进制或超大文件只提示路径', () => {
-    renderPane({ path: 'logo.png', content: null, headings: [], node: null })
+    renderPane({ path: 'logo.png', content: null, headings: [], node: null, tokens: null })
 
     expect(screen.getByText(/二进制或大文件/)).toBeTruthy()
   })

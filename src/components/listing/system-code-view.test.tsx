@@ -1,19 +1,29 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
+import type { CodeLine } from '@/lib/highlight'
 import { SystemCodeView } from './system-code-view'
 
 afterEach(() => {
   cleanup()
 })
 
-function Harness({ content, path }: { content: string; path: string }) {
+function Harness({
+  content,
+  path,
+  tokens = null,
+}: {
+  content: string
+  path: string
+  tokens?: CodeLine[] | null
+}) {
   const [wrapLines, setWrapLines] = useState(false)
   return (
     <SystemCodeView
       content={content}
       path={path}
+      tokens={tokens}
       wrapLines={wrapLines}
       onToggleWrap={() => setWrapLines((prev) => !prev)}
     />
@@ -29,6 +39,21 @@ describe('SystemCodeView 代码预览器', () => {
     // 检查行号 1, 2, 3, 4, 5
     expect(screen.getByText('1')).toBeTruthy()
     expect(screen.getByText('5')).toBeTruthy()
+  })
+
+  it('有高亮 token 时按 token 渲染并带上主题色变量', () => {
+    const tokens: CodeLine[] = [
+      [
+        { content: 'package', style: { '--shiki-light': '#d73a49' } as CSSProperties },
+        { content: ' main' },
+      ],
+    ]
+    render(<Harness content="package main" path="cmd/main.go" tokens={tokens} />)
+
+    const keyword = screen.getByText('package')
+    expect(keyword.tagName).toBe('SPAN')
+    expect(keyword.style.getPropertyValue('--shiki-light')).toBe('#d73a49')
+    expect(screen.getByText('main')).toBeTruthy()
   })
 
   it('折行状态由外部持有，点击回调切换', () => {
