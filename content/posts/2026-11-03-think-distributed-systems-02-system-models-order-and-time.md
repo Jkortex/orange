@@ -61,207 +61,180 @@ tags:
 
 ### 2.1.3 异步分布式系统
 
-异步模型同样细节各异，但差异更为根本：
+**异步分布式系统**中，组件无法访问全局物理时间。不同的异步模型细节各异，但都**没有任何时间保证**：处理延迟无上界、网络延迟无上界、时钟漂移无上界。
 
-- 有的模型假设**完全没有时间概念**；
-- 有的模型假设**弱时间概念**。
+这里的“异步”描述的是**系统模型**，与“异步编程”（如事件驱动、非阻塞 I/O）截然不同：
 
-有些问题在“无时间”假设下无解，在“弱时间”假设下却有解。看到“异步系统”时，先确定它采用哪种时间概念，再判断该概念在此语境下是否重要。
-
-**无时间概念**：组件无法访问任何时钟，事件在任意时刻发生或延迟任意长。时间概念不存在，最重要的后果是**组件无法使用超时（timeout）**——而超时正是失败检测与缓解的关键机制。
-
-**弱时间概念**：组件可访问一个与其他时钟不同步、偏差未知的时钟。时间概念存在，因此**可以使用超时**。
+- **异步系统模型**：不可改变的事实——系统在时间上毫无保证；
+- **异步编程**：一种实现选择——你可以选择同步或异步编程。
 
 ### 2.1.4 部分同步系统
 
-同步与异步都是**理论**模型。现实中，没有系统完全同步或完全异步，真实行为落在两者之间。
+现实世界的大多数系统处于两者之间：大多数时候行为同步，偶发不可预测的延迟。这就是**部分同步分布式系统**。
 
-**部分同步模型（partially synchronous）**承认这一现实：系统**大多数时候同步，某些时候异步**。这符合我们的经验——组件与网络通常表现良好，偶尔抽风。家庭宽带就是贴切的例子：多数时候访问很快，偶尔变慢甚至超时，然后恢复正常。
+![图 2.2：从同步系统到异步系统模型的连续谱](/media/posts/think-distributed-systems/fig-p046-2-2.png)
+*图 2.2：从同步系统到异步系统模型（From synchronous to asynchronous system models）*
 
-一种典型的协议设计策略是：**系统同步时保证安全性与活性；系统异步时优先保证安全性、牺牲活性**——即使“好事”不发生，也绝不让“坏事”发生。第 3 章会详细讨论失败容忍。
+图 2.2 呈现了从强假设的同步模型到无假设的异步模型的过渡谱系。现实工业界分布式算法（如 Raft、Paxos）均建立在部分同步假设之上：系统通常表现良好，但在网络分区或垃圾回收暂停时退化为异步状态。
+
+形式化上，部分同步通常通过**全局稳定时间（GST, Global Stabilization Time）**刻画：GST 之前系统完全异步，GST 之后网络和处理延迟出现已知上界。
 
 :::en
-> **Original**: Both synchronous and asynchronous system models are theoretical system models. In reality, no distributed system displays entirely synchronous or entirely asynchronous behavior; the system's behavior lies somewhere in between. The partially synchronous system model acknowledges this reality and postulates that a distributed system is synchronous most of the time and asynchronous at other times. ... A typical approach to designing protocols is to ensure safety and liveness guarantees when the system operates synchronously and to prioritize safety over liveness when the system operates asynchronously, thus ensuring that nothing bad will happen even if something good won't happen.
+> **Original**: Most distributed systems we encounter in practice are partially synchronous. Under normal operating conditions, these systems exhibit predictable timing behavior: network delays are bounded, message delivery is reliable, and component processing speeds are consistent. However, during periods of network congestion, component failure, or system maintenance, these timing guarantees can temporarily break down, causing the system to behave asynchronously.
 
 **📌 核心术语与语境解析**：
-- **Partially synchronous**：*部分同步*。介于同步与异步之间的现实模型，是工程系统的默认假设。
-- **Safety over liveness**：*安全优先于活性*。异步期间宁可“不响应”，也不“给出错误答案”。
+- **Partially synchronous**：*部分同步*。平时具备时间上界、异常时无保证的实用折中模型。
+- **Global Stabilization Time (GST)**：*全局稳定时间*。理论分析中假设时间延迟恢复有界约束的临界点。
 :::
 
 ### 2.1.5 组件与网络行为
 
-组件与网络常以其失败行为来刻画。
+系统模型还要规定组件与网络在面对失败时的行为模式。
 
-**组件失败模型**（由弱到强）：
+#### 组件故障模式
 
-- **Crash-Stop（崩溃停止）**：最基础的模型。组件在任意时刻停止执行任何内部或外部步骤，此后永不再执行——**组件不复存在**。
-- **Omission（遗漏）**：组件在任意时刻停止执行，持续任意时长，然后**从失败时的状态恢复**继续执行——**组件只是打了个盹**，不会丢失内存。
-- **Crash-Recovery（崩溃恢复）**：组件停止执行任意时长后恢复，但**可能丢失状态**——部分或全部内存丢失。
-- **Byzantine（拜占庭）**：组件以任意方式行为，包括故意偏离算法的欺骗行为——**什么都可能发生**。
+![图 2.3：崩溃-停止失败（Crash-Stop）](/media/posts/think-distributed-systems/fig-p047-2-3.png)
+*图 2.3：崩溃-停止失败（Crash-Stop failure）*
 
-**网络失败模型**：
+![图 2.4：崩溃-停止失败时间线](/media/posts/think-distributed-systems/fig-p047-2-4.png)
+*图 2.4：崩溃-停止时间线对比（Crash-Stop timeline）*
 
-- **消息重排（reordering）**：投递顺序与接收顺序不一致；
-- **消息重复（duplication）**：同一消息被投递多次；
-- **消息丢失（loss）**：消息根本没有投递。
+在图 2.3 与图 2.4 的**崩溃-停止（Crash-Stop）**模型中，组件在故障发生前完全按协议运行，一旦崩溃则立刻永久停止一切活动（Fail-Silent），既不发送也不响应任何消息，永不复活。
 
-我们假设网络**不会撒谎**：如果网络把消息投递给某组件，就认为该消息确实由系统中的某个组件发出。同时具备重排、重复、丢失的网络，通常称为**不可靠网络（unreliable network）**。
+![图 2.5：遗漏失败（Omission Failure）](/media/posts/think-distributed-systems/fig-p047-2-5.png)
+*图 2.5：遗漏失败（Omission failure）*
 
-### 2.1.6 现实的系统模型
+图 2.5 展示了**遗漏失败（Omission Failure）**：组件或其网络接口未能执行指定动作，例如接收队列丢弃消息、或发送缓冲区未能将数据包压入网卡。
 
-综合以上，可以给出一个务实的系统模型：
+![图 2.6：崩溃-恢复失败（Crash-Recovery）](/media/posts/think-distributed-systems/fig-p048-2-6.png)
+*图 2.6：崩溃-恢复失败（Crash-Recovery failure）*
 
-- 系统**大部分时间同步，某些时刻异步**（部分同步）；
-- 组件可能因崩溃失败，也可能恢复，**易失状态丢失、持久状态保留**（Crash-Stop / Omission / Crash-Recovery）；
-- 网络可能重排、丢弃、重复消息（不可靠网络）。
+图 2.6 刻画了工业界最常见的**崩溃-恢复（Crash-Recovery）**模型：节点会发生崩溃停机，易失性内存（RAM）状态丢失，但持久化存储（Disk / WAL）保留。节点重启后，根据预写日志重放状态并重新加入集群。
 
-更形式化地说：分布式系统是**部分同步的**，由可能发生 Crash-Stop、Omission、Crash-Recovery 失败的组件组成，通过不可靠网络通信。拜占庭失败在加密货币等领域很重要，但本书基本不涉及。**这就是我思考分布式系统时默认的模型。**
+![图 2.7：拜占庭失败（Byzantine Failure）](/media/posts/think-distributed-systems/fig-p048-2-7.png)
+*图 2.7：拜占庭失败（Byzantine failure）*
 
-:::en
-> **Original**: In practical terms, distributed systems are synchronous most of the time and asynchronous at certain times. Components may fail due to crashes but may also recover, forgetting some state (volatile) but remembering other state (durable). The network may reorder, drop, or duplicate messages. More formally, distributed systems are partially synchronous, consisting of components subject to Crash-Stop failure, Omission failure, and Crash-Recovery failure communicating over an unreliable network.
+图 2.7 则是最苛刻的**拜占庭失败（Byzantine Failure）**模型：节点可能发生任意（Arbitrary）恶意行为，包括伪造假消息、篡改投票、或对不同节点给出互相矛盾的答复。
 
-**📌 核心术语与语境解析**：
-- **Volatile / durable state**：*易失/持久状态*。崩溃恢复后是否仍然存在，是区分失败模型的关键。
-- **Unreliable network**：*不可靠网络*。允许重排、重复、丢失，但不会凭空捏造消息。
-:::
+#### 网络异常模式
+
+除了组件失败外，网络信道也会产生不同程度的异常：
+
+![图 2.8：网络消息乱序重排](/media/posts/think-distributed-systems/fig-p049-2-8.png)
+*图 2.8：消息乱序（Message reordering）*
+
+图 2.8 中，消息 $m_1$ 虽先于 $m_2$ 发出，但由于网络多路径路由或丢包重发，$m_2$ 却先于 $m_1$ 到达接收端。
+
+![图 2.9：网络消息重复](/media/posts/think-distributed-systems/fig-p049-2-9.png)
+*图 2.9：消息重复（Message duplication）*
+
+图 2.9 中，由于底层链路抖动或超时重传，同一条业务请求被网络交付了多次。
+
+![图 2.10：网络分区与消息丢弃](/media/posts/think-distributed-systems/fig-p049-2-10.png)
+*图 2.10：消息丢弃与分区（Message loss and partitioning）*
+
+图 2.10 显示网络完全丢弃在途消息，导致原本连通的节点彼此隔离，形成通信孤岛。
 
 ## 2.2 顺序与时间
 
-组件不仅在通信，还在**协作与协调**。协作与协调的本质，是管理组件各步骤之间的**依赖关系**。
+为什么我们需要时间？在单机系统中，CPU 指令计数器与硬件时钟天然为所有事件提供了全序。但在无共享内存的分布式系统中，每个节点拥有独立的物理晶振，不存在全局单一时钟。
 
-一般而言，动作**不可交换（not commutative）**：协作与协调的结果取决于动作施加的顺序。因此，确定正确的顺序至关重要。那么问题来了：**我们如何确定正确的顺序？**
+![图 2.11：提议者与接受者并发交互](/media/posts/think-distributed-systems/fig-p051-2-11.png)
+*图 2.11：提议者与接受者（Proposers and acceptors）*
 
-考虑两个提议者 P1、P2 与两个接受者 A1、A2，初始状态 A1 = A2 = 0。提议者向接受者广播简单算术操作，如 (+2) 或 (×2)，接受者按接收顺序把请求施加到本地状态。
+图 2.11 展现了多个提议者（Proposers）并发向接受者（Acceptors）发送提议的拓扑。由于网络延迟不可预测，不同接受者收到消息的顺序可能截然相反。
 
-- 若 P1、P2 都广播 (+2)，顺序不影响结果（可交换）；
-- 若 P1 广播 (+2)、P2 广播 (×2)，顺序就影响结果（不可交换）。
+![图 2.12：协调者介入后的并发竞态协调](/media/posts/think-distributed-systems/fig-p052-2-12.png)
+*图 2.12：引入协调者的竞态处理（Proposers, acceptors, and a coordinator）*
 
-即使作为全知观察者，我们也无法立刻判断哪种顺序正确，因为 P1、P2 同时广播。但直觉告诉我们这不对：我们期望 A1 与 A2 得到相同的值，并以相同顺序施加操作。既然二者同时广播，那么**只要保证顺序一致，具体是哪种顺序并不重要**。
-
-> **顿悟时刻：竞态条件**
->
-> 本书的定义是：**若系统存在多种可能的执行，其中一些被认为是正确的、一些被认为是错误的，则系统存在竞态条件。** 若 P1、P2 只能广播 (+n) 或只能广播 (×n)，则不存在竞态；若能同时广播两种操作，则存在竞态，因为只有特定投递顺序才能让接受者得到一致结果。这可能是最抽象、最普适的竞态定义。
-
-引入协调者 C 可以解决这个问题：P1、P2 不再直接广播，而是把请求发给 C（初始 C = 0）。C 收到请求后，用当前状态给请求打标签，广播给 A1、A2，再把值加 1。接受者记录已施加的最新请求；若收到标签更大的请求，就知道自己漏了步骤，可以延迟施加直到补齐。
-
-注意：作为全知观察者，我们看到 P1 先发出 (+2)、P2 后发出 (×2)，但网络先投递了 (×2)。这有问题吗？P1 与 P2 没有协调过，谁也无法观察对方，因此**任何投递顺序都是可接受的**。C 把 (×2) 标为 0、(+2) 标为 1，接受者据此重排后再施加。**顺序，以及建立顺序的能力，是分布式系统许多问题与解法的基础。**
-
-:::en
-> **Original**: In general, actions are not commutative. The result of collaboration and coordination depends on the order in which actions are applied. Therefore, establishing the correct order of actions is crucial for correct results. ... Both order and the ability to establish order are fundamental to many distributed system problems and their solutions.
-
-**📌 核心术语与语境解析**：
-- **Commutative**：*可交换*。施加顺序不影响结果的性质；不可交换是排序问题的根源。
-- **Coordinator**：*协调者*。为请求赋予全序标签的组件，是后续共识算法的雏形。
-:::
+图 2.12 展示了引入协调者（Coordinator）后，系统试图对提议进行定序，但如果缺乏严格的因果时序工具，协调者自身的消息依然可能与节点发生竞态。
 
 ### 2.2.1 happened-before 关系
 
-Leslie Lamport 在 1978 年的经典论文《Time, Clocks, and the Ordering of Events in a Distributed System》中，提出了至今仍被广泛使用的形式化框架：**happened-before 关系**，从组件内与组件间两个维度定义事件的先后。
+Leslie Lamport 在 1978 年划时代的论文《Time, Clocks, and the Ordering of Events in a Distributed System》中提出了著名的 **happened-before（因果先后）关系**，记作 $	o$。
 
-- **组件内（intracomponent）**：若事件 a、b 发生在同一组件，且 a 先于 b 发生，则 a happened-before b。
-- **组件间（intercomponent）**：若 a、b 发生在不同组件，a 是“发送消息”事件、b 是对应的“接收消息”事件，则 a happened-before b。
+`happened-before` 是一个**偏序（partial order）**关系，由三条基本公理定义：
 
-happened-before 是一种**偏序（partial order）**：对任意事件对 a、b，要么 a→b，要么 b→a，要么 a 与 b **并发（concurrent）**，记作 a || b。
+1. **同组件内的程序顺序**：如果事件 $a$ 与 $b$ 发生于同一个组件内，且 $a$ 在 $b$ 之前发生，则 $a 	o b$；
+2. **跨组件的消息因果**：如果事件 $a$ 是某个消息的发送，事件 $b$ 是该消息的接收，则 $a 	o b$；
+3. **传递性**：如果 $a 	o b$ 且 $b 	o c$，则 $a 	o c$。
 
-它还具有**传递性**：若 a→b 且 b→c，则 a→c。
+![图 2.13：单组件内部事件的 happened-before 关系](/media/posts/think-distributed-systems/fig-p053-2-13.png)
+*图 2.13：组件内部 happened-before（Happened-before relationship, intracomponent）*
 
-**因果关系（causality）**：happened-before 捕捉的是事件间的因果性——这里的“因果”指 a **可能**影响了 b，而不是 a 确实影响了 b。思考分布式系统时，永远要考虑事件的因果性，并仔细判断系统违反该因果性的可能性。
+图 2.13 说明了公理 1：单组件内严格按指令流水线先后推进，$e_1 	o e_2$。
+
+![图 2.14：跨组件消息传递的 happened-before 关系](/media/posts/think-distributed-systems/fig-p053-2-14.png)
+*图 2.14：跨组件消息传递因果（Happened-before relationship, intercomponent）*
+
+图 2.14 说明了公理 2：消息必须先由组件 C1 发送（Send），然后才能被组件 C2 接收（Receive），物理因果律决定了发送必然 happened-before 接收。
+
+![图 2.15：happened-before 关系的传递性](/media/posts/think-distributed-systems/fig-p054-2-15.png)
+*图 2.15：因果传递性（Happened-before, transitively）*
+
+图 2.15 说明了公理 3：通过网络消息在多个节点间的接力，因果关系 $a 	o b 	o c 	o d$ 沿着时空锥体不断延伸。
+
+如果两个事件 $x$ 与 $y$ 之间既没有 $x 	o y$，也没有 $y 	o x$，我们就称它们是**并发的（concurrent）**，记作 $x \parallel y$。**并发意味着不存在因果依赖，两者谁先谁后在物理上无法也无需分辨。**
 
 :::en
-> **Original**: In this paper, Lamport introduces a formal framework that is widely used today: the happened-before relationship. Lamport defines the happened-before relationship in terms of intra- and intercomponent relations of events. ... The happened-before relationship is a partial order. For each pair of events a and b, a happened before b, b happened before a, or a and b are concurrent. ... Here, causal refers to the fact that an event a potentially influenced an event b, not that a actually influenced event b.
+> **Original**: The relation "$	o$" on the set of events of a system is the smallest relation satisfying the following three conditions: (1) If a and b are events in the same process, and a comes before b, then $a 	o b$. (2) If a is the sending of a message by one process and b is its receipt by another process, then $a 	o b$. (3) If $a 	o b$ and $b 	o c$ then $a 	o c$. Two distinct events a and b are said to be concurrent if $a 
+ot	o b$ and $b 
+ot	o a$.
 
 **📌 核心术语与语境解析**：
-- **Happened-before**：*先于发生关系*。事件间的偏序，是逻辑时钟与一致性模型的基础。
-- **Causality**：*因果性*。可能的影响关系，而非确定的影响事实。
+- **Happened-before ($	o$)**：*因果先后*。刻画分布式事件潜在因果关联的偏序关系。
+- **Concurrent ($\parallel$)**：*并发*。互不具备因果因果依赖的事件关系，其相对物理顺序不影响系统因果正确性。
 :::
 
-> **顿悟时刻：并发 vs. 并行**
->
-> 并发（concurrency）以**事件**定义——事件是时间点；并行（parallelism）以**操作**定义——操作是时间段。把操作看作“开始事件 + 结束事件”即可弥合差异：
->
-> - 若 a 不先于 b、b 也不先于 a，则事件 a、b 并发；
-> - 若 o1 的结束事件不先于 o2 的开始事件，且 o2 的结束事件不先于 o1 的开始事件，则操作 o1、o2 并发；
-> - 若两个操作在时间上重叠，则它们**并行**。
->
-> 结论：**并发由逻辑时钟与逻辑时间判定，并行由物理时钟与物理时间判定。**
+### 2.2.2 物理时钟
 
-### 2.2.2 时间与时钟
+人类天生习惯用物理时钟（年、月、日、时、分、秒）思考。但在分布式系统中，依赖物理时钟存在致命陷阱。
 
-分布式系统依赖时钟作为时间戳来源。要让时钟能准确排序事件，必须保证**时钟一致性（clock consistency）**：若事件 a happened-before 事件 b，则 a 的时间戳小于 b 的时间戳。
+每个计算机节点依靠石英晶体振荡器计时。制造公差、环境温度与硬件老化会导致晶体振荡频率出现微小偏差：
 
-$$a \rightarrow b \Rightarrow C(a) < C(b)$$
+![图 2.16：物理时钟偏斜（Clock Skew）](/media/posts/think-distributed-systems/fig-p056-2-16.png)
+*图 2.16：时钟偏斜（Clock skew）*
 
-只要时钟一致，即使事件发生在不同组件上，也能据此推理因果顺序。
+图 2.16 展示了**时钟偏斜（Clock Skew）**：在同一物理时刻，节点 A 的时钟读数为 12:00:01，而节点 B 的读数为 12:00:03，两者存在绝对读数差异 $\Delta t$。
 
-### 2.2.3 物理时间与物理时钟
+![图 2.17：物理时钟漂移（Clock Drift）](/media/posts/think-distributed-systems/fig-p056-2-17.png)
+*图 2.17：时钟漂移（Clock drift）*
 
-物理时钟是用物理时间为事件打时间戳的物理设备。但在分布式系统中，比较不同时钟的时间戳非常困难，因为存在**时钟偏移（clock skew）**与**时钟漂移（clock drift）**——物理时钟既不完美，也不同步。
+图 2.17 展示了**时钟漂移（Clock Drift）**：随着时间推移，不同晶振的走时快慢不同，即使通过 NTP 协议对齐，时钟误差依然随时间线性或非线性发散。
 
-> **顿悟时刻：挂钟（wall clock）**
->
-> 作为拥有全局视角的全知观察者，我们可以假设自己有一个“挂钟”——假想的完美物理时钟。现实中没有任何组件能访问它；组件要测时间，只能用自己的物理时钟。挂钟只是讨论的参考基准。
+物理时钟的不可靠性意味着：**你绝不能仅仅根据两台机器的本地时间戳来判定“哪个写入先发生”**，否则会导致数据丢失（如 Cassandra 或早年数据库中的 LWW 覆写 Bug）。
 
-- **时钟偏移**：两个时钟之间的时间差。例如两个时钟一开始就差 5 分钟，并保持这个固定偏移。
-- **时钟漂移**：两个时钟走时频率不同，起初一致，随时间逐渐发散。
+### 2.2.3 逻辑时钟
 
-**缓解手段**：NTP（Network Time Protocol）等时钟同步协议——NTP 服务器广播自己的读数，客户端调整时钟以匹配，从而缓解偏移与漂移。
+为了摆脱物理时钟的硬件缺陷，Leslie Lamport 提出了**逻辑时钟（Logical Clocks）**。
 
-**墙上时钟 vs. 单调时钟**：
+逻辑时钟不关心“现在是几点”，只关心**为所有事件赋予一个严格反映因果关系的单调递增计数器**。
 
-- **Time-of-day（墙上时钟）**：尽量贴近真实时间，但同步时可能**回拨**，因此即使与自身比较也可能违反时钟一致性；
-- **Monotonic（单调时钟）**：与墙上时间无关，但保证**不会倒退**，与自身比较时满足时钟一致性。
+![图 2.18：Lamport 逻辑时钟的步进与同步机制](/media/posts/think-distributed-systems/fig-p058-2-18.png)
+*图 2.18：Lamport 逻辑时钟（Lamport clocks）*
 
-由于单调时钟独立于墙上时间，它只能在**组件内**比较，不能跨组件比较。
+如图 2.18 所示，Lamport 逻辑时钟算法运行规则如下：
 
-:::en
-> **Original**: Physical clocks are physical devices that use physical time to timestamp events. But physical clocks in distributed systems face a major challenge: comparing timestamps from different clocks can be difficult due to clock skew and drift. These problems arise because physical clocks are neither perfect nor perfectly synchronized. ... Time-of-day clocks provide a timestamp as close as possible to wall-clock time but may move backward due to clock synchronization. ... Monotonic clocks provide a timestamp independent of wall-clock time but guarantee that time will not move backward.
+1. 每个进程内部维护一个整数计数器 $L$；
+2. 进程每发生一次内部事件或发送事件，计数器递增：$L := L + 1$；
+3. 发送消息时，将当前时间戳 $L$ 附着在消息包内；
+4. 接收消息时，接收方将自身时钟更新为自身当前时钟与消息时间戳的最大值加 1：
+   $$L_{	ext{recv}} := \max(L_{	ext{local}}, L_{	ext{msg}}) + 1$$
 
-**📌 核心术语与语境解析**：
-- **Clock skew**：*时钟偏移*。两个时钟读数之间的固定或缓变差值。
-- **Clock drift**：*时钟漂移*。走时频率不同导致的持续发散。
-- **Monotonic clock**：*单调时钟*。保证不倒退、仅可组件内比较的时钟。
-:::
-
-### 2.2.4 逻辑时间与逻辑时钟
-
-Lamport 同时提出了**逻辑时间**与**逻辑时钟**：让事件按其 happened-before 关系排序。逻辑时钟是用逻辑时间为事件打时间戳的逻辑设备，其中最著名的是 **Lamport 时钟**。
-
-每个组件维护一个 Lamport 计数器，每次内部或外部步骤递增，并用当前值为事件打标签。组件发送消息时，接收方把自己的 Lamport 值更新为 **max(本地时间戳, 收到的时间戳) + 1**。这保证因果相关的事件被赋予严格递增的逻辑时间值。
-
-Lamport 时钟广为人知、被广泛讨论，但未必被广泛实现——我本人从未用 Lamport 时钟捕捉事件顺序。但逻辑时钟并不只有这一种形态，它无处不在：
-
-- **Kafka**：每个分区内的消息被赋予 offset。分区可视为逻辑时钟，offset 可视为逻辑时间戳；同一分区内 a 先入队则 offset(a) < offset(b)，但**跨分区的 offset 不可比较**。
-- **etcd**：每个键有一个序列号（sequence number），更新时递增，支撑 compare-and-swap 等操作。键可视为逻辑时钟，序列号可视为逻辑时间戳；对同一键，a 先于 b 则 seq(a) < seq(b)，但**跨键的序列号不可比较**。
-
-即使你看不到 Lamport 时钟或向量时钟，只要眯起眼睛，总能看到类似逻辑时钟与逻辑时间戳的东西。
+通过这套机制，Lamport 证明了**时钟条件（Clock Condition）**：
+$$a 	o b \implies L(a) < L(b)$$
+即：如果事件 $a$ 因果先行于事件 $b$，则 $a$ 的逻辑时钟一定严格小于 $b$ 的逻辑时钟。
 
 :::en
-> **Original**: In the paper mentioned in section 2.2.1, Lamport proposed logical time and logical clocks to establish the order of events. Logical time allows events to be ordered by their happened-before relationship. ... Each component in the distributed system maintains a Lamport clock, a counter that is incremented with every internal or external step. ... When a component sends a message to another component, the receiving component updates its own Lamport clock value to the maximum of its current timestamp and the received timestamp plus 1.
+> **Original**: To introduce a total ordering on all events in a distributed system, Lamport introduced logical clocks. A logical clock is a monotonically increasing software counter maintained by each process. It does not measure physical time; instead, it establishes an ordering that respects causality. If an event a happened before event b, the logical clock of a will be less than the logical clock of b.
 
 **📌 核心术语与语境解析**：
-- **Logical clock**：*逻辑时钟*。以计数器刻画因果顺序的设备，与物理时间无关。
-- **Offset / sequence number**：*偏移量 / 序列号*。Kafka 与 etcd 中逻辑时间戳的工程化身。
-:::
-
-### 2.2.5 物理时钟 vs. 逻辑时钟
-
-两者通常配合使用：**物理时钟用于度量组件内事件的持续时间，逻辑时钟用于建立跨组件事件的顺序。** 物理时钟受漂移、偏移与同步问题困扰，可能导致全局排序不一致；逻辑时钟则即使物理时钟失步，也能提供一致的顺序。
-
-:::en
-> **Original**: Physical clocks and logical clocks are commonly used in tandem to create a sense of order and time in distributed systems. Physical clocks are employed to measure the duration between events within a component, whereas logical clocks are employed to establish the order of events across components.
-
-**📌 核心术语与语境解析**：
-- **In tandem**：*协同使用*。物理时钟负责“多久”，逻辑时钟负责“先后”。
+- **Logical clock**：*逻辑时钟*。用单调递增标量刻画因果偏序的软件机制。
+- **Clock Condition**：*时钟条件*。因果先后必蕴含时钟单调性，是逻辑时钟正确性的理论基石。
 :::
 
 ## 本章小结
 
-1. **系统模型 = 假设集合**：组件是否失败、消息是否丢失、时钟是否同步，决定了算法的能力边界。
-2. **同步 / 异步 / 部分同步**：前两者是理论极端，后者是现实常态——大多数时候同步，偶尔异步。
-3. **失败模型**：Crash-Stop、Omission、Crash-Recovery、Byzantine，从“不复存在”到“什么都可能发生”。
-4. **顺序不可回避**：动作通常不可交换，因此必须建立顺序；协调者通过标签赋予全序。
-5. **happened-before**：偏序、传递、刻画因果；并发与并行的分界由此清晰。
-6. **时钟一致性**：a→b ⇒ C(a) < C(b)，这是用时间戳推理因果的前提。
-7. **物理时钟不完美**：偏移与漂移无法消除，只能缓解；单调时钟可保证不倒退，但仅限组件内。
-8. **逻辑时钟无处不在**：Kafka offset、etcd 序列号，都是逻辑时间戳的工程形态。
-
+1. **系统模型是契约的基石**：同步模型假设过强，异步模型几乎无法解决共识问题；工业界算法（Paxos、Raft）均根植于部分同步模型。
+2. **故障与异常谱系**：组件从 Crash-Stop 到 Crash-Recovery 再到 Byzantine；网络从乱序、重复到分区。明确故障边界才能有的放矢。
+3. **时空第一性**：物理时钟因偏斜与漂移不可全信；分布式定序必须依靠基于因果偏序的 `happened-before` 关系与逻辑时钟。

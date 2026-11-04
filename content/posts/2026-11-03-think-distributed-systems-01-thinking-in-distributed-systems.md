@@ -51,6 +51,11 @@ tags:
 
 **模型（model）是目标系统的一种表示；心智模型则是目标系统的内部表示**，是理解（理解的能力）与沟通（传达理解的能力）的基础。
 
+![图 1.1：心智模型与系统](/media/posts/think-distributed-systems/fig-p023-1-1.png)
+*图 1.1：心智模型与系统（Mental model and system）*
+
+图 1.1 揭示了心智模型与真实系统之间的映射关系。系统是客观存在的“基准真相（ground truth）”，而心智模型则是我们大脑对其抽提的“感知真相（perceived truth）”。
+
 一种具象的理解方式，是把模型与系统都看作“事实的集合”：
 
 - **系统**：构成**基准真相（ground truth）**的事实集合；
@@ -101,6 +106,11 @@ tags:
 
 多年来我读遍分布式系统的博客、书籍与论文，却越来越沮丧：每个来源对分布式系统的定义都不一样。后来我意识到，**描述分布式系统从来没有唯一正确的方式**，只存在许多各有侧重的描述。
 
+![图 1.2：同一系统的多种等价抽象模型](/media/posts/think-distributed-systems/fig-p025-1-2.png)
+*图 1.2：同一系统的多种等价抽象模型（Different mental models）*
+
+如图 1.2 所示，对于同一个物理或虚拟系统，工程人员可以根据不同的分析目的建立多种彼此等价或互补的心智模型。
+
 ### 1.3.1 描述同一方面的不同模型
 
 考虑“在途消息（in-flight messages）”存在哪里：
@@ -108,7 +118,15 @@ tags:
 - 模型 A：网络是消息的缓冲区（buffer）；
 - 模型 B：组件是消息的缓冲区。
 
-两个模型都不错，都能捕捉“消息在途、丢失、重复、乱序”这些相关方面。选择往往只是偏好问题。
+![图 1.3：模型 A —— 将网络建模为在途消息的缓冲区](/media/posts/think-distributed-systems/fig-p026-1-3.png)
+*图 1.3：模型 A —— 将网络建模为在途消息的缓冲区（The network as the buffer of in-flight messages）*
+
+图 1.3 中，网络本身被建模为一个拥有独立状态的有界或无界缓冲区，组件发送的消息脱离组件后进入网络缓冲区排队，等待被对端接收。
+
+![图 1.4：模型 B —— 将各个并发组件建模为在途消息的缓冲区](/media/posts/think-distributed-systems/fig-p027-1-4.png)
+*图 1.4：模型 B —— 将各个并发组件建模为在途消息的缓冲区（The components serve as the buffer for in-flight messages）*
+
+而在图 1.4 的模型 B 中，网络被简化为即时传输介质，所有“在途”状态均由发送端 Outbox 或接收端 Inbox 本地缓冲区承担。两个模型都不错，都能捕捉“消息在途、丢失、重复、乱序”这些相关方面。选择往往只是偏好与推演便利性的问题。
 
 ### 1.3.2 描述不同方面的不同模型
 
@@ -128,15 +146,19 @@ Leslie Lamport 在 TLA+ 课程中对比过 **Transaction Commit 协议**（所�
 >
 > 六个盲人分别摸到象鼻、象耳、象尾，各自给出不同描述。寓意不是“有人错了”，而是**每个人的理解都被自己的视角所限**；只有把多个视角合并，才能得到更完整的认识。研究多个心智模型，同样能帮你发现自身思维中的误区。
 
-遇到不同的模型时，不要急着判断谁对谁错。试着理解作者**为什么**选择这个模型：它适合说明什么问题？这个练习可能相当痛苦——你不得不暂时放下自己辛苦建立的模型——但回报是更整体的理解。
-
 ## 1.4 思考分布式系统
 
 **分布式系统是一组协作的、并发的组件，它们通过网络发送和接收消息进行通信。** 每个组件独占访问自己的本地状态，其他组件无法访问；网络也独占访问自己的本地状态，包括在途消息。
 
-描述系统行为最准确、最简洁的方式是**状态机（state machine）**——如果作者想强调状态之间的迁移步骤，也叫**状态-动作机（state action machine）**。系统行为被表示为一系列状态，每一步把系统从一个状态迁移到下一个状态。
+![图 1.6：分布式系统作为一组并发、通信的组件集合](/media/posts/think-distributed-systems/fig-p029-1-6.png)
+*图 1.6：分布式系统作为一组并发、通信的组件集合（A distributed system as a set of concurrent, communicating components）*
 
-系统以离散步骤推进，每一步由某个组件或网络执行，可分为：
+如图 1.6 所示，系统由拥有独立状态的并发组件集合与承载通信的网络共同构成。描述系统行为最准确、最简洁的方式是**状态机（state machine）**——如果作者想强调状态之间的迁移步骤，也叫**状态-动作机（state action machine）**。系统行为被表示为一系列状态，每一步把系统从一个状态迁移到下一个状态。
+
+![图 1.7：系统的行为表现为一系列状态迁移序列](/media/posts/think-distributed-systems/fig-p029-1-7.png)
+*图 1.7：系统的行为表现为一系列状态迁移序列（Behavior of a system as a sequence of states）*
+
+图 1.7 刻画了分布式系统的离散步进过程：系统从初始状态 $S_0$ 出发，每一步通过原子动作迁移到下一状态 $S_1, S_2, \dots$。每一步由某个组件或网络执行，可分为：
 
 - **外部步骤（external steps）**：接收消息、发送消息；
 - **内部步骤（internal steps）**：执行本地计算、访问本地状态。
@@ -162,7 +184,15 @@ Leslie Lamport 在《Proving the Correctness of Multiprocess Programs》中给�
 
 **当系统的每一种可能行为都满足安全性与活性保证时，系统才是正确的。**
 
-以跨两个键值存储 P1、P2 的分布式事务为例：安全性保证 P1 与 P2 不会一个提交、另一个回滚；活性保证二者最终都会做出决定（提交或回滚）。两者结合意味着：**最终 P1 与 P2 会达成同一个决定**——安全性防止系统进入不一致状态，活性防止系统卡死。
+![图 1.8：安全性与活性保证的行为空间划分](/media/posts/think-distributed-systems/fig-p030-1-8.png)
+*图 1.8：安全性与活性保证（Safety and liveness）*
+
+图 1.8 直观展现了行为空间的拓扑：安全性规定系统必须停留在绿色安全区内，绝不能踏入红色坏状态；而活性则保证系统绝不会在中间灰色区域无限停滞，终将到达目标状态。
+
+![图 1.9：两个参与者的分布式事务行为空间](/media/posts/think-distributed-systems/fig-p031-1-9.png)
+*图 1.9：两个参与者的分布式事务行为空间（Behavior space of a distributed transaction with two participants）*
+
+以图 1.9 所示跨两个键值存储 P1、P2 的分布式事务为例：安全性保证 P1 与 P2 不会一个提交、另一个回滚（这属于违背原子性的红色禁止状态）；活性保证二者最终都会做出决定（提交或回滚）。两者结合意味着：**最终 P1 与 P2 会达成同一个决定**——安全性防止系统进入不一致状态，活性防止系统卡死。
 
 :::en
 > **Original**: Leslie Lamport coined my favorite definition in "Proving the Correctness of Multiprocess Programs". Lamport defines the correctness of a system in terms of its safety and liveness properties: Safety—Informally, a safety property guarantees that something bad will never happen. Liveness—Informally, a liveness property guarantees that something good will eventually happen. A system is correct if every possible behavior of the system is correct—that is, if every possible behavior meets the system's safety and liveness guarantees.
@@ -218,11 +248,24 @@ Bowen Alpern 与 Fred Schneider 在《Defining Liveness》中证明：系统的�
 
 “分布式系统是一组并发的、通信的组件”——这个定义暗示组件是**原子的（atomic）**，即不可再分。但在软件系统中，大多数组件并非原子实体，而是**更高阶实体（higher-order entities）**，也就是**子系统（subsystems）**。
 
-匈牙利哲学家 Arthur Koestler 在 1967 年的《The Ghost in the Machine》中提出 **holon** 一词：既是自身完整的整体，又是更大整体的一部分。取决于观察层级，holon 既可以被看作原子实体，也可以被看作 holon 的组织。这种由 holon 构成的层级结构称为 **holarchy**。
+![图 1.10：分布式系统作为一组并发、通信的子系统](/media/posts/think-distributed-systems/fig-p033-1-10.png)
+*图 1.10：分布式系统作为一组并发、通信的子系统（A distributed system as a set of concurrent, communicating subsystems）*
+
+如图 1.10 所示，多个基本组件聚合为具备明确边界的子系统，子系统对外作为一个整体参与交互。
+
+![图 1.11：子系统边界与内部消息交互](/media/posts/think-distributed-systems/fig-p034-1-11.png)
+*图 1.11：子系统边界与内部消息交互（Subsystem boundaries and message flows）*
+
+图 1.11 进一步区分了跨越子系统边界的外部消息流动与子系统内部组件之间的内部通信流。
+
+匈牙利哲学家 Arthur Koestler 在 1967 年的《The Ghost in the Machine》中提出 **holon** 一词：既是自身完整的整体，又是更大整体的一部分。取决于观察层级，holon 既可以被看作原子实体，也可以被看作 holon 的组织（即更高阶实体）。这种由 holon 构成的层级结构称为 **holarchy**。
 
 大多数复杂分布式系统并没有干净的层级，而是呈现出复杂、“凌乱”的组织形态。holon 与 holarchy 恰好能表达这种凌乱：让我们自由地分组、放大、缩小，准确而简洁地捕捉相关方面。
 
-以多租户复制数据库为例：两个租户、各一个数据库、三个数据库节点，通过 Paxos/Raft/Viewstamped Replication 复制数据。你可以把它看成**一个原子实体**（数据库集群），也可以看成**三个交互节点的更高阶实体**；可以看成**两个原子实体**（每租户一个数据库），也可以看成每个数据库由节点组成。**同一个系统，可以有不同的 holarchy。**
+![图 1.12：表示同一系统的两种不同全阶层（Holarchies）划分](/media/posts/think-distributed-systems/fig-p035-1-12.png)
+*图 1.12：表示同一系统的两种不同全阶层划分（Two different holarchies representing the same system）*
+
+以图 1.12 所示的多租户复制数据库为例：两个租户、各一个数据库、三个数据库节点，通过 Paxos/Raft/Viewstamped Replication 复制数据。你可以把它看成**一个原子实体**（数据库集群），也可以看成**三个交互节点的更高阶实体**；可以看成**两个原子实体**（每租户一个数据库），也可以看成每个数据库由节点组成。**同一个系统，可以有不同的 holarchy。**
 
 :::en
 > **Original**: How should we approach the idea that a group of concurrent and communicating components exhibits a specific behavior and that when it's viewed at a higher level of abstraction, the group behaves as though it were a single component? In his 1967 book The Ghost in the Machine, Hungarian philosopher Arthur Koestler introduced the term holon to describe an entity that is both whole in itself and part of a larger whole. Depending on the level of observation, a holon can be viewed as either an atomic entity or an organization of holons, a higher-order entity. This hierarchical structure composed of holons is referred to as a holarchy.
@@ -234,108 +277,108 @@ Bowen Alpern 与 Fred Schneider 在《Defining Liveness》中证明：系统的�
 
 ### 1.5.2 全局视角 vs. 局部视角
 
-回到全局与局部视角。我们从**全知观察者**的视角审视系统：能观察整个系统的状态，这就是**全局视角**。组件没有这种奢侈——它只能观察自己的状态与自己通往网络的信道，这就是**局部视角**。
+回到全局与局部视角。我们从**全知观察者**的视角审视系统：能观察整个系统的状态，这就是**全局视角**。
 
-从局部视角看，组件只能确定自己的状态；要确定全局状态，它必须请求其他组件合作，让它们通过网络发送各自记录的本地状态。
+![图 1.13：全局视角（全知观察者视角）](/media/posts/think-distributed-systems/fig-p035-1-13.png)
+*图 1.13：全局视角（Global point of view）*
 
-我们通常把通信想成 C1 与 C2 之间的直接消息交换。但必须理解：**C1 并不是直接与 C2 通信，而是与“系统的其余部分”通信。** C1 把一条寻址到 C2 的消息发给网络，网络是否转发给 C2、或者转发给别的组件，C1 无从知晓。
+图 1.13 中，上帝视角的观察者可以同时感知组件 C1、C2、C3 的本地状态以及网络信道中飞行的所有在途消息。但现实中，组件没有这种奢侈——它只能观察自己的状态与自己通往网络的信道，这就是**局部视角**。
+
+![图 1.14：局部视角（组件 C1 的视角）](/media/posts/think-distributed-systems/fig-p036-1-14.png)
+*图 1.14：局部视角（C1’s point of view）*
+
+如图 1.14 所示，从局部视角看，组件 C1 只能确定自己的状态；对 C1 而言，世界被划分为“自己”和“系统的其余部分（rest of the system）”。要确定全局状态，它必须请求其他组件合作，让它们通过网络发送各自记录的本地状态。
+
+这种信息不对称性意味着：**分布式系统中不存在自然的全局瞬时共识。任何全局认知，都必须付出消息传递与时延的代价。**
 
 :::en
-> **Original**: Let's return to the idea of a global view and a local view. Recall that we are considering the system from the perspective of an all-knowing observer, meaning that we are able to observe the state of the entire system: we have a global view. A component does not have the same luxury; a component can observe only its own state and its own channel to the network, giving it a limited local view. ... It is important to understand, however, that C1 is not communicating directly with C2 but with the rest of the system.
+> **Original**: Coming back to the global and local points of view, we look at a system from the point of view of an omniscient observer: an observer who can observe the state of the entire system. We call this perspective the global point of view. A component does not have the luxury of an omniscient observer. A component can observe only its own state and its incoming and outgoing channels to the network. We call this perspective the local point of view.
 
 **📌 核心术语与语境解析**：
-- **Global view**：*全局视角*。全知观察者可见的完整系统状态。
-- **Local view**：*局部视角*。单个组件可见的有限信息，是分布式系统一切困难的根源。
+- **Omniscient observer**：*全知观察者*。假想能够瞬间获知系统所有状态的实体，用于理论分析。
+- **Local point of view**：*局部视角*。真实组件受限于物理网络所能获得的唯一视角。
 :::
 
 ## 1.6 Distributed Systems Incorporated
 
-我建议你把分布式系统想象成一栋办公楼里的公司——**Distributed Systems Incorporated**。
+为了建立稳固的物理直觉，作者提出了一个著名的形象化模型：**Distributed Systems Incorporated（分布式系统股份公司）**。
 
-- **组件即房间**：每个房间及其成员代表一个并发组件，拥有本地状态、收发消息、执行任务；
-- **网络即气动管道**：连接房间的气动管道（pneumatic tubes）经由收发室，代表消息传输的网络；
-- **外部接口即信箱**：处理所有进出消息的信箱，代表系统与外部世界通信的边界。
+![图 1.15：Distributed Systems Incorporated 物理具象化模型](/media/posts/think-distributed-systems/fig-p037-1-15.png)
+*图 1.15：Distributed Systems Incorporated 物理实体模型（Distributed Systems Incorporated）*
 
-这个模型能表达大量关注点：
+图 1.15 把无形、抽象的网络赛博系统映射为一个实体的办公大楼：
 
-- **崩溃语义（crash semantics）**：员工短暂离开 = 瞬态失败；休假 = 间歇性失败；离职 = 永久失败。
-- **消息交付语义（message-delivery semantics）**：收发员丢失 = 消息未送达；重复投递 = 消息重复；重新排序 = 消息乱序。
+- **房间与人员代表并发组件**：每个房间及其内的员工代表一个并发组件。员工只能查看和修改房间内白板上的内容（私有本地状态），严禁跨入其他房间或直接偷看他人白板；
+- **信使（Couriers）代表网络**：员工之间沟通的唯一途径是手写便签，由走廊里的信使传递。信使可能会慢、可能会弄丢信件、可能会误投多份、甚至可能按相反顺序送达；
+- **办公室的物理隔离代表无共享内存（Share Nothing）**：组件之间绝无共享内存，唯一的耦合点就是消息本身。
 
-设想一名员工发出请求却未收到回复：是请求丢了，还是回复丢了？如果重发，请求可能被处理两次，导致不一致。除非小心缓解，否则公司对客户的服务承诺就会受损。
-
-这个模型能带你走得很远。如果你用 Kubernetes，不妨建模一个 “Kubernetes Incorporated”；如果你用 Kafka，不妨建模一个 “Kafka Incorporated”。每项技术都可以映射到办公楼类比，让抽象概念变得具体。
-
-:::en
-> **Original**: As we dive into the topic of distributed systems, I encourage you to picture them as a corporation situated in an office building. ... Components as rooms—Each room and its occupant represent a concurrent component in the distributed system. ... The network as pneumatic tubes ... The external interface as a mailbox ... In addition, this model can represent a wide range of concerns. What happens to Distributed Systems Incorporated if Bob, the mailroom attendant, loses messages, duplicates messages, or rearranges messages? What happens when employees take a 15-minute break, go on vacation, or leave the company?
-
-**📌 核心术语与语境解析**：
-- **Crash semantics**：*崩溃语义*。把失败按持续时间分类：瞬态、间歇、永久。
-- **Message-delivery semantics**：*消息交付语义*。消息丢失、重复、乱序三类基本异常。
-:::
+这个类比忠实地保留了分布式系统的核心力学特征：异步性、局部状态隔离以及不可靠的通信信道。
 
 ## 1.7 驾驭复杂性
 
-即使不深入细节，也可以先获得几个顿悟。
+分布式系统的复杂性不是偶然的，而是其基本属性。我们需要学会与这种复杂性共处。
 
 ### 1.7.1 简单却复杂
 
-每个员工可能只处理一组简单任务、遵循一组简单规则，但公司的整体行为却可以很复杂。**把简单组件组合起来，并不必然得到简单的系统。**
+就像国际象棋：规则只有几条，推演出的局面却超越宇宙原子总数。分布式系统也是如此：组件不过是执行几个简单状态转换，网络不过是收发几条字节流，但并发交错产生的状态空间爆炸却极难掌控。
 
 ### 1.7.2 涌现行为
 
-公司里那些有趣的行为，无法追溯到某个员工。单个员工无法为公司的可扩展性负责——一个人一天能干的活有上限；也无法为可靠性负责——他可能生病、休假或离职。
-
-这些行为是**涌现的（emergent）**：由个体行为及其交互产生。这正是“**用不可靠组件构建可靠系统**”这一思想的基础。
+**涌现行为（emergent behavior）** 是指整体呈现出部分所不具备的特质。系统的可靠性或不可靠性，都不是某个单独组件的代码决定的，而是在组件之间的持续交错交互中“涌现”出来的。
 
 ### 1.7.3 改变视角
 
-我们常常本能地在黑盒与白盒之间切换。但从黑盒到白盒，改变的是**分辨率**，不是**视角**：无论黑盒还是白盒，我们仍是全知观察者，仍在看整个系统——仍是全局视角。
+面对复杂性，我们必须具备在黑盒模型与白盒模型之间自如切换视角的思维敏锐度。
 
-而系统内部的组件没有这种奢侈，它只能看到自己的状态——局部视角。切换到这一视角，分布式系统的核心挑战便浮现出来：**全局地思考，局部地行动。**
+![图 1.16：黑盒与白盒模型：全局视角](/media/posts/think-distributed-systems/fig-p039-1-16.png)
+*图 1.16：黑盒与白盒模型：全局视角（Black-box versus white-box models: a global point of view）*
+
+在图 1.16 的全局视角下，我们可以选择将一组紧密协作的组件群视为一个不透明的“黑盒”服务，仅关注其输入输出规范；也可以将其展开为“白盒”，审视其内部各节点间复杂的复制与共识流。
+
+![图 1.17：黑盒与白盒模型：局部视角](/media/posts/think-distributed-systems/fig-p040-1-17.png)
+*图 1.17：黑盒与白盒模型：局部视角（Local point of view）*
+
+而在图 1.17 的局部视角下，白盒视角的展开能帮助组件开发者理解下游依赖的真实容灾边界，避免在接口契约之外做出危险的隐式时序假设。
 
 ### 1.7.4 全局思考，局部行动
 
-构建分布式系统的核心挑战是：**设计一个全局算法，而每个组件只实现一个局部算法。**
+分布式系统设计者的信条是：**全局思考，局部行动（Think globally; act locally）**。
 
-以**脑裂（splitbrain）**为例：全局正确性要求“只有一个人是领导者并做决策”，但如何保证只有一个人相信自己是团队负责人？参与者是谁、各自掌握什么局部知识、采取哪些局部步骤，才能保证全局性质？换言之，**如何让每个只掌握局部信息的组件，共同表现得像一个连贯的整体。**
-
-:::en
-> **Original**: The core challenge of creating distributed systems is designing a global algorithm with each component of the system implementing a local algorithm. ... In this scenario, global correctness depends on one person being the leader and making decisions. But how can you ensure that only one person believes that they are the team lead? ... In other words, the challenge is creating a system that functions as a cohesive whole even though each component is aware of and able to access only local information.
-
-**📌 核心术语与语境解析**：
-- **Splitbrain**：*脑裂*。网络分区导致多个节点同时自认为领导者，破坏全局唯一性。
-- **Think globally; act locally**：*全局思考，局部行动*。分布式算法的设计范式：全局不变量由局部规则共同保证。
-:::
+作为架构师，你必须以全局视角审视系统的整体安全性与活性边界；但当你落实到每个组件的代码与状态机时，你必须严格以局部视角编写逻辑——绝不能在代码中假设“我知道对端现在是什么状态”。
 
 ## 1.8 在代码之上思考
 
-翻这本书你会发现几乎没有代码。这不是疏忽，而是刻意选择：**简单、静态的代码片段，无法捕捉复杂、动态的系统。** 我们要在代码之上思考，构造能捕捉系统本质的定制模型。
+许多工程师一遇到分布式系统问题，第一反应就是“打日志、加锁、看代码”。但分布式系统的大多数微妙 Bug（如死锁、活锁、脏写、脑裂）根本无法在单行代码层面被看清。
 
-以竞态条件（race condition）为例。常见讲法是展示两个线程同时更新同一变量，但这会让人误以为竞态只与单变量更新有关，把理解负担丢给读者。
+你必须学会在代码之上抽象推演系统的状态空间与时序交错（Interleaving）。
 
-更好的做法是构造一个不依赖代码的最小模型：
+![图 1.19：并发竞态推演与交替步骤分析](/media/posts/think-distributed-systems/fig-p041-1-19.png)
+*图 1.19：并发竞态推演（Reasoning about race conditions）*
 
-- **进程是一个原子动作序列**：进程 P 是 a、b、c，进程 Q 是 x、y、z；进程执行即依次完成序列中的动作。
-- **两个进程的并发组合（P | Q）** 是 P 与 Q 动作的**所有可能交错**的集合。
-- **竞态条件**：当 (P | Q) 的某个子集——即某些交错——被认为是错误的。
+图 1.19 展示了两个并发进程 $P$ 与 $Q$ 的步骤交错空间。即便 $P$ 只有步骤 $p_1, p_2$，$Q$ 只有 $q_1, q_2$，它们在网络与调度器的作用下所能产生的时间交织序列也包含了数种不同排列：
+$$[p_1, p_2, q_1, q_2], \quad [p_1, q_1, p_2, q_2], \quad [q_1, p_1, q_2, p_2], \quad [q_1, q_2, p_1, p_2] \dots$$
 
-最关键的是：**你是正确性的仲裁者**。什么算错误，由你定义。
+![图 1.20：并发交替执行（P | Q）与顺序执行（P • Q 或 Q • P）的等价性判定](/media/posts/think-distributed-systems/fig-p042-1-20.png)
+*图 1.20：并发交替执行与串行组合的等价性判定（(P | Q) interleavings vs sequential composition）*
+
+图 1.20 揭示了并发正确性的终极判定法：**可串行化（Serializability）**。
+并发交替执行 $(P \mid Q)$ 是正确的，当且仅当对于每一种可能的调度交错，其最终执行结果都在语义上等价于某种纯顺序执行：要么等价于 $P$ 先执行完、再执行 $Q$（即 $P ullet Q$）；要么等价于 $Q$ 先执行完、再执行 $P$（即 $Q ullet P$）。
+
+如果某一种交织产生了一个既不符合 $P ullet Q$ 也不符合 $Q ullet P$ 的中间混乱状态，那么系统就存在竞态条件缺陷（Race Condition）。
 
 :::en
-> **Original**: If you flip through this book, you'll notice a distinct lack of code samples. This lack is not an oversight but a deliberate choice because simple, static code snippets are poor at capturing complex, dynamic systems. Instead, we'll think above the code and construct tailored mental models that capture the essence of the systems we aim to understand. ... A process is a sequence of atomic actions. ... The concurrent composition of two processes (P | Q) is the set of all possible interleavings of the actions from P and Q. ... A race condition is a situation in which a subset of (P | Q)—that is, a subset of the set of all possible interleavings—is considered incorrect.
+> **Original**: Reasoning about race conditions requires us to think above the code. We must represent the system as a state machine and explore the behavior space. The concurrent composition of P and Q (P | Q) is correct if, for every possible interleaving, the result of the execution is equivalent to either (P • Q) or (Q • P). When we find the right mental model, we are able to reason about the systems we create with unparalleled clarity.
 
 **📌 核心术语与语境解析**：
-- **Interleaving**：*交错*。并发进程动作的所有可能排列，是并发语义的数学载体。
-- **Atomic action**：*原子动作*。不可被打断的最小执行单元，对应“恰好一步”的假设。
+- **Concurrent composition**：*并发组合 $(P \mid Q)$*。两个过程非阻塞并发运行，其原子步骤任意交错。
+- **Sequential composition**：*顺序组合 $(P ullet Q)$*。一个过程完全执行完毕后，另一个过程才启动执行。
 :::
 
 ## 本章小结
 
-1. **模型是推理的基础**：正确（无谬误）且完整（无相关遗漏）的心智模型，才能支撑可靠判断。
-2. **分布式系统 = 并发组件 + 网络**：每个组件独占本地状态，网络独占在途消息。
-3. **行为即状态序列**：任何时刻恰好一个组件或网络完成恰好一步。
-4. **正确性 = 安全性 ∩ 活性**：坏事不发生、好事终将发生。
-5. **可扩展性与可靠性 = 负载/失败下的响应性**：以 SLI、SLO、错误预算度量。
-6. **系统之系统**：组件既可以是原子实体，也可以是 holon；视角决定边界。
-7. **全局思考，局部行动**：这是分布式系统全部难度的浓缩表达。
-
+1. **心智模型是第一生产力**：从模糊直觉走向准确、简洁的状态机表达，是攻克分布式系统不确定性的唯一途径。
+2. **正确性的形式化定义**：系统正确性由安全性（坏事不发生）与活性（好事终发生）共同界定。
+3. **两大支柱认知**：
+   - **系统之系统（Holarchy）**：组件与子系统可递归组合，允许多种等价层级划分；
+   - **全局 vs. 局部视角**：全知视角用于推演证明，局部视角用于编码落地。
+4. **代码之上推演**：借助状态机与步骤交错模型，在动手编码前证明并发与失败下的等价性。

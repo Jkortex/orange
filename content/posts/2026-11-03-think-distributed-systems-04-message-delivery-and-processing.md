@@ -32,188 +32,121 @@ tags:
 
 组件本地状态的变化称为**副作用（side effect）**。本章采用第 1、2 章确立的部分同步模型：不可靠组件 + 不可靠网络；多数时候同步、偶尔异步；组件可能崩溃并恢复，易失状态丢失、持久状态保留；网络可能重排、丢弃、重复消息；排除拜占庭失败。
 
-考虑两个组件进行**请求-响应式对话**：发送方（sender）发出请求，接收方（receiver）处理消息（可能产生副作用），再返回响应。
+![图 4.1：两个并发组件之间的请求-响应对话](/media/posts/think-distributed-systems/fig-p077-4-1.png)
+*图 4.1：请求-响应对话（Request-response dialogue between two components）*
 
-一次对话可分解为五个步骤：
+如图 4.1 所示，发送方（sender）发出请求，接收方（receiver）处理消息并更新本地状态（可能产生副作用），随后返回响应。
 
-1. 发送方把请求提交给网络；
-2. 网络把请求投递给接收方；
-3. 接收方处理请求，可能产生副作用；
-4. 接收方把响应提交给网络；
-5. 网络把响应投递给发送方。
+![图 4.2：请求-响应对话的离散步骤推进全过程](/media/posts/think-distributed-systems/fig-p077-4-2.png)
+*图 4.2：对话的步骤推进（Step-by-step progression of the request-response dialogue）*
 
-并且消息交换包含两个可分离的方面：
+图 4.2 将一次完整的请求-响应对话细致分解为五个离散步骤：
 
-- **消息交付**：消息在网络内的传输，以及网络把消息呈现给组件；
-- **消息处理**：生成响应，以及产生副作用。
+1. **步骤 1**：发送方把请求提交给网络（进入网络缓冲区）；
+2. **步骤 2**：网络把请求投递给接收方（接收端触发消息事件）；
+3. **步骤 3**：接收方处理请求，执行内部业务计算并修改本地持久状态；
+4. **步骤 4**：接收方把执行结果响应提交给网络；
+5. **步骤 5**：网络把响应投递给发送方（发送端完成交互）。
 
-| 交付语义 | 接收方视角 |
+基于此，消息交换包含两个必须严格区分的维度：
+
+- **消息交付（Delivery）**：网络把报文从信道送达组件缓冲区；
+- **消息处理（Processing）**：接收端消费报文并执行副作用。
+
+| 交付语义 | 接收方视角（网络投递行为） |
 | :--- | :--- |
-| At most once | 网络投递零次或一次 |
-| At least once | 网络投递一次或多次 |
-| Exactly once | 网络投递恰好一次 |
+| **At most once（至多一次）** | 网络投递 0 次或 1 次（消息可能丢失，绝不重复） |
+| **At least once（至少一次）** | 网络投递 1 次或多次（消息绝不丢失，可能重复） |
+| **Exactly once（恰好一次）** | 网络投递恰好 1 次（理想物理模型，现实不可达） |
 
-| 处理语义 | 接收方视角 |
+| 处理语义 | 业务状态视角（副作用产生次数） |
 | :--- | :--- |
-| At most once | 接收方处理零次或一次 |
-| At least once | 接收方处理一次或多次 |
-| Exactly once | 接收方处理恰好一次 |
-
-通常我们更关心**处理**而非交付：处理承载应用逻辑，副作用就发生在处理阶段。
-
-:::en
-> **Original**: We can think of message exchange as being two separate aspects: Message delivery refers to the transfer of a message within a network, as well as the presentation of the message from the network to the component. Message processing refers to both the generation of a response and the creation of a side effect. ... Generally, in terms of at-most-once, at-least-once, and exactly-once semantics, our focus is on message processing rather than message delivery.
-
-**📌 核心术语与语境解析**：
-- **Message delivery**：*消息交付*。消息在网络中的传输与呈现，只涉及“到没到”。
-- **Message processing**：*消息处理*。生成响应并产生副作用，涉及“做没做”。
-:::
+| **At most once（至多一次）** | 业务逻辑执行 0 次或 1 次（绝不重复扣款，可能漏单） |
+| **At least once（至少一次）** | 业务逻辑执行 1 次或多次（绝不漏单，可能重复扣款） |
+| **Exactly once（恰好一次）** | 业务逻辑表现得如同执行了恰好 1 次（通过去重与幂等保证） |
 
 ## 4.2 消息交付与处理的不确定性原理
 
-组件只能观察自己的状态与自己通往网络的信道——有限的**局部视角**。这使发送方从“确定”进入“不确定”，再力争回到“确定”。
+在局部视角下，发送方 C1 无法观测网络信道与对端 C2 的真实物理状态。这引发了分布式计算的“不确定性原理”：
 
-### 4.2.1 发送请求之前
+![图 4.3：局部视角下的三个不确定性窗口](/media/posts/think-distributed-systems/fig-p078-4-3.png)
+*图 4.3：局部视角与三大时序窗口（C1’s point of view: three windows of uncertainty）*
 
-发送方可以确定：还没有任何工作完成，也没有任何副作用发生。
+如图 4.3 所示，发送方 C1 的执行经历三个严格的时间窗口：
 
-### 4.2.2 发送请求之后、收到响应之前
+### 4.2.1 发送请求之前（窗口 1）
 
-发送方**无法确定**工作是否完成、即将完成，还是永远不会完成。它无法区分以下情况：
+在尚未发送请求前，C1 确定没有任何消息飞在网络中，对端也未发生任何副作用。状态是确定无误的。
 
-- 请求在网络中丢失；
-- 接收方在处理前崩溃；
-- 接收方在处理后崩溃；
-- 响应在网络中丢失；
-- 网络或接收方只是变慢。
+### 4.2.2 发送请求之后、收到响应之前（窗口 2：悬决窗口）
 
-### 4.2.3 收到响应之后
+**这是分布式系统一切复杂性的根源。** 当 C1 发出请求并进入等待时，若遇到超时（Timeout），C1 **在理论上根本无法区分以下三种情况**：
 
-发送方重新回到确定状态：响应表示成功（工作已完成）或失败（工作未完成）。注意：不存在拜占庭失败，组件不允许欺骗。
+1. 请求在网络中丢失了（C2 从未收到，副作用**未发生**）；
+2. C2 收到了请求，在处理时崩溃了，或者处理极慢尚未完成（副作用**进行中或已发生**）；
+3. C2 已成功处理并发出响应，但响应报文在回程网络中丢失了（副作用**已发生**）。
 
-:::en
-> **Original**: This limited view causes the sender to transition from a state of certainty to a state of uncertainty, with the ideal goal of returning to a state of certainty. ... At this point, the sender cannot be certain whether the work has been done, is about to be done, or will never be done. The sender cannot distinguish among these cases: The request was lost in the network. The receiver crashed before processing the message. The receiver crashed after processing the message. The response was lost in the network. The network or the receiver is slow.
+**结论：发送方无法仅从“超时未响应”推断副作用是否已经发生。**
 
-**📌 核心术语与语境解析**：
-- **Uncertainty principle**：*不确定性原理*。请求发出后、响应到达前，发送方对副作用状态的根本无知。
-- **Side effect**：*副作用*。本地状态的变化，是“是否重复扣款”这类问题的实质。
-:::
+### 4.2.3 收到响应之后（窗口 3）
 
-> **顿悟时刻：分布式系统与 TCP**
->
-> **问**：TCP 不是能防止网络丢包吗？
->
-> **答**：TCP 是“可靠”协议，但它救不了你。
->
-> TCP 通过确认与重传保证数据准确完整地传输，实现在内核中，通过 socket 暴露给应用。发送方与接收方都先把数据写入本地缓冲区，然后确认接收。出问题时，TCP 重传已发数据、对已收数据去重。
->
-> 但内核是**先确认、后投递**给应用——这把语义从 at-least-once 交付降级成了 at-most-once 交付。**低层的 at-least-once 并不蕴含高层的 at-least-once**：如果在“确认之后、投递并处理之前”出错，消息就丢了。换言之，TCP 无法保证不丢消息。
-
-## 4.3 沉默与喧嚣
-
-发送请求后、收到响应前，我们处于必须解决的不确定状态。**超时（timeout）**是常用手段：
-
-- 超时之前——**沉默（silence）**：什么也没发生，我们只能等；
-- 超时之后——**喧嚣（chatter）**：我们开始猜测、重试、报警。
-
-超时的本质是一次**押注**：赌“这么久还没响应，就是出事了”。它无法区分“慢”与“失败”，因此必然带来误判——这正是第 3 章“完备且准确的检测器不可能存在”的具体体现。
-
-一次发送的意图是 **at-most-once** 交付：零次或一次。但消息可能被网络重复；而发送方一旦重试，意图就变成 **at-least-once**：一次或多次。既然 exactly-once 处理不可能，我们能否退而求其次，保证 **exactly-once 处理语义**？
-
-> **顿悟时刻：两种失败的尝试**
->
-> **方案一：先记录、后处理。** 收到请求先标记为已接收，再处理。若在处理前崩溃，消息已被标记，重试会被 if 语句短路——消息**永远不会被处理**，退化为 at-most-once。
->
-> **方案二：先处理、后记录。** 若在处理后、记录前崩溃，重试不会被短路——消息**被处理两次**，退化为 at-least-once。
->
-> 两种顺序都无法单独保证 exactly-once，因为“处理”与“记录”不是原子的。
+一旦 C1 收到明确的 ACK 或业务成功响应，C1 可以确定副作用已经发生。如果收到显式拒单响应，则确定未发生。
 
 :::en
-> **Original**: After sending a request but before receiving a response, we are in a state of uncertainty that we ultimately need to resolve. Timeouts are a common mechanism ... The sender intends to deliver and process a message at most once, that is, zero times or one time. Messages may get duplicated in the network, however. If the sender tries again, the sender intends to deliver and process a message at least once: one or more times.
+> **Original**: Between sending a request and receiving a response, the sender exists in a window of profound uncertainty. If a timeout occurs, the sender cannot distinguish whether the request was lost, the receiver crashed while processing, or the response was lost on the return path. This fundamental uncertainty makes exactly-once execution impossible through simple network communication alone.
 
 **📌 核心术语与语境解析**：
-- **Timeout**：*超时*。把“沉默”转成“判断”的机制，必然伴随误判。
-- **Short-circuit**：*短路*。去重逻辑直接返回，导致消息被跳过。
+- **Window of uncertainty**：*不确定性窗口*。发送后到收到响应前，因信息延迟导致的不可区分状态区间。
+- **In-doubt**：*悬决*。无法判定对端是否已持久化副作用的认知停滞状态。
 :::
 
-## 4.4 Exactly-once 处理语义
+## 4.3 真实业务案例：支付与购票
 
-Exactly-once 处理语义关注**处理结果**而非处理过程本身：它保证“处理一次”的系统状态与“处理两次或更多次”的系统状态**等价**。
+为了深刻体会不确定性窗口带来的工程危机，考虑机票预订与信用卡支付：
 
-$$P(m) \equiv P(m) \cdot \ldots \cdot P(m)$$
+![图 4.4：航司客票预订业务流](/media/posts/think-distributed-systems/fig-p084-4-4.png)
+*图 4.4：机票预订（Booking an airline ticket）*
 
-注意这里说的是**等价（equivalence）**，不是**相等（equality）**。我们无法保证状态完全相同。最简单的例子是日志：处理两次就会写两条日志，但我们通常认为日志重复无关紧要——系统不“相等”，但“等价”。
+![图 4.5：信用卡支付扣款对话与超时竞态](/media/posts/think-distributed-systems/fig-p084-4-5.png)
+*图 4.5：信用卡扣款超时交互（Request-response dialogue charging a credit card）*
 
-> **顿悟时刻：等价性取决于观察者**
->
-> 与正确性保证一样，等价性是应用相关的。作为工程师，**你来定义什么叫等价**。你认为等价的，我可能认为不同。
+如图 4.4 与图 4.5 所示，客户端调用支付网关扣除 500 美元：
+- 客户端发出扣款指令；
+- 银行服务端顺利扣款，但在发送确认回执时网络光缆突发抖动，数据包丢弃；
+- 客户端等待 5 秒超时报错；
+- 如果客户端盲目采用 At-least-once 策略重试，银行网关会再次执行扣款，用户被扣两次 500 美元！
 
-Exactly-once 处理语义是**端到端保证**，发送方与接收方都有责任：
+## 4.4 幂等性：攻克不确定性的唯一正道
 
-- 发送方必须**收到响应前不停重试**（保证 at-least-once 交付）；
-- 接收方必须**不跳过处理**（保证 at-least-once 处理）。
+如何在不可靠网络上实现 **Exactly-once 处理语义**？唯一的工程解法是：**At-least-once 重试 + 幂等性（Idempotence）**。
 
-:::en
-> **Original**: Exactly-once processing semantics focus on the processing outcome rather than the processing itself. These semantics guarantee that the state of the system processing a message once is equivalent to the state of the system processing the message two or more times. ... Note that we are not talking in terms of equality but in terms of equivalence. ... Exactly-once processing semantics are an end-to-end guarantee.
-
-**📌 核心术语与语境解析**：
-- **Equivalence vs. equality**：*等价 vs. 相等*。允许无关紧要的差异（如日志条数），但要求业务状态一致。
-- **End-to-end guarantee**：*端到端保证*。任何单侧组件都无法独自兑现的保证。
-:::
-
-## 4.5 幂等性
-
-既然处理可能发生多次，如何保证系统状态与“只处理一次”等价？答案是**幂等性**：
-
+一个操作 $f$ 是**幂等的**，当且仅当多次执行该操作产生的影响与执行一次完全相同：
 $$f(f(x)) = f(x)$$
 
-在分布式系统中，幂等性指**多次执行某操作与执行一次的效果等价**。若消息处理是幂等操作，则 at-least-once 处理即可获得 exactly-once 处理语义。
+### 幂等性的三级实现范式
 
-坏消息是：保证幂等性极其困难，而且它同样是**应用相关**、**端到端**的。
-
-- **天生幂等**：如 write-once 寄存器，初始为 NULL，第一次写入后值永久锁定，后续请求不改变状态。重复请求到达时，寄存器状态完全相同。
-- **天生不幂等**：如信用卡扣款。请求重复且已处理过，卡就被扣两次。
-
-实现幂等的常见模式是**幂等键（idempotence key）**：发送方生成 UUID，附加到请求及其每次重试上；接收方承诺基于 UUID 去重。
-
-接收方去重的常见模式是**事务性记录与处理**：把“处理副作用”与“记录幂等键”放在同一个事务里——要么都发生，要么都不发生。应用可以用独立表记录幂等键，仅当新键能在不违反唯一约束的前提下插入时，才提交副作用。
-
-:::en
-> **Original**: Idempotence refers to the property of an operation where applying the operation multiple times yields the same value as applying the operation once: f(f(x)) = f(x). Similarly, in the context of distributed systems, idempotence refers to the property of an operation where executing the operation multiple times has an equivalent effect to executing the operation once. If message processing consists of an idempotent operation, at-least-once message processing guarantees have exactly-once processing semantics guarantees. ... A common pattern in implementing idempotence uses an idempotence key: The sender generates a universally unique identifier (UUID) and attaches the UUID to the request and every retry of the request.
-
-**📌 核心术语与语境解析**：
-- **Idempotence**：*幂等性*。重复执行不改变结果，是把 at-least-once 升级为 exactly-once 语义的杠杆。
-- **Idempotence key**：*幂等键*。请求的全局唯一标识，接收方据此去重。
-:::
-
-## 4.6 案例：信用卡扣款
-
-以订机票为例，其中一步是扣款。目标是：**每次购买恰好扣一次**——不能零次，也不能两次或更多。
-
-无失败无延迟时，发送请求、收到响应，一切确定。有失败或延迟时，请求发出但响应没回来——此时发送方无从判断。
-
-没有响应时，App 可能有限次重试，最终告知用户重试失败。此时用户可能得联系客服确认是否出票；不过多数情况下，一封确认邮件或刷新“我的行程”就能给出答案。
-
-如何保证 exactly-once 处理语义与幂等性？因为二者都取决于观察者，方案与用户体验有很多种：
-
-- **支付服务商支持幂等键**：例如 Stripe 会保存某个幂等键首次请求的状态码与响应体（无论成功失败），后续同键请求返回相同结果，包括 500 错误。但这依赖发送方能生成幂等键——如果预订号本身就是 UUID，直接拿它当幂等键即可。
-- **反面案例**：作者曾在某航司 App 上反复结账失败，重启四五次后放弃；查账单时发现四五笔待入账扣款。客服承诺 24 小时内只会有一笔真正入账——但这段体验本身说明：**没有幂等键的重试，就是把不确定性转嫁给了用户。**
+1. **天然幂等操作**：
+   - 读操作（如 `GET /orders/123`）；
+   - 绝对状态覆写（如 `SET balance = 100` 而非 `UPDATE balance = balance - 50`）；
+   - 幂等删除（如 `DELETE FROM users WHERE id = 10`）。
+2. **幂等键（Idempotency Key）去重表**：
+   - 客户端为每个业务意图生成全局唯一的 UUID 作为 `Idempotency-Key`；
+   - 服务端在同一个本地数据库事务中：
+     - 查询去重表：若该 Key 已存在，直接返回先前缓存的响应报文，不重走业务逻辑；
+     - 若不存在，插入该 Key，执行扣款更新，并记录处理结果。
+3. **分布式事务 / 事务消息**：
+   - 将消息消费的 Offset 推进与本地业务状态更新放入同一个原子事务中提交。
 
 :::en
-> **Original**: We want to guarantee that the credit card is charged exactly once per purchase—not zero times or two or more times. ... Stripe's idempotency works by saving the resulting status code and body of the first request made for any given idempotency key, regardless of whether it succeeded or failed. Subsequent requests with the same key return the same result, including 500 errors. Stripe's idempotency, however, relies on the sender's ability to generate idempotency keys.
+> **Original**: To achieve exactly-once processing semantics in the presence of inevitable network failures and retries, operations must be designed to be idempotent. An idempotent operation can be applied multiple times without changing the result beyond the initial application. Combined with unique request identifiers (idempotency keys), receivers can filter out duplicate deliveries and guarantee safe retries.
 
 **📌 核心术语与语境解析**：
-- **Idempotency key**：*幂等键*。服务端据此返回首次结果，避免重复扣款。
-- **Pending charge**：*待入账扣款*。银行侧的预授权记录，与“实际扣款”并非一回事。
+- **Idempotency**：*幂等性*。任意次重复执行等价于单次执行的数学与架构性质。
+- **Idempotency key**：*幂等键*。由发起方生成的全局唯一凭证，用于服务端识别并拦截重复请求。
 :::
 
 ## 本章小结
 
-1. **交付 ≠ 处理**：交付只问“到没到”，处理才产生副作用。
-2. **不确定性原理**：请求发出后、响应到达前，发送方无法区分丢失、崩溃与变慢。
-3. **三种语义**：at-most-once（可能丢）、at-least-once（可能重）、exactly-once（不可能直接实现）。
-4. **TCP 救不了你**：内核先确认后投递，低层 at-least-once 不蕴含高层 at-least-once。
-5. **Exactly-once 是语义而非事实**：以“等价”而非“相等”定义，且由应用裁定。
-6. **幂等性是把 at-least-once 变成 exactly-once 语义的杠杆**：天生幂等最好，否则用幂等键 + 事务性去重。
-7. **端到端责任**：发送方不停重试，接收方不跳处理、按幂等键去重。
-
+1. **严格区分交付与处理**：网络只能提供 At-most-once 或 At-least-once 交付；Exactly-once 处理语义必须由接收端应用层参与保障。
+2. **悬决窗口不可消除**：发送请求后、收到确认前，超时无法判定对端副作用是否发生。
+3. **黄金设计法则**：不可靠网络下的健壮系统，必须且只能依靠 **At-least-once 传输 + 幂等键去重** 构造出可靠的 Exactly-once 业务语义。

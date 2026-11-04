@@ -31,7 +31,7 @@ tags:
 
 ## 为什么需要这套专栏
 
-作者 Dominik Tornow 是 Resonate HQ 的创始人兼 CEO，在哈索·普拉特纳研究所（Hasso Plattner Institute）学习软件系统工程，拥有二十余年工业界经验，长期专注于系统思维、系统建模，以及“构造即正确（correct by construction）”的形式化方法。本书正是他二十年心智模型的沉淀。
+作者 Dominik Tornow 是 Resonate HQ（Resonate HQ, Inc.）的创始人兼 CEO，在德国波茨坦的哈索·普拉特纳研究所（Hasso Plattner Institute, Potsdam）学习软件系统工程，拥有二十余年工业界经验，长期专注于系统思维、系统建模，以及“构造即正确（correct by construction）”的形式化方法。本书正是他二十年心智模型的沉淀。
 
 与“技术目录式”的分布式书籍不同，本书的核心主张是：
 

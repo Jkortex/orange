@@ -1,16 +1,16 @@
 ---
-title: "Think Distributed Systems（五）：事务——把并发与失败关进抽象里"
+title: "Think Distributed Systems（五）：事务——并发与失败的双重抽象"
 date: 2026-11-03T02:50:00Z
-description: "从事务作为抽象入手：一个不感知并发与失败的定义，如何被数据库翻译成感知并发、感知失败且可容忍失败的执行；并给出可串行化与完整性的形式化判据。"
+description: "把事务拆为对并发（可串行化）与对失败（完整性）的抽象；用状态机模型刻画事务生命周期，并厘清可串行化与 ACID 的真正边界。"
 category: distributed-systems
 column: think-distributed-systems
 tags:
   - "事务"
-  - "可串行化"
   - "ACID"
-  - "Undo"
-  - "抽象"
-  - "一致性模型"
+  - "可串行化"
+  - "完整性"
+  - "状态机"
+  - "前向恢复"
 ---
 
 # 第 5 章：事务
@@ -18,173 +18,128 @@ tags:
 本章涵盖：
 
 - 抽象（abstraction）的概念
-- 事务的概念
-- 事务的意义
-- 事务的实现
+- 事务作为并发与失败的抽象
+- 事务的模型：单机与分布式
+- 正确性：可串行化与完整性
+- ACID 与面向对象系统的对照
 
-事务是软件工程史上最流行、最强大的抽象，它诞生于数据库领域，却在分布式系统中被广泛采纳。原因很简单：**事务让你可以假装并发与失败不存在。**
-
-多数教材用 ACID 解释事务，但 ACID 把事务的性质呈现为四个彼此独立的概念。本章换一个视角：**从正确性（correctness）与完整性（completeness）的角度**理解事务。
+**事务（transaction）是计算机科学中最成功的抽象之一。** 它的魔力在于：让开发者在编写并发与可能发生崩溃的复杂程序时，能够**表现得好像既没有并发、也没有失败一样**。
 
 ## 5.1 抽象
 
-在计算机科学最基础的著作《计算机程序的构造和解释》（SICP）中，抽象与“基本表达式”“组合手段”并列为程序设计的三大基本构件。但那个定义只说明了抽象的构成，没有强调它的本质：**抽象拥有改造话语域的力量，它能重塑整个世界。**
+抽象并不是“模糊”，恰恰相反，**抽象是一种精准的简化**：通过刻意忽略特定细节，突出真正重要的结构。
 
-Tanenbaum 与 Bos 在《现代操作系统》中用“丑陋接口 → 美丽接口”说明这种转化：操作系统把 CPU、内存、磁盘这些“丑陋实体”转化为进程、内存、文件这些“美丽实体”。
+![图 5.1：事务抽象作为开发者与复杂物理世界之间的认知屏障](/media/posts/think-distributed-systems/fig-p088-5-1.png)
+*图 5.1：事务抽象（The transaction abstraction）*
 
-但美丑取决于观察者。从数据库系统的视角看，操作系统的进程、内存、文件反而是“丑陋”的，数据库把它们转化为表（行与列）与事务。
+如图 5.1 所示，事务抽象扮演了一层厚重而坚固的屏障。屏障上方是开发者简洁优雅的业务逻辑，而屏障下方则是残酷的硬件现实：微秒级的并发读写冲突、宕机、断电与死锁。
 
-Pat Helland 在《Life beyond Distributed Transactions》中用 **agnostic（无感知）** 与 **aware（有感知）** 替代美丑，并强调 **API 是跨越世界边界的翻译器**。
+## 5.2 事务的魔力：两大维度
 
-- **自顶向下**看，是**归约（reduction）**：使用高层抽象的实体，被转换、编译为使用低层抽象的实体；
-- **自底向上**看，是**组合（composition）**：使用低层抽象的实体组合成高层实体，高层实体由此**涌现**。
+事务的魔力由两个完全独立的维度交织而成：
 
-无论从哪个方向推理，都存在一种**等价性**：用高层抽象推理与用低层抽象推理，系统给出相同结果。
+![图 5.2：多进程并发操作交织产生的读写冲突](/media/posts/think-distributed-systems/fig-p089-5-2.png)
+*图 5.2：并发操作交织（Concurrent interleavings of operations）*
 
-本章把事务看作这样一种抽象：**把“无感知并发、无感知失败”的定义，转化为“感知并发、感知失败且可容忍失败”的执行。**
+![图 5.3：执行中断导致系统处于半途中断的非一致状态](/media/posts/think-distributed-systems/fig-p089-5-3.png)
+*图 5.3：部分执行故障（Partial execution failure）*
+
+### 5.2.1 针对并发的抽象：可串行化
+
+如图 5.2 所示，当多个进程并发操作共享数据时，其指令会发生任意粒度的交错（Interleaving），产生诸如脏读、不可重复读、幻读或更新丢失等异常。
+
+事务通过**隔离性（Isolation）**屏蔽了并发：系统保证无论底层的交错多么混乱，最终产生的结果都等价于某种串行执行——这就是**可串行化（Serializability）**。
+
+### 5.2.2 针对失败的抽象：完整性（原子性）
+
+如图 5.3 所示，在没有事务保护时，一个由多个步骤组成的业务过程若中途崩溃，会遗留灾难性的部分状态。
+
+事务通过**原子性（Atomicity）**屏蔽了失败：要么全部步骤执行成功（Commit），要么像从未发生过一样完全回滚（Abort）。全执行保证系统永远不会停留在破损的中间状态。
 
 :::en
-> **Original**: This chapter explores transactions as abstractions that transform concurrency-agnostic and failure-agnostic definitions into concurrency-aware, failure-aware, and failure-tolerant executions. In other words, we will explore transactions as abstractions that enable us to pretend that concurrency and failure are nonexistent.
+> **Original**: The magic of transactions is twofold: it provides an abstraction over concurrency and an abstraction over failure. Over concurrency, it guarantees that concurrent transactions behave as though they executed sequentially—a property known as serializability. Over failure, it guarantees that a transaction either completes entirely or has no effect at all—a property known as atomicity or completeness.
 
 **📌 核心术语与语境解析**：
-- **Abstraction**：*抽象*。把低层实体的复杂性归约为高层可操作的实体。
-- **Agnostic / aware**：*无感知 / 有感知*。定义层不关心并发与失败，执行层必须处理它们。
+- **Serializability**：*可串行化*。并发执行的最终状态等价于某种串行顺序执行，是隔离性的最高级别。
+- **Completeness (Atomicity)**：*完整性（原子性）*。全有或全无（All-or-Nothing）的执行保证。
 :::
 
-## 5.2 事务的魔力
+## 5.3 事务的状态机模型
 
-Web 应用就是分布式应用。我刚开始写 Web 时并未意识到这一点——之所以没意识到，正是因为**事务**。
+为了严格推理事务的行为，必须建立精确的状态机模型。
 
-事务保证正确性与完整性。如果你把应用建立在事务型数据库之上，事务保证就从数据库延伸到整个系统。事务**掩盖**了一个事实：你正在构建一个并发的、部分同步的分布式系统，组件会失败，网络不可靠。
+![图 5.4：单机事务的完整生命周期状态机](/media/posts/think-distributed-systems/fig-p091-5-4.png)
+*图 5.4：单机事务状态机模型（State machine model of a transaction）*
 
-看一个简化的转账 API：/transfer 接收源账户、目标账户与金额，执行两条 UPDATE 后 COMMIT。
+如图 5.4 所示，单个资源管理器（RM）上的事务生命周期经历以下状态流转：
 
-**你注意到这个 handler 里缺了什么吗？** 它没有任何可见的护栏：没有并发检测或缓解，也没有失败检测或缓解。
+1. **Active（活动态）**：事务初始状态，正在执行一系列读写操作；
+2. **Partially Committed（部分提交态）**：所有业务操作执行完毕，但写入的数据尚未持久化刷盘到 WAL（预写日志）；
+3. **Committed（已提交态）**：日志成功刷盘，事务获得永久生效保证，向客户端返回成功；
+4. **Failed（失败态）**：在活动或部分提交时检测到约束违背、死锁或硬件异常；
+5. **Aborted（已中止态）**：事务执行 Undo 操作，回滚所有修改，恢复到事务开始前的镜像状态。
 
-### 5.2.1 并发
+### 5.3.1 正确性：可串行化判定
 
-单账户余额更新天然易受竞态影响：更新由“读”与“写”两个操作组成，并发转账的交错会导致不同结果。
+![图 5.5：并发交替执行与串行历史等价性判定](/media/posts/think-distributed-systems/fig-p091-5-5.png)
+*图 5.5：可串行化等价判定（Serializability equivalence）*
 
-设想源账户初始 50，两笔并发转账各转 10。若读写交错为 r=50 → r=50 → w(40) → w(40)，最终余额 40，而期望是 30。
+图 5.5 说明了可串行化的数学判定：对于任意并发历史 $H$，若存在一个合法的串行历史 $H_{\text{serial}}$，使得 $H$ 中所有冲突操作的因果偏序与 $H_{\text{serial}}$ 相同，则历史 $H$ 是冲突可串行化的（Conflict Serializable）。
 
-但事务保证**正确性**。尽管查询里看不到任何检测、缓解或阻止竞态的动作，事务却**表现得好像并发不存在**。
+### 5.3.2 业务不变量与一致性
 
-### 5.2.2 失败
+![图 5.6：事务执行前后的业务不变量保持](/media/posts/think-distributed-systems/fig-p093-5-6.png)
+*图 5.6：不变量保持（Invariant preservation）*
 
-更新两个账户余额由两次写操作组成。若第一次写之后、第二次写之前执行失败，转账就只应用了一半。
+图 5.6 展现了**一致性（Consistency）**的内涵：一致性是指数据不违背预定义的业务约束（例如“账户余额不得为负” `balance >= 0`）。事务在起点接收一个一致的数据库状态，通过一系列合法变迁，在终点必须将数据库交还给另一个一致的状态。
 
-设想源账户与目标账户初始都是 50，转 10。若在两次写之间失败，最终是 40 与 50，而期望是 40 与 60。
+## 5.4 ACID 的真正内涵
 
-但事务保证**完整性**。尽管看不到任何失败检测或缓解，事务却**表现得好像失败不存在**。
+经典的 ACID 缩写常常引起混淆，让我们用第一性原理解构它：
 
-:::en
-> **Original**: Transactions guarantee correctness and completeness. If you build your application on top of a transactional database system, transactional guarantees extend from the database to your entire system. Transactions obfuscate the fact that you are building a concurrent, partially synchronous distributed system consisting of components that are subject to failure and communicating over an unreliable network. ... A concurrency and failure-agnostic definition guarantees a concurrency and failure-aware and tolerant execution.
+![图 5.7：ACID 四大支柱之间的正交与依赖关系](/media/posts/think-distributed-systems/fig-p094-5-7.png)
+*图 5.7：ACID 概念图谱（Atomicity, Consistency, Isolation, Durability）*
 
-**📌 核心术语与语境解析**：
-- **Guardrail**：*护栏*。显式的检测、限制与恢复逻辑；事务的价值就在于“看不见护栏”。
-- **Partially applied**：*部分应用*。只完成一半的更新，正是完整性要排除的状态。
-:::
+- **A（Atomicity，原子性）**：防范失败。全有或全无（图 5.7 左上）；
+- **C（Consistency，一致性）**：防范违背不变量。由应用逻辑与数据库约束共同守卫（图 5.7 右上）；
+- **I（Isolation，隔离性）**：防范并发。串行化执行（图 5.7 左下）；
+- **D（Durability，持久性）**：防范掉电。日志持久化到非易失介质，崩溃后可恢复（图 5.7 右下）。
 
-## 5.3 事务的模型
+### 恢复机制：前向恢复与后向恢复
 
-先看 ACID 的定位差异：
+系统如何保证持久性与原子性？依赖于底层的日志恢复协议：
 
-- **原子性、隔离性、持久性**是**平台层**保证，不受应用语义影响；
-- **一致性**是**应用层**保证，随应用需求而不同——余额低于零时是提交还是回滚，由开发者决定。
+![图 5.8：基于 Redo 日志的前向恢复机制](/media/posts/think-distributed-systems/fig-p095-5-8.png)
+*图 5.8：前向恢复（Complete execution traces and forward recovery）*
 
-> **注**：最初，隔离性保证事务“如同没有其他事务在并发执行”，即**可串行化**。现代数据库提供多种隔离级别，超出本书范围。
+图 5.8 展示了**前向恢复（Forward Recovery / Redo）**：对于在崩溃前已经进入 Committed 状态但脏页尚未刷入数据文件的事务，重启时读取 WAL 日志中的重做记录，将操作重新应用到磁盘。
 
-为便于推理，我们把数据库抽象为**对象（object）的集合**，每个对象用名字-值对表示。
+![图 5.9：基于 Undo 日志的后向恢复回滚机制](/media/posts/think-distributed-systems/fig-p096-5-9.png)
+*图 5.9：后向恢复（Incomplete execution traces and backward recovery）*
 
-- **程序（program）**：对一组名字执行的操作序列——这是**定义**；
-- **事务（transaction）**：对一组对象执行的动作序列，且以恰好一次 commit 或恰好一次 abort 结束——这是**执行**。
+图 5.9 展示了**后向恢复（Backward Recovery / Undo）**：对于崩溃前停留在 Active 或 Partially Committed 的未完结事务，重启时读取撤销记录，执行逆向操作，消除未提交数据对磁盘的污染。
 
-| 设计期/定义 | 运行期/执行 |
-| :--- | :--- |
-| 程序 P | 事务 t |
-| 操作 A | 动作 a |
-| 名字 N | 对象 o |
+### 隔离级别谱系
 
-事务被建模为**轨迹（trace）**：由三元组 ⟨tx, ai, oi⟩ 构成的序列。数据库可以把多个事务的执行交错，这组事务的执行称为**历史（history）**。
+![图 5.10：SQL 隔离级别层级与其防范的并发异常谱系](/media/posts/think-distributed-systems/fig-p097-5-10.png)
+*图 5.10：隔离级别谱系（Isolation levels and anomalies）*
 
-数据库系统的职责，就是把**无感知失败的定义**翻译成**感知失败、可容忍失败的执行**。
-
-### 5.3.1 正确性
-
-事务把数据库从一个一致状态迁移到另一个一致状态，可用 Hoare 三元组表示：
-
-$$\{ C \}\ t_x\ \{ C \}$$
-
-但要注意：**事务执行期间，一致性可能被暂时违反**。转账时，源账户已扣、目标账户未入账的瞬间，就是不满足一致性谓词的时刻。
-
-非并发场景下，每个事务从一致状态出发、到一致状态结束。并发执行时，一个事务可能观察到另一个事务引入的不一致。由此可得：
-
-$$\{ C \}\ t_1\ \{ C \} \wedge \{ C \}\ t_2\ \{ C \} \Rightarrow \{ C \}\ t_1; t_2\ \{ C \}$$
-
-也就是说，**串行历史（serial history）不会出现并发异常**。于是：两个并发事务 t1、t2 的执行是正确的，当且仅当其并发执行的效果，等价于“先 t1 后 t2”或“先 t2 后 t1”：
-
-$$\{ C \}\ t_1 \| t_2\ \{ C \} \Rightarrow \{ C \}\ t_1; t_2\ \{ C \} \vee \{ C \}\ t_2; t_1\ \{ C \}$$
-
-这就是**可串行化（serializability）**：只有在不引入不一致的前提下，才允许并发。
-
-### 5.3.2 可串行化
-
-可串行化是一种**一致性模型**：一致性模型是定义在执行历史之上的谓词，把历史划分为“好的/合法的/有效的”与“坏的/非法的/无效的”两类。
-
-一致性模型代表正确性保证，而**你有权为系统定义一致性模型**。Edgar Codd 提出的可串行化，是一组事务并发执行的一致性模型，其基础是“并发执行等价于某个串行执行”。
-
-对 t1、t2 的并发执行，若（事务结果, 数据库状态）等价于下列之一，则执行是可串行化的：
-
-- t1 • t2 的顺序执行；
-- t2 • t1 的顺序执行。
-
-> **注意**：可串行化**不要求**等价于某个**特定**的串行执行，只要求等价于**某个**串行执行。
-
-> **顿悟时刻：实现可串行化**
->
-> 实现可串行化很简单，**高效地**实现可串行化很难。最朴素的做法是用一把大锁保护所有对象——这强制了串行调度。然后逐步细化锁粒度，保护对象子集，允许仍具串行语义的并发调度。目标始终是：**在保证串行语义的前提下，最大化并发度。**
+可串行化虽然完美，但开销巨大。如图 5.10 所示，工程界通过放宽隔离性换取性能，构建了四大标准隔离级别：
+1. **Read Uncommitted（读未提交）**：允许脏读、不可重复读、幻读；
+2. **Read Committed（读已提交）**：杜绝脏读，允许不可重复读与幻读；
+3. **Repeatable Read（可重复读）**：杜绝脏读与不可重复读，可能存在幻读（MVCC 快照读）；
+4. **Serializable（可串行化）**：杜绝一切并发异常，保证等价于串行执行。
 
 :::en
-> **Original**: This observation leads to a straightforward conclusion: if transaction t1 transitions the database from a consistent state to a consistent state and transaction t2 also transitions the database from a consistent state to a consistent state, the sequential composition of t1 and t2 also ensures the transition from a consistent state to a consistent state. ... This guarantee of correctness is referred to as serializability, in which concurrency is allowed only if it does not introduce inconsistencies in the database.
+> **Original**: Atomicity and durability are achieved through logging. Forward recovery (redo logging) ensures that committed changes persist across crashes. Backward recovery (undo logging) ensures that aborted or uncommitted changes are rolled back. Isolation prevents anomalies arising from concurrent execution, with varying isolation levels offering different trade-offs between concurrency and safety.
 
 **📌 核心术语与语境解析**：
-- **Serializability**：*可串行化*。并发执行等价于某个串行执行的一致性模型。
-- **Serial history**：*串行历史*。无交错的执行历史，天然不产生并发异常。
-:::
-
-### 5.3.3 完整性
-
-数据库系统如何保证完整性？即如何把无感知失败的定义，翻译成感知失败、可容忍失败的执行。
-
-数据库使用第 3 章的两种技术：**后向恢复**与**前向恢复**，在数据库语境下分别称为 **Undo** 与 **Redo**。实际数据库往往二者兼用，这里聚焦 Undo。
-
-Undo 的思路很直接：**每个操作都配一个 Undo 操作**。数据库维护**事务 Undo 日志**（对象 ou）。在执行某对象的操作之前，先把对应的 Undo 操作记入日志。
-
-于是系统不再直接执行 ⟨t, ai, oi⟩，而是执行两个操作：记录 Undo（⟨t, w, ou + ⟨¬ai, oi⟩⟩）与原始操作（⟨t, ai, oi⟩）。事务由此有两条合法轨迹：
-
-- **提交轨迹（commit trace）**：无失败时展开，执行全部常规操作；
-- **中止轨迹（abort trace）**：有失败时展开，执行部分常规操作及其 Undo 操作，把系统恢复到事务之前的状态。
-
-### 5.3.4 应用层中止
-
-应用层中止很直接：应用主动决定回滚（例如余额不足），数据库执行 Undo，返回失败。**语义清晰，代价可控。**
-
-平台层中止则复杂得多：崩溃可能发生在任意时刻——Undo 日志写了一半、副作用已生效但日志未落盘、恢复过程中再次崩溃……这正是第 6 章分布式事务要处理的问题。
-
-:::en
-> **Original**: Database systems employ various strategies for failure detection and mitigation. As discussed in chapter 3, there are two broad techniques: backward recovery and forward recovery. In the context of database systems, backward recovery is referred to as Undo, and forward recovery is referred to as Redo. ... The concept of Undo is straightforward: every operation is accompanied by an Undo operation.
-
-**📌 核心术语与语境解析**：
-- **Undo / Redo**：*撤销 / 重做*。后向恢复与前向恢复在数据库中的具体形态。
-- **Commit trace / Abort trace**：*提交轨迹 / 中止轨迹*。事务在无失败与有失败下的两条合法执行路径。
+- **Redo logging**：*重做日志*。记录修改后的新值，用于在前向恢复中重放已提交修改。
+- **Undo logging**：*撤销日志*。记录修改前的前镜像旧值，用于在后向恢复中回滚脏写。
 :::
 
 ## 本章小结
 
-1. **抽象的本质是转化**：把“丑陋”的低层实体转化为“美丽”的高层实体，并通过 API 翻译两个世界。
-2. **事务是并发与失败的抽象**：定义层无感知，执行层有感知且可容忍。
-3. **正确性靠可串行化**：并发执行必须等价于某个串行执行。
-4. **完整性靠 Undo/Redo**：每个操作配一个逆操作，失败时回滚或前推。
-5. **一致性是应用层的**：提交还是回滚，由业务规则决定；原子性、隔离性、持久性则是平台层保证。
-6. **ACID 不是四个独立概念**：从正确性与完整性的角度看，它们是一体两面。
-
+1. **事务是双重抽象**：用隔离性（可串行化）屏蔽并发时序的混乱，用原子性（完整性）屏蔽硬件停机崩溃的风险。
+2. **ACID 落地力学**：通过 Write-Ahead Logging (WAL) 配合 Redo 保证持久性，配合 Undo 保证原子性。
+3. **工程取舍谱系**：完全可串行化是安全性的极点，隔离级别是业务吞吐量与时序异常容忍度之间的权衡。

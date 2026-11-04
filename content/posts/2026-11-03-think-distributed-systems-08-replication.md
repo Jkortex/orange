@@ -1,168 +1,140 @@
 ---
-title: "Think Distributed Systems（八）：复制——冗余是复制与协调的合体"
-date: 2026-11-03T03:20:00Z
-description: "从冗余逻辑门讲到软件复制：复制滞后为何不可避免，同步与异步复制如何权衡延迟与一致性，状态复制与日志复制、单领导者/多领导者/无领导者各自付出什么代价。"
+title: "Think Distributed Systems（八）：复制——用冗余换取可靠性的力学"
+date: 2026-11-03T03:10:00Z
+description: "从物理多副本到单一逻辑对象；剖析复制滞后（replication lag）、同步/异步复制，以及单主、多主与无主复制拓扑的权衡。"
 category: distributed-systems
 column: think-distributed-systems
 tags:
   - "复制"
   - "冗余"
+  - "可靠性"
   - "复制滞后"
-  - "法定人数"
-  - "CRDT"
-  - "一致性"
+  - "主从复制"
+  - "无主复制"
 ---
 
 # 第 8 章：复制
 
 本章涵盖：
 
-- 冗余（redundancy）
-- 复制（replication）
+- 冗余（redundancy）与复制（replication）
+- 逻辑对象与物理对象
+- 复制滞后（replication lag）与数据陈旧
+- 同步复制与异步复制
+- 单领导者、多领导者与无领导者复制拓扑
 
-分布式系统中最复杂的部分往往与冗余有关，尤其是**失败下的冗余**。
+如果说**分区**的目标是用切分换取**可扩展性**，那么**复制（Replication）**的目标则是用冗余换取**可靠性（Reliability）**与**可用性（Availability）**。
 
-先回忆 ACID 中的**持久性（durability）**：事务一旦提交，其效果就是永久的，不能反悔。很多业务流程都依赖这个承诺——电商发货依赖支付方“已收款”的承诺；如果支付方反悔，货已发出、钱却没到，后果可想而知。
+## 8.1 冗余：生存的本能
 
-在理论模型中，组件完全可靠，承诺必然兑现，不会反悔。但在实践模型中，组件会失败：负责处理事务的组件一旦崩溃，系统可能无法兑现承诺。**要消除单点失败，就要给系统加冗余。**
+硬件终将损坏，光缆终将断裂。在不可靠的物理世界中，任何单一实体都是脆弱的。
 
-## 8.1 冗余
+![图 8.1：冗余机制——通过物理副本复制抵御单点崩溃](/media/posts/think-distributed-systems/fig-p128-8-1.png)
+*图 8.1：冗余机制（Redundancy as duplication）*
 
-**冗余**指子系统的**复制**与**协调**，使得复制因子增加能带来可靠性（和/或可扩展性）的提升。
+如图 8.1 所示，冗余的本质是在系统中保留超出最低功能需求的额外物理资源。当一个物理组件损毁时，其余同构组件能够无缝接管，确保服务生命周期的延续。
 
-- **静态冗余（static）**：组件集合与交互集合在系统生命周期内**不变**，多见于硬件系统；
-- **动态冗余（dynamic）**：组件集合与交互集合会**变化**，多见于软件系统。
+## 8.2 逻辑对象与物理对象
 
-> **顿悟时刻：冗余与可扩展性**
->
-> 冗余提升可靠性，但它也**有助于**可扩展性：数据被分布到多个节点，配合轮询等负载均衡把请求摊到各副本上。不过后续章节会看到，冗余有时反而**降低**可扩展性。**冗余与可扩展性的关系并不直接**——真正提供可扩展性的是分区，复制只是把数据铺开。
+![图 8.2：图书馆藏书副本比拟单一逻辑知识载体](/media/posts/think-distributed-systems/fig-p129-8-2.png)
+*图 8.2：图书馆藏书类比（Library copies analogy）*
 
-> **顿悟时刻：复制与协调的对偶性**
->
-> 我们的心智模型常常只包含“复制组件”，却很少包含“协调组件”。但**一堆组件不构成系统**，必须被组合成一个连贯整体，也就是必须协调。协调可以简单到轮询，也可以复杂到共识协议，但**它必须存在**。
+考虑图 8.2 所示的图书馆：逻辑上，《算法导论》是一部唯一的经典著作；但物理上，图书馆的书架上摆放着 10 本一模一样的纸质印本。读者借走或损毁一本，并不影响该书作为知识载体的存在。
 
-看一个“Hello World”级的冗余硬件例子：冗余逻辑门。
+![图 8.3：复制——单一逻辑对象由多个相同的物理对象共同具象化](/media/posts/think-distributed-systems/fig-p130-8-3.png)
+*图 8.3：复制的概念抽象（Replication: single logical object represented by multiple physical objects）*
 
-一个逻辑门接收 n 个输入、产生 1 个输出，计算布尔函数 f。假设逻辑门一旦失败系统就失败——它是**单点失败**。
+如图 8.3 所示，复制的本质就是建立一个映射：**对外呈现为一个单一的逻辑对象（Logical Object），对内由多个物理对象（Physical Objects / Replicas）共同承载。**
 
-解决方法是复制 + 协调：
+![图 8.4：复制型键值存储的读写交互拓扑](/media/posts/think-distributed-systems/fig-p131-8-4.png)
+*图 8.4：复制型键值存储（A replicated key-value store）*
 
-- **复制**：用三个逻辑门代替一个；
-- **协调**：用一个多数门（majority gate）汇总三个副本的输出，取多数票。
+图 8.4 展示了一个典型的复制型键值存储：客户端透明地向抽象存储层发出读写请求，存储层内部负责协调各物理副本之间的数据同步。
 
-$$R = (a \wedge b) \vee (b \wedge c) \vee (a \wedge c)$$
+## 8.3 复制滞后与数据陈旧
 
-该式在三个输入中至少两个为真时为真。为避免多数门自己成为单点失败，它也应当被复制。
+由于物理网络的传输延迟，写入主副本的数据不可能瞬间同步给所有物理副本。
 
-于是，我们用一组组件替换了单个组件，让这组组件**表现得像原来的单个组件**，同时能容忍一个组件失败——这就是冗余的魔力。
+![图 8.5：主副本与从副本之间的同步延迟](/media/posts/think-distributed-systems/fig-p132-8-5.png)
+*图 8.5：副本延迟状态（Replication lag between primary and replica）*
 
-:::en
-> **Original**: Redundancy refers to the duplication and coordination of subsystems so that an increase in the duplication factor results in increased reliability and/or scalability. ... In my experience, our mental models often involve duplicating components but rarely involve coordinating those components. But a collection of components is not a system; it must be composed into a coherent system, meaning that the components must be coordinated.
+![图 8.6：复制滞后时间线与并发读取导致脏读的时序分析](/media/posts/think-distributed-systems/fig-p132-8-6.png)
+*图 8.6：复制滞后时间线（Replication lag timeline）*
 
-**📌 核心术语与语境解析**：
-- **Redundancy**：*冗余*。复制 + 协调，二者缺一不可。
-- **Single point of failure**：*单点失败*。系统可靠性的下限由它决定。
-:::
+如图 8.5 与图 8.6 所示：
+- 客户端在时间 $t_1$ 向主副本（Primary）写入 $x = 100$；
+- 主副本更新成功并向客户端返回成功；
+- 此时更新报文正在网络中飞向从副本（Replica），从副本上的值仍为旧值 $x = 50$；
+- 若另一客户端在时间 $t_2$（$t_1 < t_2 < t_3$）向从副本读取，将读到陈旧的数据 $x = 50$！
 
-## 8.2 思考复制与一致性
-
-在进入形式化模型之前，先思考一个看似幼稚的问题：**什么是“一个东西”？**
-
-William Kent 在《Data and Reality》中提出：这个问题揭示了我们的思维与语言中根深蒂固的歧义。
-
-设想作者写了《SICP》，图书馆里有十本。这里的“书”指作者的作品（**逻辑条目**），还是馆藏的那十本（**物理条目**）？
-
-再看版本：1984 年第一版、1996 年第二版、2022 年 JavaScript 版。它们算同一本书还是不同的书？第一、二版用 Scheme，JS 版用 JavaScript。那么馆藏里到底有几本 SICP？
-
-- 认为“任何版本都覆盖了相关概念” → 10 本；
-- 认为“只有 Scheme 版忠实表达” → 8 本；
-- 认为“只有 JS 版才具体可用” → 2 本。
-
-这个追问逼我们审视**同一性（identity）与等价性（equivalence）**：oneness 与 sameness。无论对象是书还是分布式软件系统，**理解这两条原则都是理解复制与一致性的基础。**
+主副本与从副本数据完全收敛对齐之间的时间差，称为**复制滞后（Replication Lag）**。复制滞后是引发分布式读取不一致的罪魁祸首。
 
 :::en
-> **Original**: This question leads us to the core of replication and consistency. Replication and consistency is about not only the number of physical items that exist but whether these physical entities represent the logical item. The answer to this question depends on your perspective.
+> **Original**: Replication creates multiple identical copies of a physical object to represent a single logical object. Because network transmission is not instantaneous, replicas fall behind the primary, creating replication lag. During this lag window, clients reading from replicas will observe stale data, violating linearizability unless appropriate synchronization mechanisms are in place.
 
 **📌 核心术语与语境解析**：
-- **Logical / physical item**：*逻辑条目 / 物理条目*。副本数不等于“同一件事”的份数。
-- **Identity / equivalence**：*同一性 / 等价性*。复制系统必须回答“什么算同一个”。
+- **Replication lag**：*复制滞后*。主副本完成写入到从副本完全追平之间的物理时间差。
+- **Stale read**：*陈旧读（脏读）*。客户端因复制滞后读取到已被最新写入覆写的旧版本数据。
 :::
 
-## 8.3 复制
+## 8.4 同步复制 vs 异步复制
 
-**复制**是最常见的复制实现方式：拥有同一事物的多个实例。它把数据分布到多个资源上，从而突破单个资源的可靠性限制。
+面对复制滞后，架构师必须在性能与安全性之间做出取舍：
 
-## 8.4 复制的机制
+![图 8.7：同步复制交互时序——主节点必须等待从节点确认回执](/media/posts/think-distributed-systems/fig-p133-8-7.png)
+*图 8.7：同步复制（Synchronous replication）*
 
-### 8.4.1 系统模型
+![图 8.8：异步复制交互时序——主节点写入本地后立刻响应客户端](/media/posts/think-distributed-systems/fig-p133-8-8.png)
+*图 8.8：异步复制（Asynchronous replication）*
 
-把网络看作组件之间的**点对点通信链路**：每个节点持有全部数据（本例为 x=1、y=2、z=3），客户端可以连接任意节点。
+### 同步复制（Synchronous Replication）
+如图 8.7 所示：
+- 主节点收到写请求，写入本地存储，同时向从节点广播；
+- **主节点挂起等待，直到所有从节点回复 ACK，才向客户端返回成功**。
+- **优点**：杜绝复制滞后，强一致性，任一节点崩溃绝不丢数据。
+- **缺点**：写延迟取决于最慢的副本；若任一从节点网络断开或宕机，写操作将**全线阻塞**，可用性急剧恶化。
 
-### 8.4.2 复制滞后
+### 异步复制（Asynchronous Replication）
+如图 8.8 所示：
+- 主节点写入本地存储后，**立刻向客户端返回成功**；
+- 随后后台异步将日志流同步给从节点。
+- **优点**：极低写延迟，高吞吐量；从节点宕机完全不影响主节点对外服务。
+- **缺点**：若主节点在异步报文尚未飞抵从节点时突然掉电崩溃，**尚未同步的写入将永久丢失**！
 
-**复制滞后（replication lag）** 指变更在各副本之间传播的固有延迟。因为任何时刻只有一个组件或网络能走一步，更新**不可能同时**应用到所有副本，只能一个接一个地施加。
+### 实用折中：半同步复制（Semi-synchronous）
+现代系统（如 MySQL Semi-sync、Kafka `min.insync.replicas`）广泛采用折中方案：只要主节点加上至少一个（或多数派 Quorum）从节点确认，即视为提交成功。
 
-复制滞后不只是时间延迟，更是复制型分布式系统的**内在属性**，也是许多问题的根源（例如复制透明性丧失）。
+## 8.5 复制拓扑模式
 
-可以区分两种滞后：
+复制节点以何种拓扑组织？工业界演化出三大经典范式：
 
-- **固有滞后（inherent）**：分布式系统本质决定，无法消除；
-- **强加滞后（imposed）**：网络分区与组件失败造成，属于额外延迟。
+![图 8.9：单领导者、多领导者与无领导者复制拓扑对照](/media/posts/think-distributed-systems/fig-p135-8-9.png)
+*图 8.9：三大复制拓扑（Single-leader, multileader, and leaderless configurations）*
 
-### 8.4.3 同步复制 vs. 异步复制
+如图 8.9 所示：
 
-- **同步复制**：变更被复制、且收到**所有**其他节点的确认后，操作才算完成。完成与复制**紧耦合**，复制发生在前台。它保证各节点立即一致，但延迟与可用性受制于每个节点的及时响应。
-- **异步复制**：操作在初始节点处理完即算完成，不等复制与确认。完成与复制**松耦合**，复制发生在后台。它改善延迟与可用性，但可能牺牲一致性。
+### 1. 单领导者（Single-Leader / Master-Slave）
+- **拓扑**：唯一主节点接收所有写入，只读流量分摊给多个从节点。
+- **代表**：MySQL 主从、PostgreSQL、Redis、Kafka 分区 Leader。
+- **特点**：写入全局定序极其简单；缺点是主节点成为写入性能与高可用单点瓶颈。
 
-实践中，很多系统采用**混合策略**：变更需要**多数副本**确认（这个多数称为 **quorum**），quorum 内的复制在前台完成；quorum 之外的副本可以异步追赶。
+### 2. 多领导者（Multi-Leader / Active-Active）
+- **拓扑**：多个数据中心各自拥有一个主节点，各自接收本地写入，随后跨城异步双向同步。
+- **代表**：跨地域多活系统、协同文档编辑（Google Docs）。
+- **特点**：容忍跨地域骨干网中断；缺点是并发冲突解决极其复杂（需要 CRDT 或版本向量）。
 
-:::en
-> **Original**: In synchronous replication, an operation is not considered complete until the changes have been replicated and acknowledgments have been received from all other nodes. ... In asynchronous replication, the operation is considered complete as soon as it's processed on the initial node; there's no wait for the changes to be replicated and acknowledgments to be received from the other nodes. ... In practice, many systems employ a hybrid strategy for replication: When a change is replicated, a majority of replicas must acknowledge the operation.
-
-**📌 核心术语与语境解析**：
-- **Replication lag**：*复制滞后*。副本间传播的固有延迟，无法通过工程手段归零。
-- **Quorum**：*法定人数*。多数派确认，是同步与异步之间的工程折中。
-:::
-
-### 8.4.4 基于状态 vs. 基于日志的复制
-
-假设系统是**确定性状态机**，复制变更有两种选择：复制**当前状态**，或复制**导致该状态的操作序列**。
-
-$$step: State \rightarrow Operation \rightarrow State$$
-
-以计数器为例，初始 counter = 0，客户端依次执行 increment-by(2)、increment-by(3)：
-
-- **基于状态**：直接把当前状态（或状态差分）发过去——消息是 counter = 2、counter = 5；
-- **基于日志**：把操作序列发过去——消息是 increment-by(2)、increment-by(3)。
-
-前者关注“现在是什么”，后者关注“怎么变成这样”。**实践中，基于日志的复制正成为业界主流。**
-
-### 8.4.5 单领导者、多领导者与无领导者
-
-- **单领导者（single-leader）**：只有一个领导者接受操作并传播给跟随者。指挥链清晰，但领导者本身可能成为单点失败——几乎抵消了复制的意义。
-- **多领导者（multileader）**：多个领导者都能接受操作。消除了单点失败，但没有指挥链，并发操作可能冲突，需要**冲突解决**。
-- **无领导者（leaderless）**：没有指定领导者，所有节点都能接受操作，冲突同样需要解决。
-
-冲突解决策略从“最后写入胜出（last write wins）”到 **CRDT（无冲突复制数据类型）** 不等。看似简单的 LWW 也可能让客户端觉得“我的写入被莫名覆盖了”——选择策略时必须理解其语义。
-
-> **顿悟时刻：领导者写、跟随者读？**
->
-> 有些资料把领导者复制简化为“领导者处理写、跟随者处理读”。这种配置确实常见，但它忽略了复制滞后：跟随者可能尚未反映最新数据。**要读到最新数据，读请求必须发给领导者。**
-
-:::en
-> **Original**: In single-leader systems, one dedicated leader node coordinates operations. Only the leader node accepts operations and propagates changes to its followers. This creates a chain of command but can become a single point of failure, almost negating the reason for replication. ... A wide array of conflict resolution strategies exists, ranging from timestamp-based methods such as "last write wins" to techniques that use conflict-free replicated data types (CRDTs).
-
-**📌 核心术语与语境解析**：
-- **Leader / follower**：*领导者 / 跟随者*。写路径的集中点，也是冲突与瓶颈的来源。
-- **CRDT**：*无冲突复制数据类型*。通过数学性质保证并发更新可合并。
-:::
+### 3. 无领导者（Leaderless / Quorum）
+- **拓扑**：不存在中心主节点。客户端直接向多个副本并行发起读写。
+- **代表**：Amazon Dynamo、Apache Cassandra、Riak。
+- **特点**：依靠法定人数机制保证读写相交：
+  $$W + R > N$$
+  其中 $N$ 为总副本数，$W$ 为写确认数，$R$ 为读确认数。只要满足上述不等式，读操作必然至少命中一个包含最新写入的物理副本。
 
 ## 本章小结
 
-1. **冗余 = 复制 + 协调**，只复制不协调只是一堆组件。
-2. **复制滞后不可消除**：一步只能走一个组件，更新不可能瞬时同步。
-3. **同步复制保一致、异步复制保延迟**；quorum 是二者的工程折中。
-4. **状态复制传“现在”，日志复制传“过程”**；日志复制成为主流。
-5. **单领导者简单但易成单点，多领导者/无领导者需要冲突解决**。
-6. **“领导者写、跟随者读”忽略了滞后**：强一致读必须回到领导者。
-
+1. **复制的根本使命**：用空间冗余换取系统抗击节点故障的生存能力。
+2. **复制滞后是一致性死穴**：光速与物理网络决定了异步复制下陈旧读与数据丢失的潜在风险。
+3. **拓扑决定架构性格**：
+   - 单主架构：模型简单，强一致性偏好；
+   - 多主架构：跨城多活，拥抱冲突合并；
+   - 无主架构：去中心化 Quorum，高可用与分区容忍优先。

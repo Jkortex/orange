@@ -1,167 +1,161 @@
 ---
-title: "Think Distributed Systems（六）：分布式事务与两阶段提交"
-date: 2026-11-03T03:00:00Z
-description: "从单资源管理器的原子提交走向多资源管理器，推导 2PC 的 Prepare/Commit 两阶段、失败下的阻塞行为，以及为什么它只能保证安全性而牺牲活性。"
+title: "Think Distributed Systems（六）：分布式事务——跨资源管理器的两阶段提交"
+date: 2026-11-03T02:55:00Z
+description: "从单 RM 到多 RM 的质变；形式化推导原子提交的本质困境、参与者悬决阻塞期，以及 2PC 与 3PC 的协议边界与工程演进。"
 category: distributed-systems
 column: think-distributed-systems
 tags:
   - "分布式事务"
   - "两阶段提交"
+  - "2PC"
+  - "3PC"
   - "原子提交"
   - "阻塞协议"
-  - "协调者"
-  - "资源管理器"
 ---
 
 # 第 6 章：分布式事务
 
 本章涵盖：
 
-- 分布式事务的概念
-- 无失败时的两阶段提交（2PC）
-- 有失败时的两阶段提交
-- 2PC 的可能改进
+- 单资源管理器（RM）到多资源管理器的演进
+- 原子提交问题（Atomic Commit Problem）
+- 两阶段提交协议（2PC）的力学推导
+- 协调者崩溃与参与者悬决阻塞
+- 优化与替代：3PC 与 Saga
 
-分布式事务跨越多个系统，参与者通常称为**资源管理器（resource manager, RM）**。这个词不仅包括数据库，也包括消息队列等能参与分布式事务的系统。本章中“资源管理器”与“数据库系统”互换使用。
+在单机系统中，事务的提交只需修改一个本地持久化状态；而在分布式系统中，数据分散在多个独立自治的节点上。本章将推导分布式计算中最著名的经典难题之一：**分布式原子提交（Distributed Atomic Commit）**。
 
-## 6.1 原子提交：从单个 RM 到多个 RM
+## 6.1 原子提交：从单 RM 到多 RM
 
-第 5 章的转账在**单个 RM** 上执行：两条 UPDATE 加一个 COMMIT，原子性由一次本地写入保证。
+单机事务之所以简单，是因为它只受制于单个**资源管理器（Resource Manager, RM）**。
 
-但如果源账户在 RM1、目标账户在 RM2 呢？两条独立事务分别提交，就可能出现“一个提交、一个回滚”的分歧。**如何保证两个事务要么都提交、要么都中止？** 换言之，**如何保证两个（子）事务的组合本身就是一个事务？** 答案是**原子提交协议（atomic commit protocol）**。
+![图 6.1：单资源管理器 vs 多个独立资源管理器架构对照](/media/posts/think-distributed-systems/fig-p100-6-1.png)
+*图 6.1：单 RM 与多 RM 架构（Single RM vs. multiple RMs）*
 
-事务以恰好一次 commit 或恰好一次 abort 结束，并且是**原子的**：
+如图 6.1 所示：
+- **单 RM 场景**：RM 独占对存储硬件的控制权，原子提交就是写入一条 COMMIT 日志记录并刷盘，成功即提交，掉电即回滚，非黑即白；
+- **多 RM 场景**：涉及两个或更多独立的 RM（例如订单库 RM1 与库存库 RM2）。各 RM 位于不同物理主机上，通过不可靠网络通信。
 
-- 若以 commit 结束，其执行在可观察层面等价于“执行一次”；
-- 若以 abort 结束，其执行在可观察层面等价于“从未执行”。
+![图 6.2：跨多个 RM 的原子提交挑战](/media/posts/think-distributed-systems/fig-p101-6-2.png)
+*图 6.2：多 RM 原子提交困境（Atomic commit across multiple RMs）*
 
-单 RM 上，原子提交靠**一次本地状态写入**保证：提交或中止时，RM 用一步把 commit/abort 记录写入本地状态；若在写入前失败，恢复后按“存在 abort 记录”处理。
-
-多 RM 上，原子提交靠**原子提交协议**保证。其正确性同样由安全性与活性规定：
-
-- **安全性**：不存在两个参与者，一个处于 commit、另一个处于 abort：
-
-$$S: \nexists\ rm_1, rm_2:\ state[rm_1] = commit \wedge state[rm_2] = abort$$
-
-- **活性**：每个参与者最终都会做出决定：
-
-$$L: \forall\ rm:\ \Diamond\Box\, state[rm] = commit \ \vee\ \Diamond\Box\, state[rm] = abort$$
-
-即每个 RM 的状态最终会永远保持 commit 或永远保持 abort。
+图 6.2 揭示了核心矛盾：**如何保证所有 RM 要么全部提交、要么全部回滚？** 绝不能出现 RM1 提交而 RM2 回滚的情况，否则系统的全局业务一致性将彻底瓦解。
 
 ### 6.1.1 阻塞与非阻塞
 
-- **阻塞协议（blocking）**：参与者失败时只保证安全性，不保证活性；
-- **非阻塞协议（nonblocking）**：**单个**参与者失败时，同时保证安全性与活性。
+在存在网络故障与机器崩溃的环境中，原子提交协议可能面临**阻塞（Blocking）**：
 
-要让协议非阻塞，单个参与者的失败就不能阻止其他参与者判断事务该提交还是中止。
+![图 6.3：分布式事务中的悬决阻塞状态](/media/posts/think-distributed-systems/fig-p102-6-3.png)
+*图 6.3：悬决阻塞状态（Blocking state in distributed transactions）*
 
-:::en
-> **Original**: There are two types of atomic commit protocols: blocking and nonblocking. Blocking protocols guarantee safety but not liveness in the presence of participant failure. Nonblocking protocols guarantee both safety and liveness in the presence of a single participant failure. For a commit protocol to be nonblocking, a single participant's failure does not prevent other participants from deciding whether the transaction is committed or aborted.
-
-**📌 核心术语与语境解析**：
-- **Blocking protocol**：*阻塞协议*。参与者失败会卡住整个决策，安全性仍在，活性丢失。
-- **Nonblocking protocol**：*非阻塞协议*。容忍单点失败，仍能达成决定。
-:::
-
-## 6.2 分布式事务的本质
-
-**分布式事务（全局事务）由两个或更多非分布式事务（本地事务）组成。**
-
-本地事务有四个状态：
-
-- **Working（工作中）**：正在执行操作。可能转为 Aborted（例如违反一致性约束），也可能转为 Prepared 并等待提交/中止指令。
-- **Prepared（已准备）**：不再执行操作，但尚未提交或中止。收到 commit 请求则提交，收到 abort 请求则中止。
-- **Committed / Aborted**：到达最终、不可逆的状态。
-
-分布式事务的状态是一个**状态向量**，包含各本地事务的状态，以及网络中尚未送达的消息。
+如图 6.3 所示，当协调者失联后，参与者处于“不知道其他参与者投票结果”的状态。为了维护安全性，参与者**既不能擅自提交，也不能擅自回滚，只能继续持有本地数据行锁无限期等待**，导致系统资源耗尽。
 
 :::en
-> **Original**: A distributed transaction, also referred to as a global transaction, consists of two or more nondistributed transactions, also referred to as local transactions. ... We can think of a nondistributed transaction as being in one of four states: working, prepared, committed, or aborted.
+> **Original**: The Atomic Commit Problem requires a group of autonomous resource managers to reach a unanimous decision: either all commit their local subtransactions, or all abort them. If an algorithm can cause components to wait indefinitely for recovery before reaching a decision, it is called a blocking protocol. In asynchronous systems with crash failures, nonblocking atomic commit is impossible.
 
 **📌 核心术语与语境解析**：
-- **Global / local transaction**：*全局事务 / 本地事务*。前者是后者的组合，后者是前者的组成单元。
-- **State vector**：*状态向量*。全局事务的状态 = 各本地状态 + 在途消息。
+- **Resource Manager (RM)**：*资源管理器*。管理本地数据并提供 ACID 支持的独立存储单元。
+- **Blocking protocol**：*阻塞协议*。在通信或节点中断时，存活节点必须暂停推进等待故障恢复的协议。
 :::
 
-## 6.3 两阶段提交协议（2PC）
+## 6.2 两阶段提交协议（2PC）
 
-2PC 是最著名、被研究最多的原子提交协议。它在**无参与者失败**时保证安全性与活性；但只要出现**特定参与者的失败**，它就只保证安全性，不保证活性——因此它是一个**阻塞协议**。
+为了解决原子提交问题，Jim Gray 于 1978 年提出了著名的**两阶段提交协议（Two-Phase Commit, 2PC）**。
 
-### 6.3.1 无失败时
+![图 6.4：协调者与多个参与者交互架构拓扑](/media/posts/think-distributed-systems/fig-p103-6-4.png)
+*图 6.4：协调者与参与者角色架构（The coordinator and participants）*
 
-系统被划分为**恰好一个事务协调者（transaction coordinator, TC）**与**两个或更多 RM**，协议分两阶段执行：Prepare 与 Commit。
+如图 6.4 所示，2PC 引入了一个中心角色：**协调者（Coordinator）**，其余节点为**参与者（Participants / RMs）**。
 
-客户端先在各个 RM 上执行标准读写操作，然后不再直接要求 RM 提交，而是请求 TC 提交——2PC 由此开始。
+### 6.2.1 阶段一：准备阶段（Prepare / Voting Phase）
 
-**阶段一：Prepare**
+![图 6.5：两阶段提交第一阶段：协调者发起 Prepare 轮询投票](/media/posts/think-distributed-systems/fig-p104-6-5.png)
+*图 6.5：2PC 第一阶段：准备阶段（2PC: Prepare phase）*
 
-1. TC 把 ⟨Prepare, Timeout⟩ 持久化写入日志，并向所有 RM 发送 ⟨Prepare⟩。
-2. 若 RMi 决定提交，持久化写入 ⟨Vote-to-Commit⟩ 并发送给 TC；若决定中止，则持久化写入 ⟨Abort⟩、发送给 TC，并中止本地事务。
+如图 6.5 所示：
+1. 协调者向所有参与者广播 `PREPARE` 消息；
+2. 每个参与者执行本地事务的预检、锁资源、写入 Undo/Redo 日志；
+3. 若参与者准备就绪且有能力提交，向协调者回复 `VOTE_COMMIT`（赞成）；若自身因故无法保证（如断电风险、约束违背），回复 `VOTE_ABORT`（否决）。
 
-**阶段二：Commit**
+### 6.2.2 阶段二：提交阶段（Commit Phase）
 
-1. 若 TC 收到**全部** RM 的 ⟨Vote-to-Commit⟩，持久化写入 ⟨Commit⟩ 并向所有 RM 发送 ⟨Commit⟩。
-2. 若 TC 收到**至少一个** ⟨Abort⟩ 或发生超时，持久化写入 ⟨Abort⟩ 并向所有 RM 发送 ⟨Abort⟩。
-3. 各 RM 收到指令后持久化写入 ⟨Commit⟩ 或 ⟨Abort⟩，并提交或中止本地事务。
+![图 6.6：两阶段提交第二阶段：全员赞成触发 Global Commit 提交](/media/posts/think-distributed-systems/fig-p104-6-6.png)
+*图 6.6：2PC 第二阶段：提交阶段（2PC: Commit phase）*
 
-> **顿悟时刻：Vote-to-Commit 与 Abort 的不对称**
->
-> Prepare 阶段不是 ⟨Vote-to-Commit⟩/⟨Vote-to-Abort⟩ 这一对，也不是 ⟨Commit⟩/⟨Abort⟩ 这一对，而是 **⟨Vote-to-Commit⟩ 与 ⟨Abort⟩** 这一对。也就是说：**RM 不能单方面提交，但可以单方面中止。**
+如图 6.6 所示（全票通过场景）：
+1. 协调者收集到**所有**参与者的 `VOTE_COMMIT` 响应；
+2. 协调者在本地持久化写入一条 `COMMIT` 记录；
+3. 协调者向所有参与者广播 `GLOBAL_COMMIT` 指令；
+4. 参与者完成最终提交、释放锁资源，并向协调者回复 `ACK`。
+
+![图 6.7：两阶段提交第二阶段：任一否决触发 Global Abort 中止](/media/posts/think-distributed-systems/fig-p105-6-7.png)
+*图 6.7：2PC 中止场景（2PC: Abort scenario）*
+
+若在阶段一中**任意一个**参与者回复了 `VOTE_ABORT`，或者协调者等待超时，如图 6.7 所示：
+- 协调者决定全局回滚，持久化记录 `ABORT`；
+- 向全体参与者广播 `GLOBAL_ABORT` 指令；
+- 所有参与者根据 Undo 日志回滚已执行操作并释放锁。
+
+## 6.3 2PC 的致命死穴：协调者崩溃与悬决期
+
+2PC 是一个**严格满足安全性、但在活性上极其脆弱的阻塞协议**。
+
+![图 6.8：协调者在发出 Prepare 后崩溃引发的全局阻塞](/media/posts/think-distributed-systems/fig-p106-6-8.png)
+*图 6.8：协调者崩溃故障（2PC failure: Coordinator crash）*
+
+图 6.8 展现了 2PC 最臭名昭著的故障场景：
+- 所有参与者均已回复 `VOTE_COMMIT`；
+- 协调者在写完本地决策后、尚未发出 `GLOBAL_COMMIT` 前突发停电崩溃；
+- 此时全体参与者陷入了**悬决期（In-Doubt Period）**。
+
+![图 6.10：参与者的悬决时段与锁资源冻结风险](/media/posts/think-distributed-systems/fig-p106-6-10.png)
+*图 6.10：参与者悬决窗口（In-doubt period for participants）*
+
+如图 6.10 所示，处于悬决期的参与者面临着严酷的困境：
+- 参与者不能单方面中止：因为协调者可能已经把 `GLOBAL_COMMIT` 发给了其他参与者；
+- 参与者不能单方面提交：因为可能存在其他参与者投了否决票；
+- **参与者只能原地死等协调者复活，期间所持有的数据库锁全部被锁死！**
+
+![图 6.9：参与者自身崩溃与基于日志的恢复时序](/media/posts/think-distributed-systems/fig-p106-6-9.png)
+*图 6.9：参与者崩溃恢复（2PC failure: Participant crash）*
+
+图 6.9 展示了参与者故障恢复：参与者必须在回复投票前将决策刷入本地 WAL。重启后扫描日志：若发现自己投了 COMMIT 但未收到最终决策，必须主动向协调者轮询决策结果。
+
+## 6.4 优化与演进
+
+### 推导中止（Presumed Abort）
+
+![图 6.11：推导中止优化消除了回滚决策的写盘开销](/media/posts/think-distributed-systems/fig-p107-6-11.png)
+*图 6.11：推导中止优化（Presumed Abort optimization）*
+
+图 6.11 介绍了**推导中止（Presumed Abort）**协议：在传统 2PC 中，中止决策也需要写盘。优化后规定：如果协调者崩溃重启，在日志中找不到某事务的记录，则**默认推定该事务已中止**。这大幅减少了回滚路径上的磁盘 I/O。
+
+### 三阶段提交协议（3PC）
+
+为了解决 2PC 的单点阻塞，Skeen 提出了**三阶段提交协议（Three-Phase Commit, 3PC）**。
+
+![图 6.12：三阶段提交协议引入 PreCommit 状态打破阻塞](/media/posts/think-distributed-systems/fig-p108-6-12.png)
+*图 6.12：三阶段提交协议（Three-Phase Commit）*
+
+如图 6.12 所示，3PC 将 2PC 的提交阶段拆分为两步，共三阶段：
+1. **Can-Commit（询问阶段）**；
+2. **Pre-Commit（预提交阶段）**：引入超时推进机制；
+3. **Do-Commit（正式提交阶段）**。
+
+通过在准备态与提交态之间插入缓冲区，3PC 保证存活节点在协调者崩溃时可以通过超时机制自主做出一致决定。然而，**3PC 必须依赖同步系统模型**（有界延迟与无分区假设）。在异步网络发生网络分区时，3PC 依然会发生脑裂并违背安全性。因此在工程实践中，3PC 极少被直接采用，现代架构多采用基于 Raft/Paxos 的复制共识或 Saga 补偿模式。
 
 :::en
-> **Original**: The 2PC protocol partitions the system into exactly one transaction coordinator (TC) and two or more RMs. The protocol executes in two phases: Prepare and Commit. ... During the protocol's first phase, the TC asks all participating RMs whether they vote to commit or abort their local transactions. In the second phase, the TC instructs all participating RMs to commit or abort.
+> **Original**: 2PC is fundamentally a blocking protocol. Once a participant votes yes, it gives up the autonomy to decide the outcome unilaterally. If the coordinator crashes while participants are in the in-doubt state, those participants must wait holding locks. 3PC attempts to alleviate this by introducing a Pre-Commit phase, but it requires a synchronous network model to guarantee correctness in the presence of partitions.
 
 **📌 核心术语与语境解析**：
-- **Transaction coordinator (TC)**：*事务协调者*。唯一决策者，负责汇总投票并广播决定。
-- **Vote-to-Commit**：*提交票*。RM 的承诺：一旦投出，就必须等待 TC 的最终决定。
+- **In-doubt state**：*悬决状态*。参与者已投票赞成但尚未收到全局决议的不可抉择状态。
+- **Presumed Abort**：*推导中止*。一种工业界优化，无记录时默认推定为中止以降低日志开销。
 :::
-
-### 6.3.2 有失败时
-
-#### RM 失败
-
-**一个或多个 RM 失败不会阻塞协议**，2PC 仍能同时保证安全性与活性。恢复行为取决于失败发生在哪个日志点之后：
-
-- 在持久化 ⟨Vote-to-Commit⟩ 或 ⟨Abort⟩ **之前**失败 → 恢复后写 ⟨Abort⟩ 并通知 TC（**尚未承诺**）；
-- 在持久化 ⟨Vote-to-Commit⟩ **之后**失败 → 恢复后必须向 TC 询问决定（**已经承诺**）；
-- 在持久化 ⟨Commit⟩ **之后**失败 → 恢复后执行 **REDO**，确保操作生效；
-- 在持久化 ⟨Abort⟩ **之后**失败 → 恢复后执行 **UNDO**，确保操作不生效。
-
-#### TC 失败
-
-**TC 失败会阻塞协议**：只保证安全性，不保证活性。
-
-若某个 RM 已持久化 ⟨Vote-to-Commit⟩ 而 TC 失败，该 RM 就被**卡住**——它不能提交（怕别人中止），也不能中止（怕别人提交），只能等 TC 修复。
-
-设想所有 RM 都投了提交票，TC 在通知 RM1 提交之后崩溃：RM2 既不能提交也不能中止，因为它不知道其他 RM 是否已经提交。
-
-:::en
-> **Original**: The 2PC protocol guarantees safety but not liveness in case the TC fails. A failure of the TC may block the protocol. If the TC fails after a participating RM persistently records ⟨Vote-to-Commit⟩, the RM is stuck. ... RM2 can neither commit nor abort the transaction because it does not know whether any other RMs have already committed or aborted.
-
-**📌 核心术语与语境解析**：
-- **Blocked**：*被阻塞*。参与者已投票但未收到决定，只能等待协调者恢复。
-- **REDO / UNDO**：*重做 / 撤销*。已提交则确保生效，已中止则确保不生效。
-:::
-
-### 6.3.3 改进方向
-
-2PC 的许多变体都以**提升活性**为目标：减少阻塞执行的数量。但注意——它们只是**减少**，并没有**消除**阻塞。
-
-常见的改进思路包括：
-
-- **协调者复制**：把 TC 的状态复制到多个节点，TC 失败时由备节点接管，避免单点阻塞；
-- **三阶段提交（3PC）**：在 Prepare 与 Commit 之间加入 PreCommit 阶段，使参与者在超时后能推断出决定，从而在**无网络分区**假设下非阻塞；
-- **共识驱动的提交**：用 Raft/Paxos 复制协调者日志，把“决定”本身变成共识问题（第 10 章）。
-
-这些方案共同揭示了 2PC 的结构性代价：**“已投票但未决定”的窗口天然存在**，而这个窗口正是阻塞的来源。
 
 ## 本章小结
 
-1. **单 RM 的原子性靠一次本地写入**；多 RM 的原子性必须靠原子提交协议。
-2. **安全性 = 不会出现一提交一中止**；**活性 = 每个参与者最终都会决定**。
-3. **2PC 两阶段**：Prepare 收集投票，Commit 广播决定；所有日志写入都必须持久化。
-4. **RM 失败不阻塞，TC 失败会阻塞**——这是 2PC 被称为阻塞协议的根本原因。
-5. **Vote-to-Commit 是不对称的承诺**：可以单方面中止，不能单方面提交。
-6. **改进只能减少阻塞，不能消除阻塞**；真正非阻塞需要更强的假设或共识机制。
-
+1. **分布式原子提交的核心挑战**：全员一致（Unanimity）在不可靠通信网络与独立自治节点之间的博弈。
+2. **2PC 的力学权衡**：以中心化协调者为锚点，牺牲活性（悬决期锁死阻塞）换取绝对安全性（永不产生部分提交）。
+3. **现代工程出路**：
+   - 跨机强一致：将协调者与参与者部署在基于 Raft/Paxos 的高可用副本组之上；
+   - 跨服务长事务：拥抱最终一致性，采用 Saga 逆向补偿与事件驱动架构。

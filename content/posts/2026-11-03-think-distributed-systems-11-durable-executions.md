@@ -1,210 +1,102 @@
 ---
-title: "Think Distributed Systems（十一）：持久执行——把失败关进平台层"
-date: 2026-11-03T03:50:00Z
-description: "两个原子动作的顺序组合并不原子，部分执行是分布式系统的原罪；持久执行通过日志重放或状态快照，让失败无感知的代码获得失败透明的执行。"
+title: "Think Distributed Systems（十一）：持久执行——故障透明的恢复范式"
+date: 2026-11-03T03:40:00Z
+description: "部分执行是微服务长流程的梦魇；从 Saga 补偿走向持久执行（Durable Execution），让代码在崩溃后像什么都没发生过一样原地继续。"
 category: distributed-systems
 column: think-distributed-systems
 tags:
   - "持久执行"
+  - "Durable Execution"
   - "Saga"
-  - "原子性"
-  - "幂等性"
-  - "工作流"
-  - "前向恢复"
+  - "状态恢复"
+  - "故障透明"
+  - "Temporal"
 ---
 
 # 第 11 章：持久执行
 
 本章涵盖：
 
-- 短进程与长进程
-- 无失败的定义
-- 容忍失败的执行
-- Saga 与持久执行的对比
+- 部分执行（partial execution）的灾难性后果
+- 分布式执行的原子性困境
+- 失败透明（failure-transparent）恢复机制
+- 持久执行（Durable Execution）的核心原理
+- 事件日志与确定性重放（deterministic replay）
 
-**持久执行（durable execution）之于分布式系统，正如事务之于数据库**：一种把“失败可能发生”这件事隐藏起来的抽象。
+在单体程序中，若一个函数包含两个步骤 `stepA(); stepB();`，如果进程崩溃，整个内存清空，下次重启直接重新运行。但在微服务与分布式工作流中，`stepA()` 往往调用了第三方支付扣款，而 `stepB()` 负责发货。一旦机器在两步之间崩溃，系统就会遗留毁灭性的中间坏账。
+
+**持久执行（Durable Execution，如 Temporal、Cadence、Resonate）彻底改写了这一游戏规则：它把“代码的执行过程本身”变成可以持久化、可故障自愈的一等公民。**
 
 ## 11.1 部分执行的陷阱
 
-> 在部分失败面前，即使最基础的推理规则也不再成立。
-> ——Black、Cremet、Guerraoui、Odersky，《An Equational Theory for Transactions》
+在多服务编排与长事务流中，部分执行无处不在。
 
-设想用户注册流媒体平台：平台先扣款，再开通内容库访问。代码看起来没问题，但它只处理了**happy path**：如果扣款成功、写库之前崩溃，用户被扣了钱却没有内容访问权。
+![图 11.1：分布式工作流中部分执行导致的资产悬挂与状态不一致](/media/posts/think-distributed-systems/fig-p166-11-1.png)
+*图 11.1：部分执行的陷阱（The pitfalls of partial executions）*
 
-这暴露了一个根本问题：**两个原子动作的顺序组合，本身并不原子。**
+如图 11.1 所示：
+- 客户预订行程：包含航班预订、酒店预订、租车预订；
+- 航班和酒店预订成功，但租车接口在调用时节点遭遇 OOM 崩溃；
+- 客户信用卡被扣除部分费用，但行程单残缺不全，资金与库存两端陷入孤立悬挂状态。
 
-$$t\ |\ \text{crash} \equiv prefix\ t$$
+传统上，工程师只能手工编写极其繁琐且极易出错的逆向回滚代码（Saga 模式）：为每一个操作编写对应的 Undo 补偿。但若补偿操作本身在执行时又崩溃了呢？复杂度将呈指数级爆炸。
 
-理想情况下，执行应当是**失败透明**的：无失败执行，与“失败后恢复并继续”的执行不可区分。
+## 11.2 分布式执行的原子性困境
 
-$$t\ |\ \text{crash} \equiv t\ \text{or nothing}$$
+为了严格建模执行过程，我们将进程看作步骤序列。
 
-> **顿悟时刻：原子性的两种含义**
->
-> - **并发原子性**：进程执行在可观察层面等价于“不被打断”，中间状态对其他进程不可见——数据库称之为**隔离性**。
-> - **失败原子性**：进程执行在可观察层面等价于“全有或全无”，但中间状态对其他进程**可见**。
->
-> 并发原子性常常是“想要”，失败原子性常常是“必需”——否则系统无法从正确状态迁移到正确状态。
+![图 11.2：分布式工作流的全执行原子性定义](/media/posts/think-distributed-systems/fig-p167-11-2.png)
+*图 11.2：工作流原子性（Definition of atomicity across workflow steps）*
 
-:::en
-> **Original**: We've run into a fundamental problem in software engineering. The sequential composition of two atomic actions is not itself atomic, leaving us vulnerable to crash failure that results in partial execution. ... Ideally, the execution of a process is failure-transparent, meaning that a failure-free execution is indistinguishable from a failed execution that was subsequently recovered.
+如图 11.2 所示，业务对长流程的终极诉求依然是**原子性（Atomicity）**：要么全流程执行完毕，要么在语义上完全回滚。
 
-**📌 核心术语与语境解析**：
-- **Failure atomicity**：*失败原子性*。全有或全无，允许中间状态被观察。
-- **Failure transparency**：*失败透明*。外部无法区分“没失败”与“失败后恢复”。
-:::
+![图 11.3：单步骤进程崩溃后的平凡恢复重试](/media/posts/think-distributed-systems/fig-p168-11-3.png)
+*图 11.3：单步骤进程执行（A process P consists of one step: a）*
 
-## 11.2 系统模型
+如图 11.3 所示，若进程 $P$ 仅包含单个原子步骤 $a$：若 $a$ 执行中崩溃，恢复策略非常平凡——只需重新执行 $a$（配合幂等键防重）。
 
-> 程序员的活动在其构造出正确定义时并未结束；真正构成其活动主题的，是在该定义控制下发生的执行。
-> ——E.W. Dijkstra
+![图 11.4：多步骤进程在跨步骤边界崩溃带来的重入危机](/media/posts/think-distributed-systems/fig-p168-11-4.png)
+*图 11.4：多步骤进程执行（A process P consists of two steps: a and b）*
 
-日常讨论中，我们常把**定义（代码）** 与**执行（运行中的代码）** 混为一谈。要建立清晰模型，必须区分：
-
-- **failure-aware / failure-agnostic** 描述**定义**；
-- **failure-free / failure-tolerant / failure-transparent** 描述**执行**。
-
-### 11.2.1 进程定义
-
-进程定义 P 是步骤 A、B……的序列，每一步都是**失败原子动作**：
-
-$$P = A \cdot P' \mid \varepsilon$$
-
-- A · P′：先执行原子动作 A，再表现得像后继进程 P′；
-- ε：进程终止（本质上是成功终止）。
-
-### 11.2.2 进程执行
-
-对进程定义 P，执行是轨迹 t，P 的每一步 A 对应 t 中一个可观察事件 a。假设 Crash-Stop 失败（执行可在任意时刻停止）：
-
-$$P = A \cdot B \cdot \varepsilon \Rightarrow t = \times \mid a \cdot \times \mid a \cdot b \cdot \checkmark$$
-
-- ✓ 表示成功执行；
-- × 表示崩溃失败。
-
-显然：**单步进程的执行继承其步骤的失败原子性**；但**多步进程的执行不继承**——**失败原子性不可组合**。
-
-> **顿悟时刻：短执行 vs. 长执行**
->
-> Garcia-Molina 与 Salem 在《Sagas》中提出短执行与长执行：**短执行由单步构成，长执行由多步构成**。所以“长短”说的不是物理时间，而是**逻辑时间**——以步骤为刻度。
+然而如图 11.4 所示，若进程 $P$ 包含两个步骤 $a$ 与 $b$：
+- 步骤 $a$ 执行完成，产生不可逆的外部物理副作用（例如发出资金）；
+- 在进入步骤 $b$ 之前，运行宿主崩溃；
+- 重启后，若简单粗暴地从头重跑进程，步骤 $a$ 将被重复执行，产生**双重扣款**灾难；若直接跳过，步骤 $a$ 的局部返回值将丢失，步骤 $b$ 无法获得必要入参！
 
 :::en
-> **Original**: In our day-to-day conversations, we often blur the lines between definition (the code) and execution (the running code). ... Failure-aware and failure-agnostic are related to definitions, whereas failure-free, failure-tolerant, and failure-transparent are associated with executions.
+> **Original**: Partial executions are the bane of distributed workflows. When a multi-step process crashes mid-flight, restarting from the beginning risks duplicating side effects, while resuming from the point of failure requires knowing the exact local state prior to the crash. Durable Execution resolves this dilemma by persisting the sequence of completed steps into an immutable event log.
 
 **📌 核心术语与语境解析**：
-- **Definition vs. execution**：*定义 vs. 执行*。静态代码与动态运行，失败语义分属两者。
-- **Failure atomicity does not compose**：*失败原子性不可组合*。这是持久执行存在的根本理由。
+- **Partial execution**：*部分执行*。多步骤业务流程在中间某个步骤突发中断的病态状态。
+- **Durable Execution**：*持久执行*。执行过程与局部变量被透明持久化，故障后可无缝断点续传的现代计算范式。
 :::
 
-## 11.3 失败透明的恢复
+## 11.3 故障透明恢复的架构力学
 
-若“无失败执行”产生的事件序列，与“失败—恢复—继续”产生的事件序列**等价**，则恢复是失败透明的。换言之，瞬态或间歇失败不能阻止执行跑到终点（永久失败则可以）。
+持久执行是如何做到让开发者像写普通单机代码一样，天然免疫宕机崩溃的？
 
-本章只讨论**前向恢复**；后向恢复与补偿见第 3 章。
+答案是：**持久化事件历史日志 + 确定性重放（Deterministic Replay）**。
 
-等价由**等价函数**判定，而等价函数是应用相关的——**由你来决定两个事件序列何时算等价**。
+![图 11.5：持久执行引擎通过事件日志重放实现故障透明的断点自愈](/media/posts/think-distributed-systems/fig-p172-11-6.png)
+*图 11.6：故障透明恢复架构（Failure-transparent recovery architecture）*
 
-以打印 a 到 f 为例：
+如图 11.6 所示，持久执行引擎（如 Temporal / Resonate）的运行力学如下：
 
-- 进程定义：P = A·B·C·D·E·F·ε；
-- 无失败执行：t = a·b·c·d·e·f·✓。
+1. **步骤结果持久化**：
+   - 开发者编写的代码中的每个耗时或带副作用的调用（称为 Activity / Task），都由引擎接管；
+   - 步骤 $a$ 完成后，引擎将其输入、输出与执行结果写入持久化的分布式共识日志中。
+2. **崩溃与漂移**：
+   - 运行该工作流的工作机发生硬件掉电，进程彻底终止。
+3. **确定性重放与断点自愈**：
+   - 调度集群感知到节点失联，将该工作流调度到另一台健康工作机上重新启动代码；
+   - 代码再次从第一行开始执行：当执行到步骤 $a$ 时，引擎拦截调用，发现历史日志中已经记录了步骤 $a$ 的执行结果；
+   - **引擎直接从日志中取出先前保存的返回值立即注入，不真正向外部发起物理网络调用！**
+   - 代码瞬间飞跃到步骤 $b$ 的起点，继续向下执行真实物理调用。
 
-常见的等价函数：
-
-| 等价函数 | 失败后的轨迹 | 代价 |
-| :--- | :--- | :--- |
-| 恒等（identity） | a·b·c💥d·e·f·✓ | 等价于 exactly-once，通常不可达 |
-| 允许重复最后一个事件 | a·b·c💥c·d·e·f·✓ | 只需最后一步幂等 |
-| 允许重复最后 n 个事件 | a·b·c💥b·c·d·e·f·✓ | 需要回退窗口内幂等 |
-| 重启（restart） | a·b·c💥a·b·c·d·e·f·✓ | 整段重放，要求全部幂等 |
-
-:::en
-> **Original**: Recovery of a process is considered failure-transparent if a failure-free execution produces a sequence of events equivalent to that of a failed, recovered, and continued execution. ... All discussion of failure-transparent recovery occurs in the context of a specific equivalence function. ... This function is specific to the application, and as software engineers, we have the authority to decide when two sequences of events are equivalent.
-
-**📌 核心术语与语境解析**：
-- **Equivalence function**：*等价函数*。定义“恢复后的轨迹是否可接受”的判据。
-- **Exactly-once**：*恰好一次*。最严格但通常不可实现的等价标准。
-:::
-
-## 11.4 失败透明恢复的策略
-
-要容忍事件重复，动作必须**幂等**。恢复并继续执行有两种主流模式：
-
-### 11.4.1 重启（restart）
-
-从**头**重新执行整个进程。若每步都幂等，实现很简单。但重启有局限：
-
-- **时间语义被重置**：若注册流程是“先建账号，一周后再扣款”，重启会把一周的延迟重置；
-- **非确定性动作**：取当前时间、生成随机数这类动作，重启后可能得到不同结果，导致行为错误。
-
-### 11.4.2 恢复（resume）
-
-从**最近的保存点（save point）** 继续执行。通过在步骤之间捕获足够信息，执行可以在失败后真正“接着跑”。
-
-:::en
-> **Original**: Process executions recover from failures by restarting the process execution from the beginning. A process restart is simple to implement if the process steps are idempotent. ... Process executions recover from failures by restarting the process execution from their most recent save point. By capturing sufficient information between process steps, a process execution effectively resumes after a failure.
-
-**📌 核心术语与语境解析**：
-- **Restart / resume**：*重启 / 恢复*。从头再来 vs. 从断点继续。
-- **Save point**：*保存点*。持久化的执行进度，是 resume 的前提。
-:::
-
-## 11.5 失败透明恢复的实现
-
-实现分两个层次：应用层与平台层。
-
-- **应用层**：进程定义必须 **failure-aware**，显式处理失败；
-- **平台层**：进程定义保持 **failure-agnostic / failure-oblivious**，失败处理被封装在平台内。
-
-这形成一条**失败处理阶梯（failure-handling ladder）**：从“失败起源”到“失败遏制”，逐级向上转义（escalation），最终让业务代码停留在“无感知”层。
-
-### 11.5.1 应用层实现：Saga
-
-应用层实现的结果是 **failure-aware 的进程定义**：开发者自己负责检测与缓解，代码里写满失败处理。
-
-**Saga** 就是这种模式：它产生失败透明的执行，但代价是业务逻辑被状态机淹没。常见实现是状态机式：每步之后持久化 saga 的状态与下一步触发器。
-
-```javascript
-async function signupSaga(state) {
-  switch (state.label) {
-    case 'createAccount':
-      const account = await AccountCreate();
-      return { label: 'createPayment', account };
-    case 'createPayment':
-      const payment = await PaymentCreate();
-      return { label: 'done', payment };
-    default:
-      throw new Error('Unknown state');
-  }
-}
-```
-
-这种写法确实能恢复，但它**掩盖了注册流程的核心业务逻辑**，更难读、更难维护。
-
-### 11.5.2 平台层实现：持久执行
-
-平台层实现的结果是 **failure-agnostic 的进程定义**：开发者不处理失败，代码里看不到任何失败分支。
-
-**持久执行**就是这种模式，有两种实现策略：
-
-- **基于日志（log-based）**：把每步的输出记入持久日志，失败时重放执行并对已执行事件去重。典型写法是协程：yield 一个待执行函数，运行时执行它、把结果写日志、再把结果送回协程；恢复时若日志中已有该步结果，直接复用并快进到失败点。
-- **基于状态（state-based）**：定期持久化完整状态快照，恢复时从最近快照继续。
-
-:::en
-> **Original**: When failure transparency is implemented at the platform level, the result is failure-agnostic or failure-oblivious process definitions. In other words, the developer of the process is not responsible for failure detection and mitigation, and the resulting process definition—the code—does not account for the possibility of failure. ... Durable executions are failure-agnostic process definitions resulting in failure-transparent process executions. Today, there are two implementation strategies for durable executions: log-based and state-based.
-
-**📌 核心术语与语境解析**：
-- **Durable execution**：*持久执行*。平台托管执行进度，业务代码保持无感知。
-- **Failure-oblivious**：*失败无感知*。代码中完全没有失败处理痕迹。
-:::
+对于外部观察者与业务代码而言，**崩溃仿佛从未发生过**，整个工作流透明地跨越了机器宕机，实现了真正的“故障透明性（Failure Transparency）”。
 
 ## 本章小结
 
-1. **两个原子动作的组合不原子**：部分执行是分布式系统的原罪。
-2. **失败原子性不可组合**，但**失败透明**可以通过恢复实现。
-3. **等价函数由应用定义**：从 exactly-once 到 restart，严格程度逐级放宽。
-4. **重启简单但会重置时间语义、破坏非确定性动作**；恢复需要保存点。
-5. **Saga 是应用层的失败透明**，代价是业务逻辑被状态机淹没。
-6. **持久执行是平台层的失败透明**，通过日志重放或状态快照让代码保持干净。
-7. **失败处理阶梯**：越往上，业务代码越不需要关心失败。
-
+1. **部分执行是微服务分布式调用的最大痛点**：缺乏原子边界使得复杂工作流极易陷入悬挂脏状态。
+2. **Saga 补偿的局限性**：手工编写逆向动作维护成本极高，无法应对补偿自身崩溃的二次故障。
+3. **持久执行的革命性跨越**：以不变的事件日志为镜像，通过确定性重放让分布式长流程获得如本地进程般的断点续传能力。
