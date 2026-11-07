@@ -1146,8 +1146,72 @@ const THINK_DISTRIBUTED_COLUMN: ColumnSource = {
   ],
 }
 
+export const KAFKA_ARCHITECTS_COLUMN: ColumnSource = {
+  id: 'kafka-for-architects',
+  title: '《Kafka for Architects：架构师的事件驱动实战》',
+  subtitle: '深入剖析分布式提交日志、数据契约治理、事务模式与企业级容灾调优全景',
+  badge: '架构权威 · 生产级指南',
+  status: 'completed',
+  titlePrefix: 'Kafka 架构师实战',
+  tags: ['Kafka', '分布式系统', '事件驱动架构', '流处理', '架构设计'],
+  focus: '事件驱动架构',
+  description:
+    '深入剖析 Apache Kafka 在现代企业级分布式系统中的架构设计与工程落地。摒弃细枝末节的 API 堆砌，通篇聚焦于架构权衡（Trade-offs）：从事件驱动架构（EDA）演进与单分区有序性，到 ISR 副本冗余、生产者批处理与幂等防乱序、消费者组协作再均衡（KIP-848）；深入实践微服务协同、CQRS、事件溯源、Transactional Outbox 本地事务发件箱；构筑基于 Schema Registry 的数据契约治理；全景横向对比 RabbitMQ、Pulsar 与云原生选型；深度掌握 Kafka Streams 状态流处理与协分区 Join；落地 KRaft 三机房防脑裂容灾、纵深安全防御、GitOps 声明式治理、SRE 黄金监控指标与极限调优诊所，直至存算分离无盘化与多 AI Agent 协作神经中枢。',
+  highlights: [
+    {
+      title: '基石与内核模型',
+      desc: 'Commit Log 顺序追加、单分区单调保序、ISR 副本仲裁、RecordAccumulator 批处理与 KIP-848 服务端协调新协议。',
+    },
+    {
+      title: '实战模式与契约治理',
+      desc: '事实事件（ECST）vs 增量差异、Schema Registry 向前/向后兼容演进、CQRS、事件溯源快照与 Transactional Outbox 模式。',
+    },
+    {
+      title: '实时流处理与技术选型',
+      desc: 'Kafka Streams 嵌入式 RocksDB 状态存储、协分区 Join 铁律，以及与 RabbitMQ、Pulsar、Flink 的全景选型决策矩阵。',
+    },
+    {
+      title: '企业运维与前沿 AI',
+      desc: 'KRaft 3 机房仲裁防脑裂、mTLS/SASL 纵深安全、GitOps 声明式管理、吞吐 vs 延迟调优诊所与多 AI Agent 事件中枢。',
+    },
+  ],
+  phases: [
+    {
+      name: '阶段一：导读与架构基石',
+      description: '全景导读与核心心智模型建立，深入 Kafka 分区、生产者流水线与消费者再均衡机制。',
+      chapters: [
+        { order: 0, slug: '2026-11-07-kafka-for-architects-00-preface' },
+        { order: 1, slug: '2026-11-07-kafka-for-architects-01-architect-view' },
+        { order: 2, slug: '2026-11-07-kafka-for-architects-02-cluster-data-architecture' },
+        { order: 3, slug: '2026-11-07-kafka-for-architects-03-producer-deep-dive' },
+        { order: 4, slug: '2026-11-07-kafka-for-architects-04-consumer-internals' },
+      ],
+    },
+    {
+      name: '阶段二：实战难题与契约治理',
+      description: '解决企业真实痛点：系统选型对比、数据契约演进、高阶架构模式与流计算应用设计。',
+      chapters: [
+        { order: 5, slug: '2026-11-07-kafka-for-architects-05-real-world-use-cases' },
+        { order: 6, slug: '2026-11-07-kafka-for-architects-06-data-contracts' },
+        { order: 7, slug: '2026-11-07-kafka-for-architects-07-interaction-patterns' },
+        { order: 8, slug: '2026-11-07-kafka-for-architects-08-streaming-applications' },
+      ],
+    },
+    {
+      name: '阶段三：企业交付、运维与未来',
+      description: '企业级生产落地：KRaft 仲裁、纵深安全、GitOps 工程规范、性能调优诊所与 AI Agent 前沿。',
+      chapters: [
+        { order: 9, slug: '2026-11-07-kafka-for-architects-09-enterprise-governance-security' },
+        { order: 10, slug: '2026-11-07-kafka-for-architects-10-project-organization' },
+        { order: 11, slug: '2026-11-07-kafka-for-architects-11-operations-and-tuning' },
+        { order: 12, slug: '2026-11-07-kafka-for-architects-12-whats-next-ai' },
+      ],
+    },
+  ],
+}
 
 export const ALL_COLUMNS: ColumnSource[] = [
+  KAFKA_ARCHITECTS_COLUMN,
   THINK_DISTRIBUTED_COLUMN,
   DISTRIBUTED_GO_COLUMN,
   AI_DDD_COLUMN,
